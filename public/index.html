@@ -28,24 +28,72 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 ::-webkit-scrollbar-thumb:hover{background:var(--p)}
 
 /* LOGIN */
-#login-screen{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
-  background:#000000;}
-.login-box{background:rgba(10,5,25,0.38);border:1px solid rgba(139,92,246,0.30);border-radius:20px;
-  padding:48px 44px;width:400px;text-align:center;
-  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-  box-shadow:0 0 0 1px rgba(139,92,246,0.15);}
-.login-logo-img{width:72px;height:72px;object-fit:cover;border-radius:16px;margin:0 auto 16px;display:block;
-  box-shadow:0 8px 32px rgba(139,92,246,0.4);}
-.brand-big{font-family:'Rajdhani',sans-serif;font-size:34px;font-weight:700;letter-spacing:4px;
+/* ── LOGIN SPLIT LAYOUT ─────────────────────────────────────── */
+#login-screen{position:fixed;inset:0;z-index:100;display:flex;background:#000;}
+.login-left{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:#000;position:relative;overflow:hidden;}
+.login-left::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 60% 50% at 50% 40%,rgba(139,92,246,0.07) 0%,transparent 70%);}
+.ll-flame{margin-bottom:28px;filter:drop-shadow(0 0 24px rgba(139,92,246,0.55));}
+.brand-big{font-family:'Rajdhani',sans-serif;font-size:42px;font-weight:700;letter-spacing:8px;
   background:linear-gradient(135deg,#c4b5fd 0%,#8b5cf6 50%,#6d28d9 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:block;line-height:1;}
-.brand-sub{font-size:10px;letter-spacing:5px;color:var(--text3);text-transform:uppercase;display:block;margin:4px 0 28px;}
-.inp{width:100%;padding:12px 15px;background:rgba(139,92,246,0.05);
-  border:1px solid var(--border2);border-radius:var(--r);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  display:block;line-height:1;text-align:center;}
+.brand-sub{font-size:9px;letter-spacing:5px;color:var(--text3);text-transform:uppercase;
+  display:block;margin:6px 0 48px;text-align:center;}
+.ll-features{display:flex;gap:16px;}
+.ll-feat{display:flex;flex-direction:column;align-items:center;gap:10px;
+  background:rgba(139,92,246,0.05);border:1px solid rgba(139,92,246,0.14);
+  border-radius:14px;padding:18px 22px;min-width:96px;}
+.ll-feat svg{color:var(--p3);}
+.ll-feat-label{font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px;text-align:center;line-height:1.3;}
+
+/* right panel */
+.login-right{width:480px;min-width:380px;display:flex;align-items:center;justify-content:center;
+  background:#0a0a0a;border-left:1px solid rgba(139,92,246,0.1);}
+.login-box{width:100%;max-width:340px;padding:0 10px;}
+.login-box h2{font-family:'Inter',sans-serif;font-size:24px;font-weight:700;color:var(--text);
+  margin-bottom:28px;letter-spacing:-.3px;}
+.login-logo-img{display:none;}
+
+/* role tabs */
+.login-tabs{display:flex;background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);
+  border-radius:10px;padding:4px;gap:4px;margin-bottom:22px;}
+.login-tab{flex:1;padding:9px 12px;font-size:12px;font-weight:600;cursor:pointer;
+  color:var(--text3);transition:all .18s;text-align:center;border-radius:7px;
+  display:flex;align-items:center;justify-content:center;gap:6px;letter-spacing:.3px;}
+.login-tab.active{background:var(--p);color:#fff;box-shadow:0 2px 12px rgba(139,92,246,0.35);}
+.login-tab:not(.active):hover{color:var(--text2);}
+
+/* fields */
+.lfield-label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.8px;
+  text-transform:uppercase;margin-bottom:7px;display:block;}
+.lfield{margin-bottom:16px;}
+.inp{width:100%;padding:12px 15px;background:rgba(255,255,255,0.03);
+  border:1px solid rgba(139,92,246,0.18);border-radius:9px;
   color:var(--text);font-family:'Inter',sans-serif;font-size:13px;
-  outline:none;transition:all .2s;margin-bottom:12px;}
-.inp:focus{border-color:var(--p);background:rgba(139,92,246,0.08);box-shadow:0 0 0 3px rgba(139,92,246,0.12);}
-.lerr{color:#9333ea;font-size:12px;margin-top:10px;min-height:18px}
+  outline:none;transition:all .2s;}
+.inp:focus{border-color:var(--p);background:rgba(139,92,246,0.06);
+  box-shadow:0 0 0 3px rgba(139,92,246,0.12);}
+.inp-pw-wrap{position:relative;}
+.inp-pw-wrap .inp{padding-right:42px;}
+.inp-eye{position:absolute;right:13px;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;color:var(--text3);padding:2px;
+  display:flex;align-items:center;transition:color .15s;}
+.inp-eye:hover{color:var(--p3);}
+
+/* submit btn */
+.btn-login{width:100%;padding:13px;font-size:13px;font-weight:700;letter-spacing:.3px;
+  background:var(--p);color:#fff;border:none;border-radius:9px;cursor:pointer;
+  transition:all .18s;margin-top:4px;box-shadow:0 4px 20px rgba(139,92,246,0.3);}
+.btn-login:hover{background:#7c3aed;box-shadow:0 6px 28px rgba(139,92,246,0.45);transform:translateY(-1px);}
+
+.login-foot{margin-top:20px;text-align:center;}
+.login-foot a,.login-foot span{font-size:12px;color:rgba(167,139,250,0.5);}
+.login-foot a{color:var(--p3);text-decoration:none;font-weight:600;}
+.login-foot a:hover{color:#c4b5fd;text-decoration:underline;}
+.login-foot-sub{display:block;margin-top:6px;font-size:11px;color:var(--text3);}
+.lerr{color:#a855f7;font-size:12px;margin-top:12px;min-height:18px;text-align:center;}
 
 /* BUTTONS */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
@@ -466,27 +514,126 @@ tbody td{padding:9px 13px;vertical-align:middle;}
 
 <!-- LOGIN -->
 <div id="login-screen">
-  <div class="login-box">
-    <img src="logo.png" class="login-logo-img" alt="BoostEmpire"/>
+
+  <!-- LEFT — Brand panel -->
+  <div class="login-left">
+    <!-- Flame SVG -->
+    <div class="ll-flame">
+      <svg width="64" height="80" viewBox="0 0 64 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M32 4C32 4 14 22 14 42C14 52.493 22.507 61 33 61C43.493 61 52 52.493 52 42C52 30 40 26 40 26C40 26 44 34 38 40C36 42 33 43 30 41C27 39 26 35 28 31C30 27 32 4 32 4Z" fill="url(#flame1)"/>
+        <path d="M32 28C32 28 24 38 24 46C24 51.523 28.477 56 34 56C39.523 56 44 51.523 44 46C44 40 38 36 38 36C38 36 40 41 37 44C35.5 45.5 33 46 31 44.5C29 43 29 40 30.5 37.5C32 35 32 28 32 28Z" fill="url(#flame2)"/>
+        <path d="M33 44C33 44 29 49 31 53C32.2 55.5 35 56 37 54.5C39 53 39 50 37.5 48C36 46 33 44 33 44Z" fill="url(#flame3)" opacity=".9"/>
+        <!-- stem/base -->
+        <ellipse cx="32" cy="62" rx="7" ry="3" fill="url(#flame1)" opacity=".25"/>
+        <defs>
+          <linearGradient id="flame1" x1="32" y1="4" x2="32" y2="64" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#c4b5fd"/>
+            <stop offset="60%" stop-color="#8b5cf6"/>
+            <stop offset="100%" stop-color="#4c1d95"/>
+          </linearGradient>
+          <linearGradient id="flame2" x1="32" y1="28" x2="32" y2="58" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#ede9fe"/>
+            <stop offset="100%" stop-color="#7c3aed"/>
+          </linearGradient>
+          <linearGradient id="flame3" x1="33" y1="44" x2="33" y2="56" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#fff" stop-opacity=".9"/>
+            <stop offset="100%" stop-color="#a78bfa"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+
     <span class="brand-big">BOOSTEMPIRE</span>
     <span class="brand-sub">KeyAuth System</span>
-    <div class="login-tabs">
-      <div class="login-tab active" id="lt-admin" onclick="switchLoginTab('admin')">👑 Admin</div>
-      <div class="login-tab" id="lt-reseller" onclick="switchLoginTab('reseller')">🔑 Reseller</div>
+
+    <!-- Feature badges -->
+    <div class="ll-features">
+      <div class="ll-feat">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <span class="ll-feat-label">HMAC<br>Signing</span>
+      </div>
+      <div class="ll-feat">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+        </svg>
+        <span class="ll-feat-label">HWID<br>Lock</span>
+      </div>
+      <div class="ll-feat">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <span class="ll-feat-label">Rate<br>Limits</span>
+      </div>
     </div>
-    <div id="login-admin-form">
-      <input class="inp" type="password" id="lp" placeholder="Admin password…" onkeydown="if(event.key==='Enter')doLogin()"/>
-      <button class="btn btn-primary" onclick="doLogin()">Sign In as Admin</button>
-      <div style="margin-top:13px;font-size:12px;color:rgba(167,139,250,0.5);">Don't have an account? Get one at <a href="https://discord.gg/hxu" target="_blank" style="color:#a78bfa;text-decoration:none;font-weight:600;">discord.gg/hxu</a></div>
-    </div>
-    <div id="login-reseller-form" style="display:none">
-      <input class="inp" type="text" id="lr-user" placeholder="Username…" onkeydown="if(event.key==='Enter')doResellerLogin()"/>
-      <input class="inp" type="password" id="lr-pass" placeholder="Password…" onkeydown="if(event.key==='Enter')doResellerLogin()"/>
-      <button class="btn btn-primary" onclick="doResellerLogin()">Sign In as Reseller</button>
-      <div style="margin-top:13px;font-size:12px;color:rgba(167,139,250,0.5);">Don't have an account? Get one at <a href="https://discord.gg/hxu" target="_blank" style="color:#a78bfa;text-decoration:none;font-weight:600;">discord.gg/hxu</a></div>
-    </div>
-    <div class="lerr" id="lerr"></div>
   </div>
+
+  <!-- RIGHT — Form panel -->
+  <div class="login-right">
+    <div class="login-box">
+      <h2>Sign in</h2>
+
+      <!-- Role tabs -->
+      <div class="login-tabs">
+        <div class="login-tab active" id="lt-admin" onclick="switchLoginTab('admin')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          ADMIN
+        </div>
+        <div class="login-tab" id="lt-reseller" onclick="switchLoginTab('reseller')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+          RESELLER
+        </div>
+      </div>
+
+      <!-- Admin form -->
+      <div id="login-admin-form">
+        <div class="lfield">
+          <label class="lfield-label">Email</label>
+          <input class="inp" type="text" placeholder="admin@boostempire.com" disabled style="opacity:.45;cursor:not-allowed;"/>
+        </div>
+        <div class="lfield">
+          <label class="lfield-label">Password</label>
+          <div class="inp-pw-wrap">
+            <input class="inp" type="password" id="lp" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+            <button class="inp-eye" type="button" onclick="togglePw('lp',this)" tabindex="-1">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <button class="btn-login" onclick="doLogin()">Sign in as Admin</button>
+        <div class="login-foot">
+          <span>No account? <a href="https://discord.gg/hxu" target="_blank">Create one</a></span>
+          <a class="login-foot-sub" href="https://discord.gg/hxu" target="_blank">Forgot your password? Contact support to reset.</a>
+        </div>
+      </div>
+
+      <!-- Reseller form -->
+      <div id="login-reseller-form" style="display:none">
+        <div class="lfield">
+          <label class="lfield-label">Username</label>
+          <input class="inp" type="text" id="lr-user" placeholder="your_username" onkeydown="if(event.key==='Enter')doResellerLogin()"/>
+        </div>
+        <div class="lfield">
+          <label class="lfield-label">Password</label>
+          <div class="inp-pw-wrap">
+            <input class="inp" type="password" id="lr-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doResellerLogin()"/>
+            <button class="inp-eye" type="button" onclick="togglePw('lr-pass',this)" tabindex="-1">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <button class="btn-login" onclick="doResellerLogin()">Sign in as Reseller</button>
+        <div class="login-foot">
+          <span>No account? <a href="https://discord.gg/hxu" target="_blank">Create one</a></span>
+          <a class="login-foot-sub" href="https://discord.gg/hxu" target="_blank">Forgot your password? Contact support to reset.</a>
+        </div>
+      </div>
+
+      <div class="lerr" id="lerr"></div>
+    </div>
+  </div>
+
 </div>
 
 <!-- APP -->
@@ -2409,6 +2556,14 @@ function toast(msg,type='success'){
   t.className='show '+type;clearTimeout(tT);tT=setTimeout(()=>t.className='',3200);
 }
 // ═══════════════ LOGIN TAB SWITCH ═══════════════
+function togglePw(id, btn) {
+  const inp = document.getElementById(id);
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  btn.innerHTML = show
+    ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+    : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+}
 function switchLoginTab(m){
   loginMode=m;
   document.getElementById('lt-admin').classList.toggle('active',m==='admin');
