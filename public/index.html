@@ -675,6 +675,11 @@ tbody td{padding:9px 13px;vertical-align:middle;}
         <span class="nav-badge" id="block-badge"></span>
       </div>
 
+      <div class="nav-item" data-page="detections" onclick="go('detections')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fb923c" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span style="color:#fb923c">Detection Events</span>
+        <span class="nav-badge" id="detect-badge" style="background:#ea580c;display:none"></span>
+      </div>
       <div class="nav-item" data-page="hwid-mismatches" onclick="go('hwid-mismatches')" style="color:#f87171">
         <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><line x1="12" y1="15" x2="12" y2="17" stroke-linecap="round"/></svg>
         <span style="color:#f87171">HWID Mismatches</span>
@@ -1829,6 +1834,87 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
       <div class="card" style="padding:0;overflow:hidden"><div class="tbl-wrap"><table><thead><tr><th>IP Address</th><th>Reason</th><th>Blocked At</th></tr></thead><tbody id="r-blocks-body"></tbody></table></div></div>
     </div>
 
+    <!-- DETECTION EVENTS PAGE -->
+    <div class="page" id="page-detections">
+      <div class="ph" style="margin-bottom:20px">
+        <div>
+          <div class="pt" style="display:flex;align-items:center;gap:10px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fb923c" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Detection <span>Events</span>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">Reverse-engineering tools detected on client machines</div>
+        </div>
+        <div class="pa" style="gap:8px">
+          <select id="detect-filter-status" class="inp" style="width:auto;padding:7px 10px;font-size:12px" onchange="loadDetections()">
+            <option value="">All Statuses</option>
+            <option value="WARNED">Warned</option>
+            <option value="CLOSED_BY_USER">Closed by User</option>
+            <option value="BSOD_TRIGGERED">BSOD Triggered</option>
+          </select>
+          <select id="detect-filter-trigger" class="inp" style="width:auto;padding:7px 10px;font-size:12px" onchange="loadDetections()">
+            <option value="">All Triggers</option>
+            <option value="IDA_PROCESS">IDA Process</option>
+            <option value="IDA_INSTALLED">IDA Installed</option>
+            <option value="IDA_MUTEX">IDA Mutex/Pipe</option>
+            <option value="CRACK_TOOL">Crack Tool</option>
+            <option value="DEBUGGER">Debugger</option>
+            <option value="EMULATION">Emulation</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="loadDetections()">↻ Refresh</button>
+          <button class="btn btn-sm" style="background:rgba(220,38,38,0.15);color:#f87171;border:1px solid rgba(220,38,38,0.3)" onclick="clearAllDetections()">🗑 Clear All</button>
+        </div>
+      </div>
+
+      <!-- Stats row -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px" id="detect-stats-row">
+        <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:4px">
+          <div style="font-size:11px;color:var(--text3);letter-spacing:.6px;text-transform:uppercase">Total Events</div>
+          <div style="font-size:26px;font-weight:700;color:var(--text)" id="ds-total">—</div>
+        </div>
+        <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:4px">
+          <div style="font-size:11px;color:var(--text3);letter-spacing:.6px;text-transform:uppercase">BSODs Triggered</div>
+          <div style="font-size:26px;font-weight:700;color:#f87171" id="ds-bsod">—</div>
+        </div>
+        <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:4px">
+          <div style="font-size:11px;color:var(--text3);letter-spacing:.6px;text-transform:uppercase">Closed by User</div>
+          <div style="font-size:26px;font-weight:700;color:#4ade80" id="ds-closed">—</div>
+        </div>
+        <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:4px">
+          <div style="font-size:11px;color:var(--text3);letter-spacing:.6px;text-transform:uppercase">Unique IPs</div>
+          <div style="font-size:26px;font-weight:700;color:#60a5fa" id="ds-ips">—</div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:140px">Timestamp</th>
+                <th>Trigger</th>
+                <th>Detected Processes</th>
+                <th>Key</th>
+                <th>IP Address</th>
+                <th>App</th>
+                <th style="width:130px">Status</th>
+                <th style="width:56px"></th>
+              </tr>
+            </thead>
+            <tbody id="detections-body">
+              <tr><td colspan="8" style="text-align:center;color:var(--text3);padding:32px">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:11px;color:var(--text3)" id="detect-count-label">—</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" id="detect-prev-btn" onclick="detectPrev()" disabled>← Prev</button>
+            <button class="btn btn-ghost btn-sm" id="detect-next-btn" onclick="detectNext()" disabled>Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -1931,7 +2017,7 @@ function go(page){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>{if(n.dataset.page===page)n.classList.add('active');});
-  const pageActions={dashboard:loadDashboard,apps:loadApps,keys:loadKeys,logs:loadLogs,blocks:loadBlocks,resellers:loadResellers,'hwid-mismatches':loadHwidMismatches,'r-dashboard':loadResellerDashboard,'r-keys':loadResellerKeys,'r-generate':loadResellerGeneratePage,'r-logs':loadResellerLogs,'r-blocks':loadResellerBlocks};
+  const pageActions={dashboard:loadDashboard,apps:loadApps,keys:loadKeys,logs:loadLogs,blocks:loadBlocks,resellers:loadResellers,'hwid-mismatches':loadHwidMismatches,detections:loadDetections,'r-dashboard':loadResellerDashboard,'r-keys':loadResellerKeys,'r-generate':loadResellerGeneratePage,'r-logs':loadResellerLogs,'r-blocks':loadResellerBlocks};
   if(pageActions[page]) pageActions[page]();
 }
 
@@ -2754,6 +2840,146 @@ async function loadResellerBlocks(){if(!RDATA.permissions.viewBlocks){document.g
 async function rget(url){const r=await fetch(url,{headers:{'x-reseller-token':RTOKEN}});return r.json();}
 async function rpost(url,body={}){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','x-reseller-token':RTOKEN},body:JSON.stringify(body)});return r.json();}
 async function rdel(url){const r=await fetch(url,{method:'DELETE',headers:{'x-reseller-token':RTOKEN}});return r.json();}
+
+// ═══════════════ DETECTION EVENTS ═══════════════
+let detectPage = 0;
+const DETECT_LIMIT = 50;
+let detectTotal = 0;
+
+function detectStatusBadge(status) {
+  const map = {
+    'WARNED':          { bg:'rgba(251,146,60,0.15)', color:'#fb923c', label:'⚠ Warned' },
+    'CLOSED_BY_USER':  { bg:'rgba(74,222,128,0.15)', color:'#4ade80', label:'✔ Closed' },
+    'BSOD_TRIGGERED':  { bg:'rgba(248,113,113,0.18)', color:'#f87171', label:'💀 BSOD' },
+  };
+  const s = map[status] || { bg:'rgba(144,144,192,0.12)', color:'var(--text2)', label: status };
+  return `<span style="padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;background:${s.bg};color:${s.color};letter-spacing:.4px">${s.label}</span>`;
+}
+
+function detectTriggerBadge(trigger) {
+  const map = {
+    'IDA_PROCESS':   { color:'#f87171', label:'IDA Process' },
+    'IDA_INSTALLED': { color:'#fb923c', label:'IDA Installed' },
+    'IDA_MUTEX':     { color:'#fbbf24', label:'IDA Mutex' },
+    'CRACK_TOOL':    { color:'#c084fc', label:'Crack Tool' },
+    'DEBUGGER':      { color:'#60a5fa', label:'Debugger' },
+    'EMULATION':     { color:'#34d399', label:'Emulation' },
+  };
+  const t = map[trigger] || { color:'var(--text2)', label: trigger };
+  return `<span style="font-size:11px;font-weight:600;color:${t.color}">${t.label}</span>`;
+}
+
+async function loadDetections() {
+  detectPage = 0;
+  await fetchDetections();
+  // Update badge
+  const r2 = await get('/api/admin/detections?limit=1');
+  const badge = document.getElementById('detect-badge');
+  if (r2 && r2.total > 0) {
+    badge.textContent = r2.total > 99 ? '99+' : r2.total;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+async function fetchDetections() {
+  const status  = document.getElementById('detect-filter-status')?.value  || '';
+  const trigger = document.getElementById('detect-filter-trigger')?.value || '';
+  const skip    = detectPage * DETECT_LIMIT;
+
+  let url = `/api/admin/detections?limit=${DETECT_LIMIT}&skip=${skip}`;
+  if (status)  url += `&status=${encodeURIComponent(status)}`;
+  if (trigger) url += `&trigger=${encodeURIComponent(trigger)}`;
+
+  const r = await get(url);
+  if (!r || !r.success) return;
+
+  detectTotal = r.total;
+  const tb = document.getElementById('detections-body');
+  const lbl = document.getElementById('detect-count-label');
+  const prevBtn = document.getElementById('detect-prev-btn');
+  const nextBtn = document.getElementById('detect-next-btn');
+
+  // Stats row
+  const all = await get('/api/admin/detections?limit=0');
+  const allBsod = await get('/api/admin/detections?status=BSOD_TRIGGERED&limit=0');
+  const allClosed = await get('/api/admin/detections?status=CLOSED_BY_USER&limit=0');
+  if (all) document.getElementById('ds-total').textContent = all.total ?? '—';
+  if (allBsod) document.getElementById('ds-bsod').textContent = allBsod.total ?? '—';
+  if (allClosed) document.getElementById('ds-closed').textContent = allClosed.total ?? '—';
+  // Count unique IPs from current page (approximation)
+  const ips = new Set((r.detections||[]).map(d=>d.ip).filter(Boolean));
+  document.getElementById('ds-ips').textContent = ips.size;
+
+  if (!r.detections || !r.detections.length) {
+    tb.innerHTML = `<tr><td colspan="8"><div class="empty"><div class="empty-icon" style="font-size:28px">🛡</div><div class="empty-text">No detection events</div><div class="empty-sub">Reverse-engineering tool alerts will appear here</div></div></td></tr>`;
+    lbl.textContent = 'No events';
+    prevBtn.disabled = true;
+    nextBtn.disabled = true;
+    return;
+  }
+
+  tb.innerHTML = r.detections.map(d => {
+    const ts = d.timestamp ? d.timestamp.substring(0,19).replace('T',' ') : '—';
+    const procs = Array.isArray(d.processes) && d.processes.length
+      ? d.processes.map(p => `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(248,113,113,0.1);color:#f87171;padding:1px 5px;border-radius:4px;margin:1px;display:inline-block">${p.name||'?'} <span style="color:var(--text3)">PID:${p.pid||'?'}</span></span>`).join(' ')
+      : '<span style="color:var(--text3);font-size:11px">—</span>';
+    const keyStr = d.key && d.key !== '—'
+      ? `<span class="kc" style="font-size:10px;cursor:pointer" title="${d.key}">${d.key.substring(0,12)}…</span>`
+      : '<span style="color:var(--text3)">—</span>';
+    const ipStr = d.ip
+      ? `<span class="kc" style="font-size:10px">${d.ip}</span>`
+      : '<span style="color:var(--text3)">—</span>';
+    return `<tr>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text2)">${ts}</td>
+      <td>${detectTriggerBadge(d.trigger||'UNKNOWN')}</td>
+      <td style="max-width:260px;overflow:hidden">${procs}</td>
+      <td>${keyStr}</td>
+      <td>${ipStr}</td>
+      <td style="font-size:11px;color:var(--text2)">${d.appName||'—'}</td>
+      <td>${detectStatusBadge(d.status)}</td>
+      <td><button class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:11px;color:#f87171" onclick="deleteDetection('${d._id}')">✕</button></td>
+    </tr>`;
+  }).join('');
+
+  const showing = skip + r.detections.length;
+  lbl.textContent = `Showing ${skip+1}–${showing} of ${r.total}`;
+  prevBtn.disabled = detectPage === 0;
+  nextBtn.disabled = showing >= r.total;
+}
+
+async function deleteDetection(id) {
+  if (!id) return;
+  await del(`/api/admin/detections/${id}`);
+  fetchDetections();
+}
+
+async function clearAllDetections() {
+  if (!confirm('Delete ALL detection events? This cannot be undone.')) return;
+  await del('/api/admin/detections');
+  loadDetections();
+  toast('All detection events cleared', 'success');
+}
+
+function detectPrev() { if (detectPage > 0) { detectPage--; fetchDetections(); } }
+function detectNext() {
+  if ((detectPage + 1) * DETECT_LIMIT < detectTotal) { detectPage++; fetchDetections(); }
+}
+
+// Poll for new detections every 30s and update badge
+setInterval(async () => {
+  if (!TOKEN) return;
+  const r = await get('/api/admin/detections?limit=1').catch(()=>null);
+  if (!r) return;
+  const badge = document.getElementById('detect-badge');
+  if (r.total > 0) {
+    badge.textContent = r.total > 99 ? '99+' : r.total;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}, 30000);
 
 </script>
 
