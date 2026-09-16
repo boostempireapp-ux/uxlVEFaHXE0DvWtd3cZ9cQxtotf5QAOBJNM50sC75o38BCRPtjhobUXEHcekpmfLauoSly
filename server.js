@@ -15,18 +15,19 @@ const BOT_SECRET = process.env.BOT_SECRET || 'changeme-set-BOT_SECRET-env-var';
 
 // ── MONGODB CONNECTION ────────────────────────────────────────────────────────
 let db;
-let keysCol, logsCol, adminCol, appsCol, blocksCol, resellersCol;
+let keysCol, logsCol, adminCol, appsCol, blocksCol, resellersCol, detectionsCol;
 
 async function connectDB() {
   const client = new MongoClient(MONGO_URI);
   await client.connect();
   db           = client.db(DB_NAME);
-  keysCol      = db.collection('keys');
-  logsCol      = db.collection('logs');
-  adminCol     = db.collection('admin');
-  appsCol      = db.collection('apps');
-  blocksCol    = db.collection('blocks');
-  resellersCol = db.collection('resellers');
+  keysCol        = db.collection('keys');
+  logsCol        = db.collection('logs');
+  adminCol       = db.collection('admin');
+  appsCol        = db.collection('apps');
+  blocksCol      = db.collection('blocks');
+  resellersCol   = db.collection('resellers');
+  detectionsCol  = db.collection('detections');
 
   // Indexes
   await keysCol.createIndex({ key: 1 }, { unique: true });
@@ -34,6 +35,7 @@ async function connectDB() {
   await appsCol.createIndex({ publicKey: 1 }, { unique: true });
   await blocksCol.createIndex({ ip: 1 }, { unique: true });
   await resellersCol.createIndex({ username: 1 }, { unique: true });
+  await detectionsCol.createIndex({ timestamp: -1 });
 
   // Admin setup — seeds on first run, force-updates password on every restart
   const adminDoc = await adminCol.findOne({ _id: 'admin' });
@@ -715,6 +717,82 @@ app.post('/api/admin/restore', requireAdmin, async (req, res) => {
     insertNew(adminCol, admin),
   ]);
   res.json({ success:true, restored:{ apps:a, keys:k, resellers:r, blocks:b, admin:ad } });
+});
+
+// ── DETECTION REPORTING ───────────────────────────────────────────────────────
+// Called by the C++ client SDK when a blacklisted tool is detected.
+// Authenticated by x-public-key (same as /api/auth).
+app.post('/api/detection', rateLimit, async (req, res) => {
+  const publicKey = req.headers['x-public-key'] || req.body.public_key;
+  const ip        = await resolveRealIP(req);
+
+  if (!publicKey || typeof publicKey !== 'string')
+    return res.json({ success: false, code: 'NO_PUBLIC_KEY' });
+
+  const appDoc = await appsCol.findOne({ publicKey });
+  if (!appDoc) return res.json({ success: false, code: 'INVALID_PUBLIC_KEY' });
+
+  const {
+    key        = '',
+    trigger    = 'UNKNOWN',       // e.g. "IDA_PROCESS", "IDA_INSTALLED", "IDA_MUTEX"
+    processes  = [],              // [{ pid, name }]
+    status     = 'WARNED',        // "WARNED", "CLOSED_BY_USER", "BSOD_TRIGGERED"
+    hwid       = '',
+    real_ip    = '',
+  } = req.body;
+
+  const resolvedIP = real_ip || ip;
+
+  const doc = {
+    appId    : String(appDoc._id),
+    appName  : appDoc.name,
+    key      : key    || '—',
+    hwid     : hwid   || '—',
+    ip       : resolvedIP,
+    trigger,
+    processes,           // array of { pid: number, name: string }
+    status,
+    timestamp: new Date().toISOString(),
+  };
+
+  await detectionsCol.insertOne(doc);
+
+  // Auto-ban key on confirmed BSOD triggers (they didn't close the tool)
+  if (status === 'BSOD_TRIGGERED' && key) {
+    await keysCol.updateOne({ key, appId: String(appDoc._id) }, { $set: { status: 'banned' } });
+    activeSessions.delete(key);
+    log(appDoc._id, key, hwid, appDoc.name, 'DETECTION', 'BANNED', resolvedIP,
+        `Auto-banned: ${trigger} — ${processes.map(p=>p.name).join(', ')}`);
+  }
+
+  res.json({ success: true, code: 'LOGGED' });
+});
+
+// GET /api/admin/detections?limit=50&skip=0&status=BSOD_TRIGGERED
+app.get('/api/admin/detections', requireAdmin, async (req, res) => {
+  const filter = {};
+  if (req.query.status) filter.status = req.query.status;
+  if (req.query.trigger) filter.trigger = req.query.trigger;
+  if (req.query.key) filter.key = req.query.key;
+  const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+  const skip  = parseInt(req.query.skip) || 0;
+  const [docs, total] = await Promise.all([
+    detectionsCol.find(filter).sort({ timestamp: -1 }).skip(skip).limit(limit).toArray(),
+    detectionsCol.countDocuments(filter),
+  ]);
+  res.json({ success: true, detections: docs, total });
+});
+
+// DELETE /api/admin/detections/:id
+app.delete('/api/admin/detections/:id', requireAdmin, async (req, res) => {
+  await detectionsCol.deleteOne({ _id: new ObjectId(req.params.id) });
+  res.json({ success: true });
+});
+
+// DELETE /api/admin/detections  (clear all)
+app.delete('/api/admin/detections', requireAdmin, async (req, res) => {
+  const result = await detectionsCol.deleteMany({});
+  res.json({ success: true, deleted: result.deletedCount });
 });
 
 // ── DISCORD BOT API ───────────────────────────────────────────────────────────
