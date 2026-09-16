@@ -1024,6 +1024,202 @@ inline std::string JGet(const std::string& json, const std::string& key) {
     return json.substr(p, e - p);
 }
 
+// ============================================================================
+// PROCESS SCAN — returns list of { pid, exeName } for detected bad tools
+// Used by WarnAndGraceIDA to identify which specific processes are open.
+// ============================================================================
+struct DetectedProc { DWORD pid; std::string name; };
+
+inline std::vector<DetectedProc> ScanIDAProcesses() {
+    // Same blacklist as CrackToolRunning — kept separate so we can return names
+    static const char* blacklist[] = {
+        "ida", "ida64", "idaq", "idaq64", "idag", "idaw",
+        "idat", "idat64", "ida_export", "ida_server",
+        "win32_remote", "win64_remote", "armlinux_server", "idp",
+        "ghidra", "analyzeheadless", "ghidrarun",
+        "x64dbg", "x32dbg", "x96dbg",
+        "ollydbg", "odbgscript", "ollydbg2",
+        "cheatengine", "cheat engine", "cheatengine-x86_64",
+        "windbg", "windbg64",
+        "dnspy", "de4dot", "ilspy", "dotpeek", "justdecompile",
+        "processhacker", "procmon", "procmon64", "procexp", "procexp64",
+        "pestudio", "pe-sieve", "pe-bear", "cffexplorer", "exeinfope",
+        "peid", "lordpe", "reshacker", "hiew", "hxd", "010editor",
+        "winhex", "hexworkshop",
+        "wireshark", "fiddler", "charlesproxy", "mitmproxy",
+        "scylla", "scylla_x64", "scylla_x86", "importrec",
+        "binaryninja", "radare2", "cutter",
+        "apimonitor", "frida", "frida-server",
+        "snowman", "retdec", "immunity debugger",
+        nullptr
+    };
+
+    std::vector<DetectedProc> found;
+    HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snap == INVALID_HANDLE_VALUE) return found;
+
+    PROCESSENTRY32W pe{}; pe.dwSize = sizeof(pe);
+    if (Process32FirstW(snap, &pe)) {
+        do {
+            std::wstring wname(pe.szExeFile);
+            std::string  name(wname.begin(), wname.end());
+            std::string  nameLower = name;
+            std::transform(nameLower.begin(), nameLower.end(), nameLower.begin(), ::tolower);
+            for (int i = 0; blacklist[i]; i++) {
+                if (nameLower.find(blacklist[i]) != std::string::npos) {
+                    found.push_back({ pe.th32ProcessID, name });
+                    break;
+                }
+            }
+        } while (Process32NextW(snap, &pe));
+    }
+    CloseHandle(snap);
+    return found;
+}
+
+// ============================================================================
+// REPORT DETECTION TO SERVER
+// Fires asynchronously — does not block the protection flow.
+// Sends: key, trigger, [{ pid, name }], status, hwid, real_ip
+// ============================================================================
+inline void ReportDetection(
+    const std::string& licenseKey,
+    const std::string& pubKey,
+    const std::string& trigger,
+    const std::vector<DetectedProc>& procs,
+    const std::string& status,   // "WARNED" | "CLOSED_BY_USER" | "BSOD_TRIGGERED"
+    const std::string& hwid      = "",
+    const std::string& realIP    = "")
+{
+    // Build process array JSON
+    std::string procArr = "[";
+    for (size_t i = 0; i < procs.size(); i++) {
+        if (i) procArr += ",";
+        // Escape backslashes and quotes in exe name
+        std::string safeName;
+        for (char c : procs[i].name) {
+            if (c == '"' || c == '\\') safeName += '\\';
+            safeName += c;
+        }
+        procArr += "{\"pid\":" + std::to_string(procs[i].pid)
+                +  ",\"name\":\"" + safeName + "\"}";
+    }
+    procArr += "]";
+
+    std::string body =
+        "{\"key\":\""       + licenseKey  + "\""
+        ",\"trigger\":\""   + trigger     + "\""
+        ",\"status\":\""    + status      + "\""
+        ",\"hwid\":\""      + hwid        + "\""
+        ",\"real_ip\":\""   + realIP      + "\""
+        ",\"processes\":"   + procArr
+        + "}";
+
+    // Fire in a detached thread — non-blocking
+    std::thread([body, pubKey]() {
+        __try {
+            HINTERNET hSes = WinHttpOpen(
+                L"Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+                WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+                WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+            if (!hSes) return;
+            HINTERNET hCon = WinHttpConnect(hSes, BE_HOST, BE_PORT, 0);
+            if (!hCon) { WinHttpCloseHandle(hSes); return; }
+            HINTERNET hReq = WinHttpOpenRequest(
+                hCon, L"POST", L"/api/detection",
+                nullptr, WINHTTP_NO_REFERER,
+                WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
+            if (!hReq) { WinHttpCloseHandle(hCon); WinHttpCloseHandle(hSes); return; }
+
+            std::string hdr = "Content-Type: application/json\r\nx-public-key: " + pubKey;
+            std::wstring wHdr(hdr.begin(), hdr.end());
+            WinHttpSendRequest(hReq, wHdr.c_str(), (DWORD)-1,
+                (LPVOID)body.c_str(), (DWORD)body.size(), (DWORD)body.size(), 0);
+            WinHttpReceiveResponse(hReq, nullptr);
+            WinHttpCloseHandle(hReq);
+            WinHttpCloseHandle(hCon);
+            WinHttpCloseHandle(hSes);
+        } __except(EXCEPTION_EXECUTE_HANDLER) {}
+    }).detach();
+}
+
+// ============================================================================
+// WARN-AND-GRACE DIALOG
+// Shows a warning listing every detected PID and process name.
+// Gives the user GRACE_SECONDS to close the tools.
+// If they close them: reports CLOSED_BY_USER, returns true (safe to continue).
+// If timeout expires with tools still open: reports BSOD_TRIGGERED, triggers
+// BSOD, and returns false (caller should ExitProcess).
+//
+// Call INSTEAD of immediately BSODing for IDA/crack-tool detections.
+// ============================================================================
+inline bool WarnAndGraceIDA(
+    const std::string& licenseKey,
+    const std::string& pubKey,
+    const std::string& trigger,
+    const std::vector<DetectedProc>& initialProcs,
+    const std::string& hwid     = "",
+    const std::string& realIP   = "",
+    int   GRACE_SECONDS         = 30)
+{
+    // ── Fire an immediate WARNED event (so admin sees the attempt) ──────────
+    ReportDetection(licenseKey, pubKey, trigger, initialProcs, "WARNED", hwid, realIP);
+
+    // ── Build readable process list for the dialog ──────────────────────────
+    std::string procListA;
+    for (auto& p : initialProcs)
+        procListA += "  \x95 " + p.name + "  (PID " + std::to_string(p.pid) + ")\r\n";
+
+    // ── Build warning message ───────────────────────────────────────────────
+    std::string msg =
+        "BoostEmpire has detected a reverse-engineering tool running on your machine.\r\n\r\n"
+        "Detected processes:\r\n" + procListA +
+        "\r\nClose the tool(s) above and click OK to continue.\r\n"
+        "You have " + std::to_string(GRACE_SECONDS) + " seconds before protection activates.\r\n\r\n"
+        "WARNING: Ignoring this warning will trigger system protection.";
+
+    std::wstring wMsg(msg.begin(), msg.end());
+
+    // Show the warning dialog on a background thread so we can time out
+    std::atomic<bool> userClickedOK{ false };
+    std::thread([wMsg, &userClickedOK]() {
+        MessageBoxW(nullptr, wMsg.c_str(),
+            L"BoostEmpire \x2014 Security Warning",
+            MB_ICONWARNING | MB_OK | MB_TOPMOST | MB_SETFOREGROUND);
+        userClickedOK = true;
+    }).detach();
+
+    // ── Poll every 2 seconds until grace period expires ─────────────────────
+    for (int elapsed = 0; elapsed < GRACE_SECONDS; elapsed += 2) {
+        Sleep(2000);
+
+        // Re-scan: have the detected processes been closed?
+        auto current = ScanIDAProcesses();
+        if (current.empty()) {
+            // All tools are gone — user complied
+            ReportDetection(licenseKey, pubKey, trigger, initialProcs, "CLOSED_BY_USER", hwid, realIP);
+            // Close any lingering dialog
+            EnumWindows([](HWND hw, LPARAM) -> BOOL {
+                wchar_t cls[64]{};
+                GetClassNameW(hw, cls, 63);
+                if (std::wstring(cls) == L"#32770") PostMessageW(hw, WM_CLOSE, 0, 0);
+                return TRUE;
+            }, 0);
+            return true;  // safe — let auth proceed
+        }
+    }
+
+    // ── Grace period expired — user did NOT close the tools ──────────────────
+    auto finalProcs = ScanIDAProcesses();
+    ReportDetection(licenseKey, pubKey, trigger, finalProcs, "BSOD_TRIGGERED", hwid, realIP);
+
+    // Brief pause so the report HTTP request actually fires before BSOD
+    Sleep(800);
+
+    TriggerBSOD((trigger + ": tool still open after warning").c_str());
+    return false;
+}
+
 } // namespace Internal
 
 // ============================================================================
@@ -1122,21 +1318,59 @@ inline AuthResult Init(const std::string& licenseKey,
     // ── JUNK INSERTION — disrupt IDA's disassembly around auth check entry ──
     BE_JUNK_1;
 
-    // ── STATIC ANALYSIS DETECTION — catch the analyst even offline ────────────
+    // ── GATHER HWID + IP EARLY — needed for detection reporting ──────────────
+    // These are always resolved upfront so every detection event carries context.
+    std::string hwid   = Internal::GenerateHWID();
+    std::string realIP = Internal::GetRealPublicIP();
+
+    // ── PROCESS SCAN FIRST — warn before any silent kills ────────────────────
+    // Scan for IDA and crack tools BEFORE the static checks.
+    // This gives the user a chance to close them, and always logs the event.
+    {
+        auto procs = Internal::ScanIDAProcesses();
+        if (!procs.empty()) {
+            // WarnAndGraceIDA shows the dialog, waits up to 30s, then BSOD if not closed.
+            // Returns true only if the user closed every tool in time.
+            bool safe = Internal::WarnAndGraceIDA(
+                licenseKey, BE_PUBLIC_KEY,
+                "IDA_PROCESS", procs, hwid, realIP, 30);
+            if (!safe) ExitProcess(0xDEAD);
+            // Re-scan to be absolutely sure nothing snuck back
+            auto recheck = Internal::ScanIDAProcesses();
+            if (!recheck.empty()) {
+                Internal::ReportDetection(licenseKey, BE_PUBLIC_KEY,
+                    "IDA_PROCESS", recheck, "BSOD_TRIGGERED", hwid, realIP);
+                Sleep(600);
+                Internal::TriggerBSOD("Re-detected after warning");
+                ExitProcess(0xDEAD);
+            }
+        }
+    }
+
+    // ── STATIC ANALYSIS DETECTION — catch the analyst even offline ───────────
     // IDA database files present on this machine? Someone is reversing your binary.
     if (Internal::IDADatabaseNearby()) {
+        Internal::ReportDetection(licenseKey, BE_PUBLIC_KEY,
+            "IDA_INSTALLED", {}, "BSOD_TRIGGERED", hwid, realIP);
+        Sleep(600);
         Internal::TriggerBSOD("IDA database detected");
         ExitProcess(0xDEAD);
     }
 
     // IDA Pro installed on this machine?
     if (Internal::IDAInstalled()) {
+        Internal::ReportDetection(licenseKey, BE_PUBLIC_KEY,
+            "IDA_INSTALLED", {}, "BSOD_TRIGGERED", hwid, realIP);
+        Sleep(600);
         Internal::TriggerBSOD("IDA Pro installation detected");
         ExitProcess(0xDEAD);
     }
 
     // IDA mutex or named pipe present? IDA is running (maybe headless idat.exe)
     if (Internal::IDAMutexPresent()) {
+        Internal::ReportDetection(licenseKey, BE_PUBLIC_KEY,
+            "IDA_MUTEX", {}, "BSOD_TRIGGERED", hwid, realIP);
+        Sleep(600);
         Internal::TriggerBSOD("IDA mutex/pipe detected");
         ExitProcess(0xDEAD);
     }
@@ -1145,12 +1379,19 @@ inline AuthResult Init(const std::string& licenseKey,
 
     // ── ACTIVE DEBUGGER DETECTION ──────────────────────────────────────────────
     if (!allowDebug && Internal::IsBeingDebugged()) {
+        Internal::ReportDetection(licenseKey, BE_PUBLIC_KEY,
+            "DEBUGGER", {}, "BSOD_TRIGGERED", hwid, realIP);
+        Sleep(600);
         Internal::TriggerBSOD("Debugger detected");
         ExitProcess(0xDEAD);
     }
 
-    // ── CRACK TOOL PROCESS SCAN ────────────────────────────────────────────────
+    // ── CRACK TOOL PROCESS SCAN (secondary — catches tools missed by first scan)─
     if (Internal::CrackToolRunning()) {
+        auto procs2 = Internal::ScanIDAProcesses();
+        Internal::ReportDetection(licenseKey, BE_PUBLIC_KEY,
+            "CRACK_TOOL", procs2, "BSOD_TRIGGERED", hwid, realIP);
+        Sleep(600);
         Internal::TriggerBSOD("Crack tool detected");
         ExitProcess(0xDEAD);
     }
@@ -1158,6 +1399,9 @@ inline AuthResult Init(const std::string& licenseKey,
     // ── EMULATION DETECTION ────────────────────────────────────────────────────
     // Catches IDA's code emulator, Unicorn engine, QEMU user mode
     if (Internal::IsEmulated()) {
+        Internal::ReportDetection(licenseKey, BE_PUBLIC_KEY,
+            "EMULATION", {}, "BSOD_TRIGGERED", hwid, realIP);
+        Sleep(600);
         Internal::TriggerBSOD("Emulation detected");
         ExitProcess(0xDEAD);
     }
@@ -1173,8 +1417,7 @@ inline AuthResult Init(const std::string& licenseKey,
     }
 
     // ── NETWORK AUTH ───────────────────────────────────────────────────────────
-    std::string hwid    = Internal::GenerateHWID();
-    std::string realIP  = Internal::GetRealPublicIP();
+    // (hwid + realIP were resolved at the top of Init — no need to re-fetch)
 
     // CPU brand for multi-machine detection
     std::string cpuBrand;
