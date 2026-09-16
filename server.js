@@ -8,6 +8,11 @@ const PORT = process.env.PORT || 8080;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://boostempireapp_db_user:iLtBIzCxsdt8A7Wu@cluster0.3dj2qi7.mongodb.net/?appName=Cluster0';
 const DB_NAME   = 'boostempire';
 
+// ── DISCORD BOT TOKEN ─────────────────────────────────────────────────────────
+// Set this env var once, paste the value into your bot source as the API token.
+// Example:  BOT_SECRET=supersecrettoken123  node server.js
+const BOT_SECRET = process.env.BOT_SECRET || 'changeme-set-BOT_SECRET-env-var';
+
 // ── MONGODB CONNECTION ────────────────────────────────────────────────────────
 let db;
 let keysCol, logsCol, adminCol, appsCol, blocksCol, resellersCol;
@@ -205,7 +210,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS,PATCH');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-token, x-reseller-token, x-public-key, x-secret-key, x-request-id, x-timestamp, CF-Connecting-IP');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-token, x-reseller-token, x-public-key, x-secret-key, x-request-id, x-timestamp, CF-Connecting-IP, x-bot-token');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
@@ -710,6 +715,154 @@ app.post('/api/admin/restore', requireAdmin, async (req, res) => {
     insertNew(adminCol, admin),
   ]);
   res.json({ success:true, restored:{ apps:a, keys:k, resellers:r, blocks:b, admin:ad } });
+});
+
+// ── DISCORD BOT API ───────────────────────────────────────────────────────────
+// Auth: pass your BOT_SECRET in the header:  x-bot-token: <your secret>
+// Base URL to paste into your Discord bot:   https://your-server.com
+// All routes live under /api/bot/
+
+function requireBot(req, res, next) {
+  const token = req.headers['x-bot-token'];
+  if (!token || token !== BOT_SECRET)
+    return res.status(401).json({ success: false, message: 'Invalid bot token' });
+  next();
+}
+
+// GET /api/bot/stats
+app.get('/api/bot/stats', requireBot, async (req, res) => {
+  const hr = new Date(Date.now() - 3600000).toISOString();
+  const [total, active, banned, frozen, used, recentAuths, hwidBlocks, totalApps, blockedIPs, totalResellers] = await Promise.all([
+    keysCol.countDocuments({}),
+    keysCol.countDocuments({ status: 'active' }),
+    keysCol.countDocuments({ status: 'banned' }),
+    keysCol.countDocuments({ status: 'frozen' }),
+    keysCol.countDocuments({ uses: { $gt: 0 } }),
+    logsCol.countDocuments({ timestamp: { $gt: hr } }),
+    logsCol.countDocuments({ result: 'HWID_MISMATCH' }),
+    appsCol.countDocuments({}),
+    blocksCol.countDocuments({}),
+    resellersCol.countDocuments({}),
+  ]);
+  res.json({ success: true, stats: { total, active, banned, frozen, used, recentAuths, hwidBlocks, totalApps, blockedIPs, totalResellers } });
+});
+
+// GET /api/bot/apps
+app.get('/api/bot/apps', requireBot, async (req, res) => {
+  const apps = await appsCol.find({}).sort({ createdAt: -1 }).toArray();
+  res.json({ success: true, apps: apps.map(({ secretKey, ...a }) => a) });
+});
+
+// POST /api/bot/genkey  { appId, count, product, label, expires_days }
+app.post('/api/bot/genkey', requireBot, async (req, res) => {
+  let { count = 1, label = '', product = 'Default', max_uses = 1, expires_days = null, appId } = req.body;
+  if (!appId) return res.json({ success: false, message: 'appId required' });
+  const appDoc = await appsCol.findOne({ _id: new ObjectId(appId) });
+  if (!appDoc) return res.json({ success: false, message: 'App not found' });
+  count = Math.min(parseInt(count) || 1, 500);
+  const docs = [], keys = [];
+  for (let i = 0; i < count; i++) {
+    const key = genKey();
+    const expiresAt = expires_days && parseInt(expires_days) > 0
+      ? new Date(Date.now() + parseInt(expires_days) * 86400000).toISOString() : null;
+    docs.push({ key, appId: String(appDoc._id), appName: appDoc.name, label, product, status: 'active', hwid: null, hwidRaw: null, max_uses: parseInt(max_uses) || 1, uses: 0, expiresAt, createdAt: new Date().toISOString(), lastUsed: null, createdBy: 'discord-bot' });
+    keys.push(key);
+  }
+  await keysCol.insertMany(docs);
+  res.json({ success: true, keys });
+});
+
+// GET /api/bot/keyinfo/:key
+app.get('/api/bot/keyinfo/:key', requireBot, async (req, res) => {
+  const doc = await keysCol.findOne({ key: req.params.key });
+  if (!doc) return res.json({ success: false, message: 'Key not found' });
+  res.json({ success: true, key: doc });
+});
+
+// GET /api/bot/keys?appId=xxx&limit=25
+app.get('/api/bot/keys', requireBot, async (req, res) => {
+  const filter = req.query.appId ? { appId: req.query.appId } : {};
+  const limit  = Math.min(parseInt(req.query.limit) || 25, 100);
+  const keys   = await keysCol.find(filter).sort({ createdAt: -1 }).limit(limit).toArray();
+  const total  = await keysCol.countDocuments(filter);
+  res.json({ success: true, keys, total });
+});
+
+// POST /api/bot/keys/:key/ban  (force ban)
+app.post('/api/bot/keys/:key/ban', requireBot, async (req, res) => {
+  const doc = await keysCol.findOne({ key: req.params.key });
+  if (!doc) return res.json({ success: false, message: 'Key not found' });
+  if (doc.status === 'banned') return res.json({ success: true, status: 'banned', note: 'Already banned' });
+  await keysCol.updateOne({ key: req.params.key }, { $set: { status: 'banned' } });
+  activeSessions.delete(req.params.key);
+  log(null, req.params.key, '—', 'BOT', 'BAN', 'SUCCESS', 'discord-bot');
+  res.json({ success: true, status: 'banned' });
+});
+
+// POST /api/bot/keys/:key/unban  (force unban → active)
+app.post('/api/bot/keys/:key/unban', requireBot, async (req, res) => {
+  const doc = await keysCol.findOne({ key: req.params.key });
+  if (!doc) return res.json({ success: false, message: 'Key not found' });
+  await keysCol.updateOne({ key: req.params.key }, { $set: { status: 'active' } });
+  log(null, req.params.key, '—', 'BOT', 'UNBAN', 'SUCCESS', 'discord-bot');
+  res.json({ success: true, status: 'active' });
+});
+
+// POST /api/bot/keys/:key/freeze
+app.post('/api/bot/keys/:key/freeze', requireBot, async (req, res) => {
+  const doc = await keysCol.findOne({ key: req.params.key });
+  if (!doc) return res.json({ success: false, message: 'Key not found' });
+  if (doc.status === 'banned') return res.json({ success: false, message: 'Key is banned, cannot freeze' });
+  await keysCol.updateOne({ key: req.params.key }, { $set: { status: 'frozen' } });
+  activeSessions.delete(req.params.key);
+  res.json({ success: true, status: 'frozen' });
+});
+
+// POST /api/bot/keys/:key/unfreeze
+app.post('/api/bot/keys/:key/unfreeze', requireBot, async (req, res) => {
+  const doc = await keysCol.findOne({ key: req.params.key });
+  if (!doc) return res.json({ success: false, message: 'Key not found' });
+  await keysCol.updateOne({ key: req.params.key }, { $set: { status: 'active' } });
+  res.json({ success: true, status: 'active' });
+});
+
+// POST /api/bot/keys/:key/reset-hwid
+app.post('/api/bot/keys/:key/reset-hwid', requireBot, async (req, res) => {
+  const doc = await keysCol.findOne({ key: req.params.key });
+  if (!doc) return res.json({ success: false, message: 'Key not found' });
+  await keysCol.updateOne({ key: req.params.key }, { $set: { hwid: null, hwidRaw: null, uses: 0 } });
+  activeSessions.delete(req.params.key);
+  res.json({ success: true });
+});
+
+// DELETE /api/bot/keys/:key
+app.delete('/api/bot/keys/:key', requireBot, async (req, res) => {
+  const result = await keysCol.deleteOne({ key: req.params.key });
+  if (!result.deletedCount) return res.json({ success: false, message: 'Key not found' });
+  activeSessions.delete(req.params.key);
+  res.json({ success: true });
+});
+
+// GET /api/bot/logs?result=SUCCESS&limit=20
+app.get('/api/bot/logs', requireBot, async (req, res) => {
+  const filter = {};
+  if (req.query.result) filter.result = req.query.result;
+  const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+  const logs  = await logsCol.find(filter).sort({ timestamp: -1 }).limit(limit).toArray();
+  res.json({ success: true, logs });
+});
+
+// GET /api/bot/blocks
+app.get('/api/bot/blocks', requireBot, async (req, res) => {
+  const blocks = await blocksCol.find({}).sort({ blockedAt: -1 }).toArray();
+  res.json({ success: true, blocks });
+});
+
+// DELETE /api/bot/blocks/:ip
+app.delete('/api/bot/blocks/:ip', requireBot, async (req, res) => {
+  await blocksCol.deleteOne({ ip: req.params.ip });
+  failCounts.delete(req.params.ip);
+  res.json({ success: true });
 });
 
 // ── START ─────────────────────────────────────────────────────────────────────
