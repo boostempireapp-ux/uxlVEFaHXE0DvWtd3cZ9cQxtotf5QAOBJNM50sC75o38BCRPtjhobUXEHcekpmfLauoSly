@@ -1950,6 +1950,9 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
     <div class="fg" style="margin-bottom:16px"><label>Notes (Discord, Telegram, etc.)</label><input class="inp" type="text" id="nr-notes" placeholder="e.g. Discord: user#1234"/></div>
     <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:10px">🛡️ Permission Control — What can this reseller access?</div>
     <div class="perm-grid" id="perm-grid-create"></div>
+    <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin:16px 0 10px">📦 App Access — Which apps can this reseller use?</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Leave all unchecked to allow access to ALL apps.</div>
+    <div class="perm-grid" id="app-grid-create"></div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('modal-new-reseller')">Cancel</button><button class="btn btn-gold" onclick="createReseller()">Create Reseller</button></div>
   </div>
 </div>
@@ -1967,6 +1970,9 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
     </div>
     <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:10px">🛡️ Permission Control</div>
     <div class="perm-grid" id="perm-grid-edit"></div>
+    <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin:16px 0 10px">📦 App Access — Which apps can this reseller use?</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Leave all unchecked to allow access to ALL apps.</div>
+    <div class="perm-grid" id="app-grid-edit"></div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('modal-edit-reseller')">Cancel</button><button class="btn btn-gold" onclick="saveReseller()">Save Changes</button></div>
   </div>
 </div>
@@ -2750,13 +2756,32 @@ async function loadResellers(){
     </div>`;
   }).join('');
 }
-function openNewResellerModal(){renderPermGrid('perm-grid-create',{});['nr-username','nr-displayname','nr-password','nr-notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('nr-quota').value='0';document.getElementById('modal-new-reseller').classList.add('open');}
+function renderAppGrid(containerId, selectedIds=[]){
+  const el=document.getElementById(containerId);
+  if(!el)return;
+  if(!allApps||allApps.length===0){el.innerHTML='<div style="font-size:12px;color:var(--muted)">No apps found — create an app first.</div>';return;}
+  el.innerHTML=allApps.map(a=>{
+    const checked=selectedIds.includes(String(a._id));
+    return `<label style="display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">
+      <input type="checkbox" data-app-id="${a._id}" ${checked?'checked':''} style="accent-color:var(--gold);width:15px;height:15px;cursor:pointer"/>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text)">${a.name}</div>
+        <div style="font-size:11px;color:var(--muted)">${a.active?'🟢 Active':'🔴 Disabled'}</div>
+      </div>
+    </label>`;
+  }).join('');
+}
+function getSelectedApps(containerId){
+  const el=document.getElementById(containerId); if(!el)return[];
+  return Array.from(el.querySelectorAll('input[data-app-id]:checked')).map(i=>i.getAttribute('data-app-id'));
+}
+function openNewResellerModal(){renderPermGrid('perm-grid-create',{});renderAppGrid('app-grid-create',[]);['nr-username','nr-displayname','nr-password','nr-notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('nr-quota').value='0';document.getElementById('modal-new-reseller').classList.add('open');}
 async function createReseller(){
   const username=document.getElementById('nr-username').value.trim();
   const password=document.getElementById('nr-password').value;
   if(!username||!password){toast('Username and password required','error');return;}
   if(password.length<6){toast('Password min 6 chars','error');return;}
-  const r=await post('/api/admin/resellers',{username,displayName:document.getElementById('nr-displayname').value.trim()||username,password,keyQuota:parseInt(document.getElementById('nr-quota').value)||0,notes:document.getElementById('nr-notes').value.trim(),permissions:getPerms('perm-grid-create')});
+  const r=await post('/api/admin/resellers',{username,displayName:document.getElementById('nr-displayname').value.trim()||username,password,keyQuota:parseInt(document.getElementById('nr-quota').value)||0,notes:document.getElementById('nr-notes').value.trim(),permissions:getPerms('perm-grid-create'),allowedApps:getSelectedApps('app-grid-create')});
   if(r.success){closeModal('modal-new-reseller');toast('Reseller created!','success');loadResellers();}
   else toast(r.message||'Error','error');
 }
@@ -2768,11 +2793,12 @@ function openEditResellerModal(id){
   document.getElementById('edit-quota').value=rs.keyQuota||0;
   document.getElementById('edit-notes').value=rs.notes||'';
   renderPermGrid('perm-grid-edit',rs.permissions||{});
+  renderAppGrid('app-grid-edit', rs.allowedApps||[]);
   document.getElementById('modal-edit-reseller').classList.add('open');
 }
 async function saveReseller(){
   const id=document.getElementById('edit-reseller-id').value;
-  const body={displayName:document.getElementById('edit-displayname').value.trim(),keyQuota:parseInt(document.getElementById('edit-quota').value)||0,notes:document.getElementById('edit-notes').value.trim(),permissions:getPerms('perm-grid-edit')};
+  const body={displayName:document.getElementById('edit-displayname').value.trim(),keyQuota:parseInt(document.getElementById('edit-quota').value)||0,notes:document.getElementById('edit-notes').value.trim(),permissions:getPerms('perm-grid-edit'),allowedApps:getSelectedApps('app-grid-edit')};
   const pw=document.getElementById('edit-password').value; if(pw) body.password=pw;
   const r=await fetch('/api/admin/resellers/'+id,{method:'PATCH',headers:{'Content-Type':'application/json','x-admin-token':TOKEN},body:JSON.stringify(body)}).then(r=>r.json());
   if(r.success){closeModal('modal-edit-reseller');toast('Updated!','success');loadResellers();}
