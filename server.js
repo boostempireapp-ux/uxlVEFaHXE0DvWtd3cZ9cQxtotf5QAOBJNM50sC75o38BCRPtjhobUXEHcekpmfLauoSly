@@ -13,8 +13,10 @@ const DB_NAME   = 'boostempire';
 const BOT_SECRET = process.env.BOT_SECRET || 'changeme-set-BOT_SECRET-env-var';
 
 // ── CATBOX DLL HOSTING ────────────────────────────────────────────────────────
-// Set CATBOX_URL env var or replace the string below with your Catbox link
-const CATBOX_URL = process.env.CATBOX_URL || 'https://files.catbox.moe/YOURFILE.dll';
+// Catbox URL is stored in the DB and managed via the admin dashboard Settings page.
+// GET  /api/admin/catbox        — fetch current URL
+// POST /api/admin/catbox        — update URL
+// The /api/file endpoint reads it from DB on every request so changes apply instantly.
 
 // ── DISCORD WEBHOOK ───────────────────────────────────────────────────────────
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK
@@ -952,6 +954,22 @@ app.post('/api/admin/config', requireAdmin, async (req, res) => {
     message: clean.length ? `Auth restricted to: ${clean.join(', ')}` : 'Country allowlist disabled (all regions allowed)' });
 });
 
+// ── ADMIN: CATBOX URL (DLL hosting) ───────────────────────────────────────────
+app.get('/api/admin/catbox', requireAdmin, async (req, res) => {
+  const doc = await adminCol.findOne({ _id: 'admin' }, { projection: { catboxUrl: 1 } });
+  res.json({ success: true, catboxUrl: doc?.catboxUrl || '' });
+});
+
+app.post('/api/admin/catbox', requireAdmin, async (req, res) => {
+  const { catboxUrl } = req.body;
+  if (!catboxUrl || typeof catboxUrl !== 'string' || !catboxUrl.startsWith('https://'))
+    return res.json({ success: false, message: 'Invalid URL — must start with https://' });
+  const clean = catboxUrl.trim();
+  await adminCol.updateOne({ _id: 'admin' }, { $set: { catboxUrl: clean } });
+  auditLog(req.adminIP, 'UPDATE_CATBOX_URL', { catboxUrl: clean });
+  res.json({ success: true, message: 'Catbox URL updated — takes effect immediately' });
+});
+
 // ── ADMIN: RESELLERS ──────────────────────────────────────────────────────────
 const DEFAULT_PERMISSIONS = { viewKeys:false, viewHWID:false, viewIP:false, viewLogs:false, viewBlocks:false, generateKeys:false, banKeys:false, freezeKeys:false, resetHWID:false, deleteKeys:false, viewStats:false };
 
@@ -1239,8 +1257,14 @@ app.post('/api/file', rateLimit, async (req, res) => {
 
   log(appDoc._id, key, '', appDoc.name, 'FILE', 'DOWNLOADED', ip, 'DLL delivered via Catbox proxy');
 
+  // Read Catbox URL from DB — updated instantly from the dashboard without restarting
+  const adminDoc = await adminCol.findOne({ _id: 'admin' }, { projection: { catboxUrl: 1 } });
+  const catboxUrl = adminDoc?.catboxUrl;
+  if (!catboxUrl)
+    return res.status(503).json({ success: false, code: 'NO_FILE_URL', message: 'No DLL URL configured — set it in the admin dashboard Settings.' });
+
   // Proxy the file from Catbox — loader gets raw bytes, never sees the URL
-  https.get(CATBOX_URL, (catboxRes) => {
+  https.get(catboxUrl, (catboxRes) => {
     if (catboxRes.statusCode !== 200) {
       return res.status(502).json({ success: false, code: 'FILE_UNAVAILABLE' });
     }
