@@ -2756,26 +2756,34 @@ async function loadResellers(){
     </div>`;
   }).join('');
 }
-function renderAppGrid(containerId, selectedIds=[]){
+async function renderAppGrid(containerId, selectedIds=[]){
   const el=document.getElementById(containerId);
   if(!el)return;
-  if(!allApps||allApps.length===0){el.innerHTML='<div style="font-size:12px;color:var(--muted)">No apps found — create an app first.</div>';return;}
-  el.innerHTML=allApps.map(a=>{
-    const checked=selectedIds.includes(String(a._id));
-    return `<label style="display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">
-      <input type="checkbox" data-app-id="${a._id}" ${checked?'checked':''} style="accent-color:var(--gold);width:15px;height:15px;cursor:pointer"/>
-      <div>
-        <div style="font-size:13px;font-weight:600;color:var(--text)">${a.name}</div>
-        <div style="font-size:11px;color:var(--muted)">${a.active?'🟢 Active':'🔴 Disabled'}</div>
-      </div>
-    </label>`;
-  }).join('');
+  el.innerHTML='<div style="font-size:12px;color:var(--muted)">Loading apps...</div>';
+  try {
+    const r=await fetch('/api/admin/apps',{headers:{'x-admin-token':TOKEN}}).then(r=>r.json());
+    const apps=r.apps||[];
+    allApps=apps; // keep cache in sync
+    if(!apps||apps.length===0){el.innerHTML='<div style="font-size:12px;color:var(--muted)">No apps found — create an app first.</div>';return;}
+    el.innerHTML=apps.map(a=>{
+      const checked=selectedIds.map(String).includes(String(a._id));
+      return `<label style="display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">
+        <input type="checkbox" data-app-id="${a._id}" ${checked?'checked':''} style="accent-color:var(--gold);width:15px;height:15px;cursor:pointer"/>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text)">${a.name}</div>
+          <div style="font-size:11px;color:var(--muted)">${a.active?'🟢 Active':'🔴 Disabled'}</div>
+        </div>
+      </label>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML='<div style="font-size:12px;color:var(--danger)">Failed to load apps.</div>';
+  }
 }
 function getSelectedApps(containerId){
   const el=document.getElementById(containerId); if(!el)return[];
   return Array.from(el.querySelectorAll('input[data-app-id]:checked')).map(i=>i.getAttribute('data-app-id'));
 }
-function openNewResellerModal(){renderPermGrid('perm-grid-create',{});renderAppGrid('app-grid-create',[]);['nr-username','nr-displayname','nr-password','nr-notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('nr-quota').value='0';document.getElementById('modal-new-reseller').classList.add('open');}
+async function openNewResellerModal(){renderPermGrid('perm-grid-create',{});await renderAppGrid('app-grid-create',[]);['nr-username','nr-displayname','nr-password','nr-notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('nr-quota').value='0';document.getElementById('modal-new-reseller').classList.add('open');}
 async function createReseller(){
   const username=document.getElementById('nr-username').value.trim();
   const password=document.getElementById('nr-password').value;
@@ -2785,7 +2793,7 @@ async function createReseller(){
   if(r.success){closeModal('modal-new-reseller');toast('Reseller created!','success');loadResellers();}
   else toast(r.message||'Error','error');
 }
-function openEditResellerModal(id){
+async function openEditResellerModal(id){
   const rs=allResellers.find(r=>r._id===id); if(!rs)return;
   document.getElementById('edit-reseller-id').value=id;
   document.getElementById('edit-displayname').value=rs.displayName||'';
@@ -2793,7 +2801,7 @@ function openEditResellerModal(id){
   document.getElementById('edit-quota').value=rs.keyQuota||0;
   document.getElementById('edit-notes').value=rs.notes||'';
   renderPermGrid('perm-grid-edit',rs.permissions||{});
-  renderAppGrid('app-grid-edit', rs.allowedApps||[]);
+  await renderAppGrid('app-grid-edit', rs.allowedApps||[]);
   document.getElementById('modal-edit-reseller').classList.add('open');
 }
 async function saveReseller(){
