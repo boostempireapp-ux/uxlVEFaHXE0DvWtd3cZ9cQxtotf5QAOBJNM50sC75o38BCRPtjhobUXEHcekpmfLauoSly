@@ -115,14 +115,9 @@ const SERVICE_URL = process.env.SERVICE_URL || '';
 const PING_INTERVAL_MS = 30 * 1000; // 30 seconds
 
 function startKeepAlive() {
-  if (!SERVICE_URL) {
-    console.log('[keep-alive] SERVICE_URL not set — self-ping disabled (set it in Render env vars)');
-    return;
-  }
-
-  const pingUrl = SERVICE_URL.replace(/\/$/, '') + '/health';
-  const isHttps = pingUrl.startsWith('https');
-  const transport = isHttps ? https : http;
+  // Always ping localhost directly — avoids Cloudflare 403 on the public domain
+  const pingUrl = `http://localhost:${PORT}/health`;
+  const transport = http;
 
   let failStreak = 0;
 
@@ -571,11 +566,11 @@ app.get('/api/admin/resellers', requireAdmin, async (req, res) => {
   res.json({ success:true, resellers:safe });
 });
 app.post('/api/admin/resellers', requireAdmin, async (req, res) => {
-  const { username, password, displayName, keyQuota, permissions, notes } = req.body;
+  const { username, password, displayName, keyQuota, permissions, notes, allowedApps } = req.body;
   if (!username||!password) return res.json({ success:false, message:'Username and password required' });
   if (password.length<6) return res.json({ success:false, message:'Password must be at least 6 characters' });
   const perms = Object.assign({}, DEFAULT_PERMISSIONS, permissions||{});
-  const doc = { username:username.toLowerCase().trim(), password:hashString(password), displayName:displayName||username, active:true, keyQuota:parseInt(keyQuota)||0, keysGenerated:0, permissions:perms, notes:notes||'', sessionToken:null, createdAt:new Date().toISOString(), lastLogin:null };
+  const doc = { username:username.toLowerCase().trim(), password:hashString(password), displayName:displayName||username, active:true, keyQuota:parseInt(keyQuota)||0, keysGenerated:0, permissions:perms, allowedApps:Array.isArray(allowedApps)?allowedApps:[], notes:notes||'', sessionToken:null, createdAt:new Date().toISOString(), lastLogin:null };
   try {
     const result = await resellersCol.insertOne(doc);
     const { password:p, ...safe } = { ...doc, _id:result.insertedId };
@@ -585,13 +580,14 @@ app.post('/api/admin/resellers', requireAdmin, async (req, res) => {
   }
 });
 app.patch('/api/admin/resellers/:id', requireAdmin, async (req, res) => {
-  const { displayName, password, keyQuota, permissions, notes, active } = req.body;
+  const { displayName, password, keyQuota, permissions, notes, active, allowedApps } = req.body;
   const update = {};
   if (displayName !== undefined) update.displayName = displayName;
   if (notes      !== undefined) update.notes = notes;
   if (keyQuota   !== undefined) update.keyQuota = parseInt(keyQuota)||0;
   if (active     !== undefined) update.active = !!active;
   if (permissions !== undefined) update.permissions = Object.assign({}, DEFAULT_PERMISSIONS, permissions);
+  if (allowedApps !== undefined) update.allowedApps = Array.isArray(allowedApps) ? allowedApps : [];
   if (password && password.length>=6) update.password = hashString(password);
   const result = await resellersCol.updateOne({ _id:new ObjectId(req.params.id) }, { $set:update });
   if (!result.matchedCount) return res.json({ success:false, message:'Reseller not found' });
@@ -638,8 +634,14 @@ app.get('/api/reseller/stats', requireReseller, async (req, res) => {
 // ── RESELLER: KEYS ────────────────────────────────────────────────────────────
 app.get('/api/reseller/keys', requireReseller, async (req, res) => {
   if (!req.reseller.permissions.viewKeys) return res.status(403).json({ success:false, message:'Access denied' });
+  const allowed = req.reseller.allowedApps || [];
   const filter = { createdBy:req.reseller.username };
-  if (req.query.appId) filter.appId = req.query.appId;
+  if (req.query.appId) {
+    if (allowed.length > 0 && !allowed.includes(String(req.query.appId))) return res.status(403).json({ success:false, message:'You do not have access to this app' });
+    filter.appId = req.query.appId;
+  } else if (allowed.length > 0) {
+    filter.appId = { $in: allowed };
+  }
   const docs = await keysCol.find(filter).sort({ createdAt:-1 }).toArray();
   const perm = req.reseller.permissions;
   const masked = docs.map(k => { const out={...k}; if (!perm.viewHWID) { delete out.hwid; delete out.hwidRaw; } return out; });
@@ -649,6 +651,9 @@ app.post('/api/reseller/generate', requireReseller, async (req, res) => {
   if (!req.reseller.permissions.generateKeys) return res.status(403).json({ success:false, message:'Access denied' });
   let { count=1, label='', product='Default', max_uses=1, expires_days=null, appId } = req.body;
   if (!appId) return res.json({ success:false, message:'Select an app first' });
+  // Enforce app access restriction
+  const allowed = req.reseller.allowedApps || [];
+  if (allowed.length > 0 && !allowed.includes(String(appId))) return res.status(403).json({ success:false, message:'You do not have access to this app' });
   count = Math.min(parseInt(count)||1, 100);
   if (req.reseller.keyQuota > 0) {
     const remaining = req.reseller.keyQuota - req.reseller.keysGenerated;
@@ -738,7 +743,10 @@ app.get('/api/reseller/blocks', requireReseller, async (req, res) => {
   res.json({ success:true, blocks:masked });
 });
 app.get('/api/reseller/apps', requireReseller, async (req, res) => {
-  const docs = await appsCol.find({ active:true }).sort({ createdAt:-1 }).toArray();
+  const allowed = req.reseller.allowedApps || [];
+  const filter = { active:true };
+  if (allowed.length > 0) filter._id = { $in: allowed.map(id => { try { return new ObjectId(id); } catch { return null; } }).filter(Boolean) };
+  const docs = await appsCol.find(filter).sort({ createdAt:-1 }).toArray();
   const safe = docs.map(({ secretKey, ...a }) => a);
   res.json({ success:true, apps:safe });
 });
