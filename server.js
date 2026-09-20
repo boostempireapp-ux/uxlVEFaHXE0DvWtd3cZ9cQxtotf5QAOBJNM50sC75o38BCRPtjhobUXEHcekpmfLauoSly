@@ -104,6 +104,61 @@ function getIP(req) {
 }
 
 const https = require('https');
+const http  = require('http');
+
+// ── RENDER FREE-TIER KEEP-ALIVE ───────────────────────────────────────────────
+// Render's free tier spins down after ~15 min of silence.
+// This loop pings our own /health endpoint every 30 s so the process never idles.
+// Set SERVICE_URL to your Render URL, e.g.:
+//   SERVICE_URL=https://your-app.onrender.com
+const SERVICE_URL = process.env.SERVICE_URL || '';
+const PING_INTERVAL_MS = 30 * 1000; // 30 seconds
+
+function startKeepAlive() {
+  if (!SERVICE_URL) {
+    console.log('[keep-alive] SERVICE_URL not set — self-ping disabled (set it in Render env vars)');
+    return;
+  }
+
+  const pingUrl = SERVICE_URL.replace(/\/$/, '') + '/health';
+  const isHttps = pingUrl.startsWith('https');
+  const transport = isHttps ? https : http;
+
+  let failStreak = 0;
+
+  function ping() {
+    const req = transport.get(pingUrl, { timeout: 10000 }, (res) => {
+      const alive = res.statusCode >= 200 && res.statusCode < 400;
+      if (alive) {
+        if (failStreak > 0) {
+          console.log(`[keep-alive] ✅  Back online after ${failStreak} failed ping(s) — ${new Date().toISOString()}`);
+        }
+        failStreak = 0;
+        // Drain body so the socket closes cleanly
+        res.resume();
+      } else {
+        failStreak++;
+        console.warn(`[keep-alive] ⚠️  Ping returned HTTP ${res.statusCode} (streak: ${failStreak}) — ${new Date().toISOString()}`);
+      }
+    });
+
+    req.on('timeout', () => {
+      failStreak++;
+      console.warn(`[keep-alive] ⏱  Ping timed out (streak: ${failStreak}) — ${new Date().toISOString()}`);
+      req.destroy();
+    });
+
+    req.on('error', (err) => {
+      failStreak++;
+      console.warn(`[keep-alive] ❌  Ping error (streak: ${failStreak}): ${err.message} — ${new Date().toISOString()}`);
+    });
+  }
+
+  // Infinite loop — setInterval never stops; Node will keep it alive indefinitely.
+  setInterval(ping, PING_INTERVAL_MS);
+  console.log(`[keep-alive] 🔄  Self-ping started → ${pingUrl} every ${PING_INTERVAL_MS / 1000}s`);
+}
+
 function fetchPublicIP() {
   return new Promise((resolve) => {
     https.get('https://api.ipify.org?format=json', (r) => {
@@ -948,6 +1003,7 @@ connectDB().then(() => {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n  BoostEmpire KeyAuth  |  http://localhost:${PORT}`);
     console.log(`  Storage: MongoDB Atlas (persistent)\n`);
+    startKeepAlive(); // ← keep Render free tier awake
   });
 }).catch(err => {
   console.error('[FATAL] MongoDB connection failed:', err.message);
