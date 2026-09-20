@@ -12,6 +12,10 @@ const DB_NAME   = 'boostempire';
 
 const BOT_SECRET = process.env.BOT_SECRET || 'changeme-set-BOT_SECRET-env-var';
 
+// ── CATBOX DLL HOSTING ────────────────────────────────────────────────────────
+// Set CATBOX_URL env var or replace the string below with your Catbox link
+const CATBOX_URL = process.env.CATBOX_URL || 'https://files.catbox.moe/YOURFILE.dll';
+
 // ── DISCORD WEBHOOK ───────────────────────────────────────────────────────────
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK
   || 'https://canary.discord.com/api/webhooks/1551110595401613343/13goaUq_9wCAnKdtmiHLsaoK8Vy_ZNtkDgcZtdkzesrbtVhipyXvR4X3qPE0vjxAbGEx';
@@ -1205,6 +1209,49 @@ app.post('/api/detection', rateLimit, async (req, res) => {
         `Auto-banned: ${trigger} — ${processes.map(p=>p.name).join(', ')}`);
   }
   res.json({ success: true, code: 'LOGGED' });
+});
+
+// ── DLL FILE DELIVERY (Catbox proxy — requires valid session token) ───────────
+// Called by the loader after successful auth to download the DLL
+// POST /api/file  body: { key, session_token }
+app.post('/api/file', rateLimit, async (req, res) => {
+  const { key, session_token } = req.body;
+  const publicKey = req.headers['x-public-key'];
+  const ip        = await resolveRealIP(req);
+
+  if (!key || !session_token || !publicKey)
+    return res.status(400).json({ success: false, code: 'MISSING_FIELDS' });
+
+  // Validate public key
+  const appDoc = await appsCol.findOne({ publicKey });
+  if (!appDoc)
+    return res.status(401).json({ success: false, code: 'INVALID_PUBLIC_KEY' });
+
+  // Validate session token matches active session for this key
+  const session = activeSessions.get(key);
+  if (!session || session.token !== session_token || session.appId !== String(appDoc._id))
+    return res.status(401).json({ success: false, code: 'INVALID_SESSION' });
+
+  // Validate key is still active in DB
+  const doc = await keysCol.findOne({ key, appId: String(appDoc._id) });
+  if (!doc || doc.status !== 'active')
+    return res.status(401).json({ success: false, code: 'KEY_INACTIVE' });
+
+  log(appDoc._id, key, '', appDoc.name, 'FILE', 'DOWNLOADED', ip, 'DLL delivered via Catbox proxy');
+
+  // Proxy the file from Catbox — loader gets raw bytes, never sees the URL
+  https.get(CATBOX_URL, (catboxRes) => {
+    if (catboxRes.statusCode !== 200) {
+      return res.status(502).json({ success: false, code: 'FILE_UNAVAILABLE' });
+    }
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', 'attachment; filename="payload.dll"');
+    if (catboxRes.headers['content-length'])
+      res.setHeader('Content-Length', catboxRes.headers['content-length']);
+    catboxRes.pipe(res);
+  }).on('error', () => {
+    res.status(502).json({ success: false, code: 'FILE_FETCH_ERROR' });
+  });
 });
 
 // GET /api/admin/detections
