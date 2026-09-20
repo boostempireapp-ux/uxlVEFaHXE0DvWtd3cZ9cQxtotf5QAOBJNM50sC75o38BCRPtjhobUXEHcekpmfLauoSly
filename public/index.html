@@ -597,6 +597,11 @@ tbody td{padding:9px 13px;vertical-align:middle;}
             </button>
           </div>
         </div>
+        <div class="lfield" id="totp-field" style="display:none">
+          <label class="lfield-label">2FA Code</label>
+          <input class="inp" type="text" id="ltotp" placeholder="6-digit code" maxlength="6" inputmode="numeric" onkeydown="if(event.key==='Enter')doLogin()"/>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Enter the code from Google Authenticator</div>
+        </div>
         <button class="btn-login" onclick="doLogin()">Sign in as Admin</button>
         <div class="login-foot">
           <span>No account? <a href="https://discord.gg/hxu" target="_blank">Create one</a></span>
@@ -697,6 +702,10 @@ tbody td{padding:9px 13px;vertical-align:middle;}
         SDK &amp; Integration
       </div>
       <div class="nav-sec">System</div>
+      <div class="nav-item" data-page="audit" onclick="go('audit')" style="color:#f59e0b">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Audit Log
+      </div>
       <div class="nav-item" data-page="settings" onclick="go('settings')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
         Settings
@@ -1649,6 +1658,45 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
       <!-- ROW 3: Danger Zone + About -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px">
 
+        <!-- 2FA -->
+        <div class="card" style="border-color:rgba(139,92,246,0.3)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+            <div style="width:32px;height:32px;background:var(--pdim);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px">🔑</div>
+            <div>
+              <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--p3);letter-spacing:1px;text-transform:uppercase">Two-Factor Auth (TOTP)</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:1px">Google Authenticator / Authy — protect the admin panel</div>
+            </div>
+          </div>
+          <div id="twofa-status" style="font-size:12px;color:var(--text3);margin-bottom:12px">Loading…</div>
+          <div id="twofa-setup-area" style="display:none">
+            <img id="twofa-qr" src="" style="width:160px;height:160px;border-radius:8px;border:2px solid var(--border);display:block;margin-bottom:10px"/>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Scan the QR code in Google Authenticator, then enter the 6-digit code below to confirm.</div>
+            <div class="fg" style="margin-bottom:10px"><label>Confirm TOTP Code</label><input class="inp" type="text" id="twofa-confirm-code" placeholder="123456" maxlength="6" inputmode="numeric"/></div>
+            <button class="btn btn-primary btn-sm" onclick="verify2FA()">✓ Confirm & Enable 2FA</button>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap" id="twofa-btns">
+            <button class="btn btn-primary btn-sm" onclick="setup2FA()" id="btn-setup-2fa">Setup 2FA</button>
+            <button class="btn btn-danger btn-sm" onclick="disable2FA()" id="btn-disable-2fa" style="display:none">Disable 2FA</button>
+          </div>
+        </div>
+
+        <!-- COUNTRY ALLOWLIST -->
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+            <div style="width:32px;height:32px;background:var(--pdim);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px">🌍</div>
+            <div>
+              <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--p3);letter-spacing:1px;text-transform:uppercase">Country Allowlist</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:1px">Restrict auth to specific countries. Empty = all allowed.</div>
+            </div>
+          </div>
+          <div class="fg" style="margin-bottom:10px">
+            <label>ISO-2 Country Codes (comma separated)</label>
+            <input class="inp" type="text" id="country-allowlist" placeholder="e.g. US,CA,GB — leave empty to allow all"/>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px">Example: <code>US,CA,GB,AU,DE</code></div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveCountryAllowlist()">Save Allowlist</button>
+        </div>
+
         <!-- DANGER ZONE -->
         <div class="card" style="border-color:rgba(109,40,217,0.3)">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
@@ -1681,6 +1729,25 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
               <span class="badge b-info">Server Online</span>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ AUDIT LOG PAGE ══ -->
+    <div class="page" id="page-audit">
+      <div class="ph" style="margin-bottom:18px">
+        <div>
+          <div class="pt">Admin <span style="color:#f59e0b">Audit Log</span></div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">Every admin action — who did what and when</div>
+        </div>
+        <div class="pa">
+          <button class="btn btn-ghost btn-sm" onclick="loadAudit()">↻ Refresh</button>
+          <button class="btn btn-sm" style="background:#7f1d1d;color:#fca5a5;border:1px solid #991b1b" onclick="clearAudit()">🗑 Clear Log</button>
+        </div>
+      </div>
+      <div class="card" style="max-width:1000px;padding:0;overflow:hidden">
+        <div id="audit-list" style="min-height:120px">
+          <div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Loading…</div></div>
         </div>
       </div>
     </div>
@@ -1985,14 +2052,19 @@ let TOKEN='', RTOKEN='', RDATA=null, allKeys=[], allLogs=[], allApps=[], allRese
 // LOGIN
 async function doLogin(){
   const pass=document.getElementById('lp').value.trim();
+  const totp=document.getElementById('ltotp').value.trim();
   const err=document.getElementById('lerr');
   err.textContent='';
   if(!pass){err.textContent='Enter your password.';return;}
   try{
-    const d=await post('/api/admin/login',{password:pass});
+    const body={password:pass};
+    if(totp) body.totp=totp;
+    const d=await post('/api/admin/login',body);
     if(d.success){
       TOKEN=d.token;
       document.getElementById('login-screen').style.display='none';
+      document.getElementById('totp-field').style.display='none';
+      document.getElementById('ltotp').value='';
       var _lf=document.getElementById('login-footer');if(_lf)_lf.style.display='none';
       document.getElementById('app').classList.add('on');
       document.getElementById('admin-nav').style.display='';
@@ -2002,7 +2074,15 @@ async function doLogin(){
       document.getElementById('sb-userrole').textContent='BoostEmpire';
       document.getElementById('sb-userrole').className='user-role';
       go('dashboard'); startPoll();
-    } else err.textContent='Wrong password. Default: boostempire123';
+    } else if(d.code==='TOTP_REQUIRED'){
+      document.getElementById('totp-field').style.display='';
+      document.getElementById('ltotp').focus();
+      err.textContent='Enter your 2FA code to continue.';
+    } else {
+      document.getElementById('totp-field').style.display='none';
+      document.getElementById('ltotp').value='';
+      err.textContent=d.message||'Wrong password.';
+    }
   } catch{ err.textContent='Cannot reach server — is start.bat running?'; }
 }
 function logout(){
@@ -2023,7 +2103,7 @@ function go(page){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>{if(n.dataset.page===page)n.classList.add('active');});
-  const pageActions={dashboard:loadDashboard,apps:loadApps,keys:loadKeys,logs:loadLogs,blocks:loadBlocks,resellers:loadResellers,'hwid-mismatches':loadHwidMismatches,detections:loadDetections,'r-dashboard':loadResellerDashboard,'r-keys':loadResellerKeys,'r-generate':loadResellerGeneratePage,'r-logs':loadResellerLogs,'r-blocks':loadResellerBlocks};
+  const pageActions={dashboard:loadDashboard,apps:loadApps,keys:loadKeys,logs:loadLogs,blocks:loadBlocks,resellers:loadResellers,'hwid-mismatches':loadHwidMismatches,detections:loadDetections,'r-dashboard':loadResellerDashboard,'r-keys':loadResellerKeys,'r-generate':loadResellerGeneratePage,'r-logs':loadResellerLogs,'r-blocks':loadResellerBlocks,audit:loadAudit,settings:()=>{load2FAStatus();loadCountryAllowlist();}};
   if(pageActions[page]) pageActions[page]();
 }
 
@@ -2379,6 +2459,100 @@ function renderLogs(logs){
     <td style="color:var(--text3);font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${l.details||''}">${l.details||'—'}</td>
   </tr>`).join('');
 }
+// ── 2FA ───────────────────────────────────────────────────────────────────────
+async function load2FAStatus(){
+  try{
+    const r=await get('/api/admin/2fa/status');
+    const el=document.getElementById('twofa-status');
+    const btnSetup=document.getElementById('btn-setup-2fa');
+    const btnDisable=document.getElementById('btn-disable-2fa');
+    if(r.enabled){
+      el.innerHTML='<span style="color:#4ade80">✓ 2FA is <strong>enabled</strong></span>';
+      btnSetup.style.display='none'; btnDisable.style.display='';
+    } else {
+      el.innerHTML='<span style="color:#f87171">✗ 2FA is <strong>disabled</strong></span>';
+      btnSetup.style.display=''; btnDisable.style.display='none';
+    }
+  } catch{}
+}
+async function setup2FA(){
+  const r=await post('/api/admin/2fa/setup',{});
+  if(!r.success){toast(r.message||'Error','error');return;}
+  document.getElementById('twofa-qr').src=r.qr_url;
+  document.getElementById('twofa-setup-area').style.display='';
+  document.getElementById('twofa-confirm-code').focus();
+  toast('Scan the QR code in your authenticator app','info');
+}
+async function verify2FA(){
+  const totp=document.getElementById('twofa-confirm-code').value.trim();
+  if(!totp||totp.length!==6){toast('Enter the 6-digit code','error');return;}
+  const r=await post('/api/admin/2fa/verify',{totp});
+  if(r.success){
+    toast('2FA enabled!','success');
+    document.getElementById('twofa-setup-area').style.display='none';
+    document.getElementById('twofa-confirm-code').value='';
+    load2FAStatus();
+  } else toast(r.message||'Invalid code','error');
+}
+async function disable2FA(){
+  const totp=prompt('Enter your current 2FA code to disable:');
+  if(!totp)return;
+  const r=await post('/api/admin/2fa/disable',{totp});
+  if(r.success){toast('2FA disabled','info');load2FAStatus();}
+  else toast(r.message||'Invalid code','error');
+}
+
+// ── COUNTRY ALLOWLIST ─────────────────────────────────────────────────────────
+async function loadCountryAllowlist(){
+  try{
+    const r=await get('/api/admin/config');
+    if(r.success) document.getElementById('country-allowlist').value=(r.allowedCountries||[]).join(',');
+  }catch{}
+}
+async function saveCountryAllowlist(){
+  const raw=document.getElementById('country-allowlist').value.trim();
+  const list=raw?raw.split(',').map(s=>s.trim().toUpperCase()).filter(Boolean):[];
+  const r=await post('/api/admin/config',{allowedCountries:list});
+  if(r.success) toast(r.message||'Saved','success');
+  else toast(r.message||'Error','error');
+}
+
+// ── AUDIT LOG ─────────────────────────────────────────────────────────────────
+async function loadAudit(){
+  const el=document.getElementById('audit-list');
+  el.innerHTML='<div class="empty"><div class="empty-icon">⏳</div><div class="empty-text">Loading…</div></div>';
+  const r=await get('/api/admin/audit?limit=200');
+  if(!r.success||!r.audit?.length){el.innerHTML='<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No audit entries yet</div></div>';return;}
+  const ACTION_COLOR={
+    ADMIN_LOGIN_SUCCESS:'#4ade80',ADMIN_LOGIN_FAIL:'#f87171',
+    BAN_KEY:'#f87171',UNBAN_KEY:'#4ade80',FREEZE_KEY:'#fb923c',UNFREEZE_KEY:'#4ade80',
+    DELETE_KEY:'#f87171',GENERATE_KEYS:'#a78bfa',RESET_HWID:'#60a5fa',
+    CREATE_APP:'#4ade80',DELETE_APP:'#f87171',ROTATE_APP_KEYS:'#fb923c',
+    ENABLE_APP:'#4ade80',DISABLE_APP:'#f87171',SET_HMAC_SECRET:'#a78bfa',
+    CREATE_RESELLER:'#4ade80',DELETE_RESELLER:'#f87171',SUSPEND_RESELLER:'#fb923c',
+    CHANGE_PASSWORD:'#fb923c',UPDATE_COUNTRY_ALLOWLIST:'#60a5fa',
+    '2FA_ENABLED':'#4ade80','2FA_DISABLED':'#f87171',
+    BACKUP_EXPORT:'#60a5fa',BACKUP_RESTORE:'#fb923c',
+    CLEAR_LOGS:'#f87171',CLEAR_AUDIT_LOG:'#f87171',CLEAR_DETECTIONS:'#f87171',UNBLOCK_IP:'#4ade80',
+  };
+  el.innerHTML=r.audit.map(e=>{
+    const c=ACTION_COLOR[e.action]||'#a1a1aa';
+    const extras=Object.entries(e).filter(([k])=>!['_id','action','ip','timestamp'].includes(k)).map(([k,v])=>`<span style="color:var(--text3)">${k}:</span> <span style="color:var(--text2)">${typeof v==='object'?JSON.stringify(v):v}</span>`).join('  ');
+    return `<div style="display:flex;align-items:baseline;gap:12px;padding:8px 16px;border-bottom:1px solid var(--border2);font-size:11px;font-family:'JetBrains Mono',monospace">
+      <span style="color:var(--text3);white-space:nowrap;flex-shrink:0">${new Date(e.timestamp).toLocaleString()}</span>
+      <span style="color:#60a5fa;white-space:nowrap;flex-shrink:0">${e.ip||'—'}</span>
+      <span style="color:${c};font-weight:700;white-space:nowrap;flex-shrink:0">${e.action}</span>
+      <span style="color:var(--text3);word-break:break-all">${extras}</span>
+    </div>`;
+  }).join('');
+}
+async function clearAudit(){
+  if(!confirm('Clear the entire audit log? This cannot be undone.'))return;
+  const r=await del('/api/admin/audit');
+  if(r.success){toast('Audit log cleared','info');loadAudit();}
+  else toast('Error','error');
+}
+
 async function clearLogs(){
   if(!confirm('Clear all logs?'))return;
   const r=await del('/api/admin/logs');
