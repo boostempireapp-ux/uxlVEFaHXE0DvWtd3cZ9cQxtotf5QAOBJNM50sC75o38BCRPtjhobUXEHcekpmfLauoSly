@@ -224,29 +224,77 @@ function getIP(req) {
   return socketRaw;
 }
 
-// ── RENDER FREE-TIER KEEP-ALIVE ───────────────────────────────────────────────
-const SERVICE_URL      = process.env.SERVICE_URL || '';
-const PING_INTERVAL_MS = 30 * 1000;
+// ── KEEP-ALIVE (multi-strategy, works on Railway / Fly / VPS / Render paid) ───
+const SERVICE_URL      = process.env.SERVICE_URL || '';   // e.g. https://yourapp.railway.app
+const PING_INTERVAL_MS = 25 * 1000;                       // 25 s — well under any 30 s idle cutoff
+const EXTERNAL_INTERVAL_MS = 4 * 60 * 1000;              // 4 min external ping
+
+let _kaFailStreak  = 0;
+let _kaLastSuccess = Date.now();
+
+// ── 1. Localhost self-ping (keeps the Node event loop + HTTP server warm) ─────
+function _pingLocal() {
+  const url = `http://localhost:${PORT}/health`;
+  const req = http.get(url, { timeout: 8000 }, (res) => {
+    const ok = res.statusCode >= 200 && res.statusCode < 400;
+    res.resume();
+    if (ok) {
+      if (_kaFailStreak > 0)
+        console.log(`[keep-alive] ✅  Recovered after ${_kaFailStreak} missed ping(s)`);
+      _kaFailStreak  = 0;
+      _kaLastSuccess = Date.now();
+    } else {
+      _kaFailStreak++;
+      console.warn(`[keep-alive] ⚠️  Local ping HTTP ${res.statusCode} (streak: ${_kaFailStreak})`);
+    }
+  });
+  req.on('timeout', () => { _kaFailStreak++; req.destroy(); });
+  req.on('error',   () => { _kaFailStreak++; });
+}
+
+// ── 2. External self-ping (counts as real traffic on Railway / Fly / VPS) ─────
+function _pingExternal() {
+  if (!SERVICE_URL) return;
+  const target = SERVICE_URL.replace(/\/$/, '') + '/health';
+  const mod    = target.startsWith('https') ? https : http;
+  const req    = mod.get(target, { timeout: 12000 }, (res) => {
+    res.resume();
+    console.log(`[keep-alive] 🌐  External ping → ${target} [${res.statusCode}]`);
+  });
+  req.on('timeout', () => { req.destroy(); console.warn('[keep-alive] ⚠️  External ping timed out'); });
+  req.on('error',   (e) => { console.warn(`[keep-alive] ⚠️  External ping error: ${e.message}`); });
+}
+
+// ── 3. CPU tickle — runs a tiny no-op to prevent V8 from idling too deeply ────
+function _tickleCPU() {
+  let x = 0;
+  for (let i = 0; i < 1e5; i++) x += Math.sqrt(i);
+  return x; // value discarded — just keeps the event loop busy for ~1 ms
+}
+
+// ── 4. Watchdog — restarts the process if health has been failing >3 minutes ──
+function _watchdog() {
+  const silentMs = Date.now() - _kaLastSuccess;
+  if (silentMs > 3 * 60 * 1000 && _kaFailStreak > 5) {
+    console.error(`[keep-alive] 💀  No successful ping in ${Math.round(silentMs/1000)}s — forcing restart`);
+    process.exit(1); // host process manager (Railway / PM2 / Fly) will restart it
+  }
+}
 
 function startKeepAlive() {
-  const pingUrl = `http://localhost:${PORT}/health`;
-  let failStreak = 0;
-  function ping() {
-    const req = http.get(pingUrl, { timeout: 10000 }, (res) => {
-      const alive = res.statusCode >= 200 && res.statusCode < 400;
-      if (alive) {
-        if (failStreak > 0) console.log(`[keep-alive] ✅  Back online after ${failStreak} failed ping(s) — ${new Date().toISOString()}`);
-        failStreak = 0; res.resume();
-      } else {
-        failStreak++;
-        console.warn(`[keep-alive] ⚠️  Ping returned HTTP ${res.statusCode} (streak: ${failStreak}) — ${new Date().toISOString()}`);
-      }
-    });
-    req.on('timeout', () => { failStreak++; req.destroy(); });
-    req.on('error',   () => { failStreak++; });
-  }
-  setInterval(ping, PING_INTERVAL_MS);
-  console.log(`[keep-alive] 🔄  Self-ping started → ${pingUrl} every ${PING_INTERVAL_MS / 1000}s`);
+  _pingLocal();    // immediate first ping
+  _pingExternal();
+
+  setInterval(_pingLocal,    PING_INTERVAL_MS);
+  setInterval(_pingExternal, EXTERNAL_INTERVAL_MS);
+  setInterval(_tickleCPU,    PING_INTERVAL_MS);
+  setInterval(_watchdog,     60 * 1000);        // check every minute
+
+  console.log(`[keep-alive] 🔄  Local ping every ${PING_INTERVAL_MS/1000}s`);
+  if (SERVICE_URL)
+    console.log(`[keep-alive] 🌐  External ping every ${EXTERNAL_INTERVAL_MS/1000}s → ${SERVICE_URL}`);
+  else
+    console.log(`[keep-alive] ℹ️   Set SERVICE_URL env var to enable external pinging`);
 }
 
 function fetchPublicIP() {
