@@ -509,151 +509,66 @@ tbody td{padding:9px 13px;vertical-align:middle;}
 .pt .gold{color:var(--gold);}
 
 
-/* === SETTINGS REDESIGN === */
-
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-
-:root{
-  --bg:#050508;
-  --bg2:#0a0a10;
-  --bg3:#0f0f18;
-  --surface:#111120;
-  --surface2:#16162a;
-  --p:#7c3aed;
-  --p2:#6d28d9;
-  --p3:#a78bfa;
-  --p4:#c4b5fd;
-  --p5:#8b5cf6;
-  --glow:rgba(124,58,237,0.18);
-  --glow2:rgba(167,139,250,0.08);
-  --border:rgba(124,58,237,0.12);
-  --border2:rgba(167,139,250,0.2);
-  --border3:rgba(167,139,250,0.08);
-  --text:#e2e0ff;
-  --text2:#9d9ac4;
-  --text3:#524f7a;
-  --danger:#9333ea;
-  --danger-dim:rgba(109,40,217,0.12);
-  --server:#34d399;
-  --server-dim:rgba(52,211,153,0.1);
-  --r:10px;
-  --r2:16px;
-  --r3:20px;
-}
-
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;-webkit-font-smoothing:antialiased}
-
-body{display:flex;flex-direction:column;min-height:100vh;padding:32px 36px;max-width:1080px;margin:0 auto}
-
-/* ── Page Header ── */
-.page-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:36px;padding-bottom:24px;border-bottom:1px solid var(--border3)}
-.page-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-0.5px;color:var(--text)}
-.page-title em{font-style:normal;color:var(--p3)}
-.page-sub{font-size:11px;color:var(--text3);margin-top:4px;font-weight:400;letter-spacing:0.2px}
-.header-badge{display:flex;align-items:center;gap:6px;background:var(--server-dim);border:1px solid rgba(52,211,153,0.2);border-radius:100px;padding:5px 12px 5px 8px}
-.header-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--server);box-shadow:0 0 8px var(--server);animation:pulse 2.4s ease-in-out infinite}
-.header-badge span{font-size:10px;font-weight:600;color:var(--server);letter-spacing:0.5px}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
-
-/* ── Layout Grid ── */
-.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
-.settings-grid.wide{grid-template-columns:1fr}
-.settings-grid.tri{grid-template-columns:1fr 1fr 1fr}
-
-/* ── Base Card ── */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);padding:22px;position:relative;overflow:hidden}
-.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--p3),transparent);opacity:0.3}
-
-/* ── Card Header ── */
-.card-head{display:flex;align-items:center;gap:12px;margin-bottom:20px}
-.card-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(109,40,217,0.1));border:1px solid rgba(124,58,237,0.2)}
-.card-icon.green{background:linear-gradient(135deg,rgba(52,211,153,0.15),rgba(52,211,153,0.05));border-color:rgba(52,211,153,0.2)}
-.card-icon.amber{background:linear-gradient(135deg,rgba(251,191,36,0.15),rgba(251,191,36,0.05));border-color:rgba(251,191,36,0.2)}
-.card-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);letter-spacing:0.3px}
-.card-sub{font-size:10px;color:var(--text3);margin-top:2px}
-
-/* ── Form Fields ── */
-.fg{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
-.fg label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:0.8px;text-transform:uppercase}
-.fg input,.fg textarea{padding:10px 13px;background:rgba(124,58,237,0.04);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);font-family:'Inter',sans-serif;font-size:12px;outline:none;transition:all 0.16s;width:100%}
-.fg input:focus,.fg textarea:focus{border-color:var(--p);background:rgba(124,58,237,0.07);box-shadow:0 0 0 3px rgba(124,58,237,0.1)}
-.fg input::placeholder,.fg textarea::placeholder{color:var(--text3)}
-
-/* ── Buttons ── */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 20px;border-radius:var(--r);font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;text-decoration:none}
-.btn-primary{background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;width:100%;box-shadow:0 2px 20px rgba(124,58,237,0.2)}
-.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(124,58,237,0.4)}
-.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2)}
-.btn-ghost:hover{background:var(--glow2);color:var(--text);border-color:var(--border2)}
-.btn-danger{background:var(--danger-dim);color:#c084fc;border:1px solid rgba(147,51,234,0.25)}
-.btn-danger:hover{background:rgba(109,40,217,0.2);border-color:rgba(147,51,234,0.4)}
-.btn-sm{padding:7px 14px;font-size:11px}
-.btn-xs{padding:5px 10px;font-size:10px;border-radius:7px}
-
-/* ── Info Rows (System Info) ── */
-.info-list{display:flex;flex-direction:column;gap:0}
-.info-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:8px;transition:background 0.12s}
-.info-row:hover{background:var(--glow2)}
-.info-row:not(:last-child){border-bottom:1px solid var(--border3)}
-.info-key{font-size:10px;color:var(--text3);font-weight:600;letter-spacing:0.5px;text-transform:uppercase}
-.info-val{font-size:11px;color:var(--text2)}
-.info-val.mono{font-family:'JetBrains Mono',monospace;color:var(--p3);font-size:10.5px}
-.info-val.online{display:flex;align-items:center;gap:6px;color:var(--server);font-weight:600}
-.info-val.online::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--server);box-shadow:0 0 6px var(--server);animation:pulse 2.4s ease-in-out infinite;flex-shrink:0}
-
-/* ── Security Grid ── */
-.security-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);padding:22px;margin-bottom:14px;position:relative;overflow:hidden}
-.security-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--p3),transparent);opacity:0.3}
-.sec-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px}
-.sec-item{background:var(--bg2);border:1px solid var(--border3);border-radius:12px;padding:13px;display:flex;flex-direction:column;gap:8px;transition:all 0.15s;cursor:default;position:relative;overflow:hidden}
-.sec-item::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--p),transparent);opacity:0;transition:opacity 0.2s}
-.sec-item:hover{border-color:var(--border2);background:rgba(124,58,237,0.05)}
-.sec-item:hover::after{opacity:1}
-.sec-row{display:flex;align-items:center;justify-content:space-between;gap:4px}
-.sec-name{font-size:10.5px;font-weight:700;color:var(--text);line-height:1.2}
-.sec-desc{font-size:9px;color:var(--text3);line-height:1.55;flex:1}
-.sec-layer{display:flex;align-items:center;gap:4px;margin-top:auto;padding-top:6px;border-top:1px solid var(--border3)}
-.sec-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
-.sec-dot.client{background:var(--p3)}
-.sec-dot.server{background:var(--server)}
-.sec-layer-label{font-size:8.5px;color:var(--text3);font-weight:600;letter-spacing:0.3px}
-
-/* ── Badges ── */
-.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:100px;font-size:9px;font-weight:700;letter-spacing:0.4px;white-space:nowrap;flex-shrink:0}
-.b-client{background:rgba(167,139,250,0.12);color:var(--p3);border:1px solid rgba(167,139,250,0.2)}
-.b-server{background:var(--server-dim);color:var(--server);border:1px solid rgba(52,211,153,0.2)}
-.b-active{background:rgba(124,58,237,0.15);color:var(--p3);border:1px solid rgba(124,58,237,0.25)}
-.b-disabled{background:rgba(82,79,122,0.12);color:var(--text3);border:1px solid rgba(82,79,122,0.2)}
-
-/* ── Action Rows (Danger Zone) ── */
-.action-row{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-radius:10px;border:1px solid var(--border3);margin-bottom:8px;background:var(--bg2);transition:background 0.12s}
-.action-row:hover{background:rgba(109,40,217,0.05)}
-.action-row:last-child{margin-bottom:0}
-.action-row-left .title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px}
-.action-row-left .desc{font-size:10px;color:var(--text3)}
-
-/* ── 2FA Card ── */
-.twofa-status{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;margin-bottom:14px;background:var(--danger-dim);color:#c084fc;border:1px solid rgba(147,51,234,0.2)}
-
-/* ── Country Input Hint ── */
-.input-hint{font-size:10px;color:var(--text3);margin-top:4px}
-.input-hint code{font-family:'JetBrains Mono',monospace;color:var(--p3);font-size:9.5px;background:rgba(124,58,237,0.08);padding:1px 5px;border-radius:4px}
-
-/* ── About Card ── */
-.about-card{background:linear-gradient(135deg,rgba(124,58,237,0.07) 0%,var(--surface) 60%);border:1px solid var(--border);border-radius:var(--r3);padding:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative;overflow:hidden}
-.about-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--p3),transparent);opacity:0.4}
-.about-glow{position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:200px;height:120px;background:radial-gradient(ellipse,rgba(124,58,237,0.2) 0%,transparent 70%);pointer-events:none}
-.about-brand{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;letter-spacing:4px;background:linear-gradient(135deg,#c4b5fd 0%,#a78bfa 50%,#7c3aed 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;position:relative}
-.about-version{font-size:9px;letter-spacing:4px;color:var(--text3);margin-top:4px;text-transform:uppercase}
-.about-desc{font-size:11px;color:var(--text3);line-height:1.9;margin:16px 0}
-.about-chips{display:flex;justify-content:center;gap:8px}
-
-/* ── Section Divider Label ── */
-.section-label{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin:8px 0 12px;padding-left:2px}
-
-/* ── Toast simulation ── */
-.demo-note{font-size:10px;color:var(--text3);text-align:center;padding:14px;border:1px dashed var(--border);border-radius:8px;margin-top:12px}
-
+#page-settings 
+/* === SETTINGS REDESIGN (scoped) === */
+#page-settings { font-family:'Inter',sans-serif; }
+#page-settings .page-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:36px;padding-bottom:24px;border-bottom:1px solid rgba(167,139,250,0.08)}
+#page-settings .page-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-0.5px;color:#e2e0ff}
+#page-settings .page-title em{font-style:normal;color:#a78bfa}
+#page-settings .page-sub{font-size:11px;color:#524f7a;margin-top:4px;font-weight:400}
+#page-settings .header-badge{display:flex;align-items:center;gap:6px;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.2);border-radius:100px;padding:5px 12px 5px 8px}
+#page-settings .header-badge .dot{width:6px;height:6px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399;animation:blink 2.4s ease-in-out infinite}
+#page-settings .header-badge span{font-size:10px;font-weight:600;color:#34d399;letter-spacing:0.5px}
+#page-settings .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+#page-settings .card-new{background:#0a0a10;border:1px solid rgba(124,58,237,0.12);border-radius:20px;padding:22px;position:relative;overflow:hidden;margin-bottom:0}
+#page-settings .card-new::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#a78bfa,transparent);opacity:0.3}
+#page-settings .card-head{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+#page-settings .card-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(109,40,217,0.1));border:1px solid rgba(124,58,237,0.2)}
+#page-settings .card-icon.s-green{background:linear-gradient(135deg,rgba(52,211,153,0.15),rgba(52,211,153,0.05));border-color:rgba(52,211,153,0.2)}
+#page-settings .card-icon.s-amber{background:linear-gradient(135deg,rgba(251,191,36,0.15),rgba(251,191,36,0.05));border-color:rgba(251,191,36,0.2)}
+#page-settings .s-card-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#e2e0ff;letter-spacing:0.3px}
+#page-settings .s-card-sub{font-size:10px;color:#524f7a;margin-top:2px}
+#page-settings .info-list{display:flex;flex-direction:column;gap:0}
+#page-settings .info-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:8px;transition:background 0.12s}
+#page-settings .info-row:hover{background:rgba(124,58,237,0.05)}
+#page-settings .info-row:not(:last-child){border-bottom:1px solid rgba(167,139,250,0.08)}
+#page-settings .info-key{font-size:10px;color:#524f7a;font-weight:600;letter-spacing:0.5px;text-transform:uppercase}
+#page-settings .info-val{font-size:11px;color:#9d9ac4}
+#page-settings .info-val.s-mono{font-family:'JetBrains Mono',monospace;color:#a78bfa;font-size:10.5px}
+#page-settings .info-val.s-online{display:flex;align-items:center;gap:6px;color:#34d399;font-weight:600}
+#page-settings .info-val.s-online::before{content:'';width:6px;height:6px;border-radius:50%;background:#34d399;box-shadow:0 0 6px #34d399;animation:blink 2.4s ease-in-out infinite;flex-shrink:0}
+#page-settings .s-fg{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+#page-settings .s-fg label{font-size:10px;font-weight:600;color:#524f7a;letter-spacing:0.8px;text-transform:uppercase}
+#page-settings .s-fg input{padding:10px 13px;background:rgba(124,58,237,0.04);border:1px solid rgba(167,139,250,0.2);border-radius:10px;color:#e2e0ff;font-family:'Inter',sans-serif;font-size:12px;outline:none;transition:all 0.16s;width:100%}
+#page-settings .s-fg input:focus{border-color:#7c3aed;background:rgba(124,58,237,0.07);box-shadow:0 0 0 3px rgba(124,58,237,0.1)}
+#page-settings .s-fg input::placeholder{color:#524f7a}
+#page-settings .s-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 20px;border-radius:10px;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;width:100%;box-shadow:0 2px 20px rgba(124,58,237,0.2)}
+#page-settings .s-btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(124,58,237,0.4)}
+#page-settings .s-btn-ghost{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:7px 14px;border-radius:10px;font-family:'Inter',sans-serif;font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:#9d9ac4;border:1px solid rgba(167,139,250,0.2);transition:all 0.15s;flex:1}
+#page-settings .s-btn-ghost:hover{background:rgba(124,58,237,0.08);color:#e2e0ff}
+#page-settings .s-btn-danger{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:7px 14px;border-radius:10px;font-family:'Inter',sans-serif;font-size:11px;font-weight:600;cursor:pointer;background:rgba(109,40,217,0.12);color:#c084fc;border:1px solid rgba(147,51,234,0.25);transition:all 0.15s;flex:1}
+#page-settings .s-btn-danger:hover{background:rgba(109,40,217,0.2)}
+#page-settings .s-btn-xs{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:5px 12px;border-radius:7px;font-family:'Inter',sans-serif;font-size:10px;font-weight:600;cursor:pointer;background:rgba(109,40,217,0.12);color:#c084fc;border:1px solid rgba(147,51,234,0.25);transition:all 0.15s}
+#page-settings .s-btn-xs:hover{background:rgba(109,40,217,0.2)}
+#page-settings .s-btn-save{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 18px;border-radius:10px;font-family:'Inter',sans-serif;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;box-shadow:0 2px 12px rgba(124,58,237,0.2)}
+#page-settings .s-btn-save:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(124,58,237,0.4)}
+#page-settings .action-row{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-radius:10px;border:1px solid rgba(167,139,250,0.08);margin-bottom:8px;background:#0a0a10;transition:background 0.12s}
+#page-settings .action-row:hover{background:rgba(109,40,217,0.05)}
+#page-settings .action-row:last-child{margin-bottom:0}
+#page-settings .action-row .ar-title{font-size:12px;font-weight:600;color:#e2e0ff;margin-bottom:2px}
+#page-settings .action-row .ar-desc{font-size:10px;color:#524f7a}
+#page-settings .twofa-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;margin-bottom:14px;background:rgba(109,40,217,0.12);color:#c084fc;border:1px solid rgba(147,51,234,0.2)}
+#page-settings .input-hint{font-size:10px;color:#524f7a;margin-top:4px}
+#page-settings .input-hint code{font-family:'JetBrains Mono',monospace;color:#a78bfa;font-size:9.5px;background:rgba(124,58,237,0.08);padding:1px 5px;border-radius:4px}
+#page-settings .about-card{background:linear-gradient(135deg,rgba(124,58,237,0.07) 0%,#0a0a10 60%);border:1px solid rgba(124,58,237,0.12);border-radius:20px;padding:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative;overflow:hidden}
+#page-settings .about-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#a78bfa,transparent);opacity:0.4}
+#page-settings .about-glow{position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:200px;height:120px;background:radial-gradient(ellipse,rgba(124,58,237,0.2) 0%,transparent 70%);pointer-events:none}
+#page-settings .about-brand{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;letter-spacing:4px;background:linear-gradient(135deg,#c4b5fd 0%,#a78bfa 50%,#7c3aed 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;position:relative}
+#page-settings .about-version{font-size:9px;letter-spacing:4px;color:#524f7a;margin-top:4px;text-transform:uppercase}
+#page-settings .about-desc{font-size:11px;color:#524f7a;line-height:1.9;margin:16px 0}
+#page-settings .about-chips{display:flex;justify-content:center;gap:8px}
+#page-settings .s-badge-active{display:inline-flex;align-items:center;padding:2px 7px;border-radius:100px;font-size:9px;font-weight:700;background:rgba(124,58,237,0.15);color:#a78bfa;border:1px solid rgba(124,58,237,0.25)}
+#page-settings .s-badge-server{display:inline-flex;align-items:center;padding:2px 7px;border-radius:100px;font-size:9px;font-weight:700;background:rgba(52,211,153,0.1);color:#34d399;border:1px solid rgba(52,211,153,0.2)}
 </style>
 </head>
 <body>
@@ -1661,45 +1576,45 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
 <div class="settings-grid" style="margin-bottom:14px">
 
   <!-- Change Password -->
-  <div class="card">
+  <div class="card-new">
     <div class="card-head">
       <div class="card-icon">🔐</div>
       <div>
-        <div class="card-title">Change Password</div>
-        <div class="card-sub">Update your admin panel password</div>
+        <div class="s-card-title">Change Password</div>
+        <div class="s-card-sub">Update your admin panel password</div>
       </div>
     </div>
-    <div class="fg">
+    <div class="s-fg">
       <label>New Password</label>
       <input type="password" id="np1" placeholder="Min 6 characters"/>
     </div>
-    <div class="fg">
+    <div class="s-fg">
       <label>Confirm Password</label>
       <input type="password" id="np2" placeholder="Repeat new password"/>
     </div>
-    <button class="btn btn-primary" onclick="changePw()">
+    <button class="s-btn-primary" onclick="changePw()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       Update Password
     </button>
   </div>
 
   <!-- System Info -->
-  <div class="card">
+  <div class="card-new">
     <div class="card-head">
-      <div class="card-icon green">🖥️</div>
+      <div class="card-icon s-green">🖥️</div>
       <div>
-        <div class="card-title">System Info</div>
-        <div class="card-sub">Current server configuration</div>
+        <div class="s-card-title">System Info</div>
+        <div class="s-card-sub">Current server configuration</div>
       </div>
     </div>
     <div class="info-list">
       <div class="info-row">
         <span class="info-key">Version</span>
-        <span class="info-val mono">v4.0</span>
+        <span class="info-val s-mono">v4.0</span>
       </div>
       <div class="info-row">
         <span class="info-key">Server</span>
-        <span class="info-val mono" style="font-size:9.5px">boostempire-keyauth.onrender.com</span>
+        <span class="info-val s-mono" style="font-size:9.5px">boostempire-keyauth.onrender.com</span>
       </div>
       <div class="info-row">
         <span class="info-key">Database</span>
@@ -1707,7 +1622,7 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
       </div>
       <div class="info-row">
         <span class="info-key">Status</span>
-        <span class="info-val online">Online</span>
+        <span class="info-val s-online">Online</span>
       </div>
       <div class="info-row">
         <span class="info-key">Sessions</span>
@@ -1721,16 +1636,16 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
 <div class="settings-grid" style="margin-bottom:14px">
 
   <!-- 2FA -->
-  <div class="card">
+  <div class="card-new">
     <div class="card-head">
       <div class="card-icon">🔑</div>
       <div>
-        <div class="card-title">Two-Factor Auth</div>
-        <div class="card-sub">Google Authenticator / Authy</div>
+        <div class="s-card-title">Two-Factor Auth</div>
+        <div class="s-card-sub">Google Authenticator / Authy</div>
       </div>
     </div>
     <div id="twofa-status" style="margin-bottom:14px">
-      <div class="twofa-status">
+      <div class="twofa-pill">
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         2FA is disabled
       </div>
@@ -1738,33 +1653,33 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
     <div id="twofa-setup-area" style="display:none">
       <img id="twofa-qr" src="" style="width:148px;height:148px;border-radius:10px;border:1px solid var(--border2);display:block;margin-bottom:12px"/>
       <div style="font-size:10px;color:var(--text3);margin-bottom:10px;line-height:1.7">Scan the QR code in Google Authenticator, then enter the 6-digit code below to confirm.</div>
-      <div class="fg" style="margin-bottom:10px">
+      <div class="s-fg" style="margin-bottom:10px">
         <label>Confirm Code</label>
         <input type="text" id="twofa-confirm-code" placeholder="123456" maxlength="6" inputmode="numeric"/>
       </div>
-      <button class="btn btn-primary btn-sm" onclick="verify2FA()">✓ Confirm &amp; Enable</button>
+      <button class="s-btn-save" onclick="verify2FA()">✓ Confirm &amp; Enable</button>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap" id="twofa-btns">
-      <button class="btn btn-ghost btn-sm" onclick="setup2FA()" id="btn-setup-2fa" style="flex:1">Setup 2FA</button>
-      <button class="btn btn-danger btn-sm" onclick="disable2FA()" id="btn-disable-2fa" style="display:none;flex:1">Disable 2FA</button>
+      <button class="s-btn-ghost" onclick="setup2FA()" id="btn-setup-2fa" style="flex:1">Setup 2FA</button>
+      <button class="s-btn-danger" onclick="disable2FA()" id="btn-disable-2fa" style="display:none;flex:1">Disable 2FA</button>
     </div>
   </div>
 
   <!-- Country Allowlist -->
-  <div class="card">
+  <div class="card-new">
     <div class="card-head">
-      <div class="card-icon green">🌍</div>
+      <div class="card-icon s-green">🌍</div>
       <div>
-        <div class="card-title">Country Allowlist</div>
-        <div class="card-sub">Restrict auth to specific countries</div>
+        <div class="s-card-title">Country Allowlist</div>
+        <div class="s-card-sub">Restrict auth to specific countries</div>
       </div>
     </div>
-    <div class="fg">
+    <div class="s-fg">
       <label>ISO-2 Country Codes</label>
       <input type="text" id="country-allowlist" placeholder="e.g. US,CA,GB — empty = all allowed"/>
       <div class="input-hint">Example: <code>US,CA,GB,AU,DE</code> — leave empty to allow all countries</div>
     </div>
-    <button class="btn btn-primary btn-sm" onclick="saveCountryAllowlist()" style="width:auto;padding:8px 18px">
+    <button class="s-btn-save" onclick="saveCountryAllowlist()" style="width:auto;padding:8px 18px">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
       Save Allowlist
     </button>
@@ -1775,27 +1690,27 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
 <div class="settings-grid">
 
   <!-- Danger Zone -->
-  <div class="card" style="border-color:rgba(147,51,234,0.18)">
+  <div class="card-new" style="border-color:rgba(147,51,234,0.18)">
     <div class="card-head">
-      <div class="card-icon amber">⚠️</div>
+      <div class="card-icon s-amber">⚠️</div>
       <div>
-        <div class="card-title" style="color:#c084fc">Danger Zone</div>
-        <div class="card-sub">Destructive actions — use with care</div>
+        <div class="s-card-title" style="color:#c084fc">Danger Zone</div>
+        <div class="s-card-sub">Destructive actions — use with care</div>
       </div>
     </div>
     <div class="action-row">
       <div class="action-row-left">
-        <div class="title">Clear All Logs</div>
-        <div class="desc">Permanently delete all auth log entries</div>
+        <div class="ar-title">Clear All Logs</div>
+        <div class="ar-desc">Permanently delete all auth log entries</div>
       </div>
-      <button class="btn btn-danger btn-xs" onclick="clearLogs()">Clear Logs</button>
+      <button class="s-btn-xs" onclick="clearLogs()">Clear Logs</button>
     </div>
     <div class="action-row">
       <div class="action-row-left">
-        <div class="title">Unblock All IPs</div>
-        <div class="desc">Remove all IP blocks from the blocklist</div>
+        <div class="ar-title">Unblock All IPs</div>
+        <div class="ar-desc">Remove all IP blocks from the blocklist</div>
       </div>
-      <button class="btn btn-danger btn-xs" onclick="unblockAllIPs()">Unblock All</button>
+      <button class="s-btn-xs" onclick="unblockAllIPs()">Unblock All</button>
     </div>
   </div>
 
@@ -1806,8 +1721,8 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
     <div class="about-version">KeyAuth System · v4.0</div>
     <div class="about-desc">Self-hosted license authentication<br/>with C++ anti-crack protection</div>
     <div class="about-chips">
-      <span class="badge b-active">16 Protections</span>
-      <span class="badge b-server">Server Online</span>
+      <span class="s-badge-active">16 Protections</span>
+      <span class="s-badge-server">Server Online</span>
     </div>
   </div>
 
