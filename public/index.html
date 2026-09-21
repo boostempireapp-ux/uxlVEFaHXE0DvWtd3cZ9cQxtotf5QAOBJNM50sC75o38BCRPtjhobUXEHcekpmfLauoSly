@@ -2288,28 +2288,56 @@ async function rotateKeys(id){
 }
 
 // CUSTOM SELECT
+// ── Portal dropdown — renders in fixed layer so it's never clipped ──
+let _csPortal=null,_csActiveId=null;
+function _ensurePortal(){
+  if(_csPortal)return;
+  _csPortal=document.createElement('div');
+  _csPortal.id='cs-portal';
+  _csPortal.style.cssText='position:fixed;z-index:99999;display:none;';
+  document.body.appendChild(_csPortal);
+  // inherit dropdown styles
+  _csPortal.innerHTML='';
+}
 function toggleCS(id){
+  _ensurePortal();
+  if(_csActiveId===id){closeAllCS();return;}
+  closeAllCS();
   const sel=document.getElementById(id);
+  if(!sel)return;
   const btn=sel.querySelector('.cs-selected');
   const menu=sel.querySelector('.cs-dropdown');
-  const wasOpen=menu.classList.contains('open');
-  closeAllCS();
-  if(!wasOpen){btn.classList.add('open');menu.classList.add('open');}
+  if(!btn||!menu)return;
+  // position portal under the trigger button
+  const rect=btn.getBoundingClientRect();
+  _csPortal.innerHTML=menu.innerHTML;
+  _csPortal.className='cs-dropdown open';
+  _csPortal.style.cssText=`position:fixed;z-index:99999;left:${rect.left}px;top:${rect.bottom}px;width:${rect.width}px;display:block;background:var(--bg3);border:1px solid var(--p);border-top:none;border-bottom-left-radius:var(--r);border-bottom-right-radius:var(--r);max-height:260px;overflow-y:auto;box-shadow:0 16px 40px rgba(0,0,0,0.85);animation:ddO .15s ease;`;
+  btn.classList.add('open');
+  _csActiveId=id;
+  // onclick attributes in the cloned HTML fire naturally — no manual wiring needed
 }
 function selectCS(id, val, label){
-  document.getElementById(id.replace('cs-','g-')).value=val;
-  document.getElementById(id+'-label').textContent=label;
-  document.querySelectorAll('#'+id+'-menu .cs-opt').forEach(o=>{
+  const hiddenId=id.replace('cs-','g-');
+  const hid=document.getElementById(hiddenId);
+  if(hid)hid.value=val;
+  const lbEl=document.getElementById(id+'-label');
+  if(lbEl)lbEl.textContent=label;
+  const menu=document.getElementById(id+'-menu');
+  if(menu)menu.querySelectorAll('.cs-opt').forEach(o=>{
     o.classList.toggle('selected', o.dataset.val===String(val));
   });
+  if(id==='cs-count'||id==='cs-days'||id==='cs-uses')gkUpdateSummary&&gkUpdateSummary();
   closeAllCS();
 }
 function closeAllCS(){
   document.querySelectorAll('.cs-selected').forEach(b=>b.classList.remove('open'));
   document.querySelectorAll('.cs-dropdown').forEach(m=>m.classList.remove('open'));
+  if(_csPortal){_csPortal.style.display='none';_csPortal.innerHTML='';}
+  _csActiveId=null;
 }
 document.addEventListener('click',e=>{
-  if(!e.target.closest('.custom-select')&&!e.target.closest('.dropdown'))closeAllCS();
+  if(!e.target.closest('.custom-select')&&e.target.id!=='cs-portal'&&!e.target.closest('#cs-portal'))closeAllCS();
   if(!e.target.closest('.dropdown'))closeDD();
 });
 
