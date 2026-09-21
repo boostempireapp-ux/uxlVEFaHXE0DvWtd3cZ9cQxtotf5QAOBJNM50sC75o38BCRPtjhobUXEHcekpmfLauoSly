@@ -978,6 +978,19 @@ app.post('/api/admin/keys/:key/unfreeze', requireAdmin, async (req, res) => {
   res.json({ success:true, status:'active' });
 });
 
+// POST /api/admin/keys/:key/set-expiry  { days: 30 }  (0 or null = never)
+app.post('/api/admin/keys/:key/set-expiry', requireAdmin, async (req, res) => {
+  const doc = await keysCol.findOne({ key: req.params.key });
+  if (!doc) return res.json({ success: false, message: 'Key not found' });
+  const days = parseInt(req.body.days);
+  const expiresAt = (!days || days <= 0)
+    ? null
+    : new Date(Date.now() + days * 86400000).toISOString();
+  await keysCol.updateOne({ key: req.params.key }, { $set: { expiresAt } });
+  auditLog(req.adminIP, 'SET_EXPIRY', { key: req.params.key, days: days || 'never', expiresAt });
+  res.json({ success: true, expiresAt });
+});
+
 // ── ADMIN: LOGS / BLOCKS / STATS ──────────────────────────────────────────────
 app.get('/api/admin/logs', requireAdmin, async (req, res) => {
   const filter={};
