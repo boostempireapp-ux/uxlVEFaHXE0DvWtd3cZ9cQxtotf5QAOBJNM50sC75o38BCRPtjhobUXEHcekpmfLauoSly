@@ -1188,7 +1188,7 @@ app.post('/api/admin/config', requireAdmin, async (req, res) => {
 });
 
 // ── ADMIN: RESELLERS ──────────────────────────────────────────────────────────
-const DEFAULT_PERMISSIONS = { viewKeys:false, viewHWID:false, viewIP:false, viewLogs:false, viewBlocks:false, generateKeys:false, banKeys:false, freezeKeys:false, resetHWID:false, deleteKeys:false, viewStats:false };
+const DEFAULT_PERMISSIONS = { viewKeys:false, viewHWID:false, viewIP:false, viewLogs:false, viewBlocks:false, generateKeys:false, banKeys:false, freezeKeys:false, resetHWID:false, deleteKeys:false, viewStats:false, canUseCatboxHosting:false };
 
 app.get('/api/admin/resellers', requireAdmin, async (req, res) => {
   const docs = await resellersCol.find({}).sort({ createdAt:-1 }).toArray();
@@ -1398,9 +1398,13 @@ app.get('/api/reseller/dll-info', requireReseller, async (req, res) => {
 });
 
 // POST /api/reseller/apps/:id/set-dll  { dllUrl: "https://files.catbox.moe/..." }
-// Reseller can only set DLL on apps they are assigned to
+// Reseller can only set DLL on apps they are assigned to AND if canUseCatboxHosting is granted
 app.post('/api/reseller/apps/:id/set-dll', requireReseller, async (req, res) => {
   const { dllUrl } = req.body;
+
+  // Check Catbox hosting permission
+  if (!req.reseller.permissions?.canUseCatboxHosting)
+    return res.status(403).json({ success: false, message: 'Your account does not have Catbox DLL hosting permission. Contact your admin.' });
 
   // Verify the reseller is allowed to manage this app
   const allowed = (req.reseller.allowedApps || []).map(String);
