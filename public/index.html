@@ -1986,6 +1986,32 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
   </div>
 </div>
 
+<!-- MODAL: SET API KEY EXPIRY -->
+<div class="modal-bg" id="modal-expiry">
+  <div class="modal">
+    <div class="modal-title">⏱ API Key Expiry — <span id="expiry-modal-appname"></span></div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px">Set when this app's API key stops working. Once expired the key returns <code style="background:var(--bg2);padding:2px 6px;border-radius:4px;color:#f87171">EXPIRED</code> and is completely inactive.</div>
+    <div class="fg" style="margin-bottom:6px">
+      <label>Expires in (days from now)</label>
+      <input class="inp" type="number" id="expiry-days-input" placeholder="e.g. 30 — leave 0 for never" min="0"/>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px">0 or blank = key never expires</div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+      <button class="btn btn-ghost btn-xs" onclick="setExpiryPreset(7)">7 days</button>
+      <button class="btn btn-ghost btn-xs" onclick="setExpiryPreset(30)">30 days</button>
+      <button class="btn btn-ghost btn-xs" onclick="setExpiryPreset(90)">90 days</button>
+      <button class="btn btn-ghost btn-xs" onclick="setExpiryPreset(365)">1 year</button>
+      <button class="btn btn-ghost btn-xs" onclick="setExpiryPreset(0)">Never</button>
+    </div>
+    <div id="expiry-preview" style="font-size:11px;color:var(--text3);margin-bottom:14px"></div>
+    <div id="expiry-modal-result" style="margin-bottom:8px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-expiry')">Cancel</button>
+      <button class="btn btn-purple" onclick="saveExpiry()">💾 Save Expiry</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: CREATE RESELLER -->
 <div class="modal-bg" id="modal-new-reseller">
   <div class="modal modal-wide">
@@ -2244,10 +2270,17 @@ async function loadApps(){
         In your code: &nbsp;<span style="color:var(--p3);font-family:'JetBrains Mono',monospace;font-size:11px">x-public-key: ${a.publicKey}</span>
       </div>
       <div style="margin-top:8px;padding:8px 13px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);font-size:11px;display:flex;align-items:center;gap:8px">
-        <span style="color:#c084fc;font-weight:600;flex-shrink:0">🟣 DLL:</span>
+        <span style="color:#c084fc;flex-shrink:0">🟣 DLL:</span>
         ${a.dllUrl
-          ? `<span style="color:#a855f7;font-family:'JetBrains Mono',monospace;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.dllUrl}">${a.dllUrl}</span><span style="color:#4ade80;font-weight:600;flex-shrink:0">✅ Set</span>`
-          : `<span style="color:var(--text3)">Not configured — click 🟣 DLL to add a Catbox link</span>`}
+          ? `<span style="color:#a855f7;font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.dllUrl}">${a.dllUrl}</span><span style="color:#4ade80;flex-shrink:0">✅ Set</span>`
+          : `<span style="color:var(--text3);font-size:11px">Not configured — click 🟣 DLL to add a Catbox link</span>`}
+      </div>
+      <div style="margin-top:8px;padding:8px 13px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);font-size:11px;display:flex;align-items:center;gap:8px">
+        <span style="color:var(--text3);flex-shrink:0">⏱ API Key Expiry:</span>
+        <span style="flex:1;color:${a.keyExpiresAt?(new Date(a.keyExpiresAt)<new Date()?'#f87171':'var(--text2)'):'var(--text3)'}" id="app-expiry-${a._id}">
+          ${a.keyExpiresAt?(new Date(a.keyExpiresAt)<new Date()?'⚠️ Expired — '+a.keyExpiresAt.substring(0,10):a.keyExpiresAt.substring(0,10)):'Never'}
+        </span>
+        <button class="btn btn-ghost btn-xs" onclick="openExpiryModal('${a._id}','${a.name}','${a.keyExpiresAt||''}')">Edit</button>
       </div>
     </div>
   `).join('');
@@ -2374,6 +2407,7 @@ function renderKeys(keys){
           <button class="btn btn-ghost btn-xs" onclick="toggleDD(this)">⋯</button>
           <div class="dd-menu">
             <div class="dd-item" onclick="resetHWID('${k.key}');closeDD()">↺ Reset HWID</div>
+            <div class="dd-item" onclick="openKeyExpiry('${k.key}','${k.expiresAt||''}');closeDD()">⏱ Set Expiry</div>
             <div class="dd-item" onclick="copyText('${k.key}');closeDD()">📋 Copy Key</div>
             <div class="dd-sep"></div>
             <div class="dd-item danger" onclick="delKey('${k.key}');closeDD()">🗑 Delete</div>
@@ -3292,6 +3326,56 @@ async function clearDll() {
   if (!confirm('Remove the DLL URL for this app?')) return;
   const d = await post('/api/admin/apps/' + _dllAppId + '/set-dll', { dllUrl: null });
   if (d && d.success) { toast('DLL URL removed', 'info'); closeModal('modal-dll'); loadApps(); }
+}
+
+// ── API KEY EXPIRY ────────────────────────────────────────────────────────────
+let _expiryKey = null;
+
+function openKeyExpiry(keyVal, currentExpiry) {
+  _expiryKey = keyVal;
+  document.getElementById('expiry-modal-appname').textContent = keyVal.substring(0, 20) + '…';
+  document.getElementById('expiry-days-input').value = '';
+  document.getElementById('expiry-modal-result').innerHTML = '';
+  const prev = document.getElementById('expiry-preview');
+  prev.textContent = currentExpiry ? 'Current expiry: ' + currentExpiry.substring(0, 10) : 'Current expiry: Never';
+  prev.style.color = 'var(--text3)';
+  document.getElementById('modal-expiry').classList.add('open');
+}
+
+// Keep old name for app card button (not used now but safe to keep)
+function openExpiryModal(appId, appName, currentExpiry) { openKeyExpiry(appId, currentExpiry); }
+
+function setExpiryPreset(days) {
+  document.getElementById('expiry-days-input').value = days;
+  updateExpiryPreview();
+}
+
+function updateExpiryPreview() {
+  const days = parseInt(document.getElementById('expiry-days-input').value);
+  const prev = document.getElementById('expiry-preview');
+  if (!days || days <= 0) {
+    prev.textContent = 'Key will never expire';
+    prev.style.color = 'var(--text3)';
+  } else {
+    const d = new Date(Date.now() + days * 86400000);
+    prev.textContent = 'Expires: ' + d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+    prev.style.color = 'var(--p3)';
+  }
+}
+
+document.addEventListener('input', e => { if (e.target.id === 'expiry-days-input') updateExpiryPreview(); });
+
+async function saveExpiry() {
+  const days = parseInt(document.getElementById('expiry-days-input').value) || 0;
+  const res = document.getElementById('expiry-modal-result');
+  const d = await post('/api/admin/keys/' + encodeURIComponent(_expiryKey) + '/set-expiry', { days });
+  if (d && d.success) {
+    toast(days > 0 ? 'Expiry set!' : 'Expiry removed — key never expires', 'success');
+    res.innerHTML = '<div style="color:#4ade80;font-size:12px">✅ Saved' + (d.expiresAt ? ' — expires ' + d.expiresAt.substring(0,10) : ' — never expires') + '</div>';
+    setTimeout(() => { closeModal('modal-expiry'); loadKeys(); }, 1200);
+  } else {
+    res.innerHTML = '<div style="color:#f87171;font-size:12px">❌ ' + (d && d.message ? d.message : 'Error saving expiry') + '</div>';
+  }
 }
 
 </script>
