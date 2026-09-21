@@ -3203,7 +3203,8 @@ function buildResellerNav(){
   document.getElementById('r-nav-keys-sec').style.display=hasKeys?'':'none';
   document.getElementById('r-nav-keys').style.display=p.viewKeys?'':'none';
   document.getElementById('r-nav-generate').style.display=p.generateKeys?'':'none';
-  document.getElementById('r-nav-dll-sec').style.display='';document.getElementById('r-nav-dll').style.display='';document.getElementById('r-nav-mon-sec').style.display=hasMon?'':'none';
+  const hasDll=!!p.canUseCatboxHosting;
+  document.getElementById('r-nav-dll-sec').style.display=hasDll?'':'none';document.getElementById('r-nav-dll').style.display=hasDll?'':'none';document.getElementById('r-nav-mon-sec').style.display=hasMon?'':'none';
   document.getElementById('r-nav-logs').style.display=p.viewLogs?'':'none';
   document.getElementById('r-nav-blocks').style.display=p.viewBlocks?'':'none';
   const gb=document.getElementById('r-gen-btn'); if(gb) gb.style.display=p.generateKeys?'':'none';
@@ -3225,6 +3226,7 @@ const PERMS=[
   {key:'resetHWID',label:'Reset HWID',desc:'Reset HWID lock'},
   {key:'deleteKeys',label:'Delete Keys',desc:'Remove keys'},
   {key:'viewStats',label:'View Stats',desc:'Dashboard stats'},
+  {key:'canUseCatboxHosting',label:'Catbox DLL Hosting',desc:'Upload & manage DLLs via Catbox'},
 ];
 function renderPermGrid(cid,ex={}){
   document.getElementById(cid).innerHTML=PERMS.map(p=>`<div class="perm-item ${ex[p.key]?'on':''}" id="pi-${cid}-${p.key}"><div class="perm-label">${p.label}<small>${p.desc}</small></div><div class="toggle ${ex[p.key]?'on':''}" id="pt-${cid}-${p.key}" onclick="togglePerm('${cid}','${p.key}')"></div></div>`).join('');
@@ -3724,6 +3726,18 @@ async function saveExpiry() {
 async function loadResellerDLL() {
   const wrap = document.getElementById('r-dll-content');
   if (!wrap) return;
+
+  // Permission gate
+  if (!RDATA || !RDATA.permissions || !RDATA.permissions.canUseCatboxHosting) {
+    wrap.innerHTML = `
+      <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.18);border-radius:12px;padding:32px;text-align:center;max-width:520px;margin:0 auto">
+        <div style="font-size:36px;margin-bottom:12px">🔒</div>
+        <div style="font-size:15px;font-weight:700;color:#f87171;margin-bottom:8px">Catbox DLL Hosting Not Enabled</div>
+        <div style="font-size:13px;color:var(--text3);line-height:1.6">Your reseller account does not have the <strong style="color:var(--text2)">Catbox DLL Hosting</strong> permission.<br>Contact your admin to have it enabled for your account.</div>
+      </div>`;
+    return;
+  }
+
   wrap.innerHTML = '<div class="empty"><div class="empty-icon">⏳</div><div class="empty-text">Loading apps…</div></div>';
   const r = await rget('/api/reseller/dll-info');
   if (!r.success) { wrap.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Failed to load apps</div></div>'; return; }
@@ -3731,7 +3745,23 @@ async function loadResellerDLL() {
     wrap.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No apps assigned to your account yet. Contact your admin.</div></div>';
     return;
   }
-  wrap.innerHTML = r.apps.map(app => `
+
+  // Catbox how-to banner
+  const banner = `
+    <div style="background:rgba(139,92,246,0.07);border:1px solid rgba(139,92,246,0.22);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;gap:14px;align-items:flex-start">
+      <div style="font-size:26px;flex-shrink:0;margin-top:2px">📤</div>
+      <div>
+        <div style="font-weight:700;font-size:13px;color:#c084fc;margin-bottom:4px">How to upload your Catbox DLL</div>
+        <ol style="margin:0;padding-left:16px;color:var(--text3);font-size:12px;line-height:1.9">
+          <li>Go to <a href="https://catbox.moe" target="_blank" rel="noopener" style="color:#a78bfa">catbox.moe</a> and upload your <code style="background:rgba(139,92,246,0.15);padding:1px 5px;border-radius:4px">.dll</code> file</li>
+          <li>Copy the direct link — it will look like <code style="background:rgba(139,92,246,0.15);padding:1px 5px;border-radius:4px">https://files.catbox.moe/xxxxxx.dll</code></li>
+          <li>Paste it into the field below for your app and click <strong style="color:var(--text)">Save URL</strong></li>
+        </ol>
+        <div style="margin-top:8px;font-size:11px;color:var(--text3)">✅ Also supported: Discord CDN · GitHub Raw · jsDelivr · Google Drive · Dropbox</div>
+      </div>
+    </div>`;
+
+  wrap.innerHTML = banner + r.apps.map(app => `
     <div class="card" style="padding:22px;margin-bottom:14px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
         <div style="display:flex;align-items:center;gap:12px">
@@ -3748,7 +3778,7 @@ async function loadResellerDLL() {
       ${app.dllUrl ? `<div style="background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);word-break:break-all;margin-bottom:14px">${app.dllUrl}</div>` : ''}
       <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
         <div class="fg" style="flex:1;min-width:260px;margin:0">
-          <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;display:block;margin-bottom:6px">Catbox / CDN URL</label>
+          <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;display:block;margin-bottom:6px">Upload your Catbox DLL — paste direct link here</label>
           <input type="text" id="dll-url-${app._id}" value="${app.dllUrl||''}" placeholder="https://files.catbox.moe/xxxxxx.dll"
             style="width:100%;background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none"
             onfocus="this.style.borderColor='rgba(139,92,246,0.5)'" onblur="this.style.borderColor='var(--border)'"/>
