@@ -248,11 +248,9 @@ tbody td{padding:9px 13px;vertical-align:middle;}
 .cs-selected.open .cs-arrow{transform:rotate(180deg);}
 .cs-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .cs-dropdown{
-  position:absolute;top:100%;left:0;right:0;z-index:999;
-  background:var(--bg3);border:1px solid var(--p);border-top:none;
+  background:#0a0a0a;border:1px solid var(--p);border-top:none;
   border-bottom-left-radius:var(--r);border-bottom-right-radius:var(--r);
-  max-height:220px;overflow-y:auto;display:none;
-  box-shadow:0 16px 40px rgba(0,0,0,0.7);
+  display:none;box-shadow:0 20px 50px rgba(0,0,0,0.9);
 }
 .cs-dropdown.open{display:block;animation:ddO .15s ease;}
 @keyframes ddO{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
@@ -2287,35 +2285,20 @@ async function rotateKeys(id){
   if(r.success){toast('Keys rotated — update your code!','info');document.getElementById('pk-'+id).textContent=r.publicKey;document.getElementById('sk-'+id).textContent=r.secretKey;loadApps();}
 }
 
-// CUSTOM SELECT
-// ── Portal dropdown — renders in fixed layer so it's never clipped ──
-let _csPortal=null,_csActiveId=null;
-function _ensurePortal(){
-  if(_csPortal)return;
-  _csPortal=document.createElement('div');
-  _csPortal.id='cs-portal';
-  _csPortal.style.cssText='position:fixed;z-index:99999;display:none;';
-  document.body.appendChild(_csPortal);
-  // inherit dropdown styles
-  _csPortal.innerHTML='';
-}
+// CUSTOM SELECT — fixed positioning on open so nothing clips it
 function toggleCS(id){
-  _ensurePortal();
-  if(_csActiveId===id){closeAllCS();return;}
-  closeAllCS();
   const sel=document.getElementById(id);
   if(!sel)return;
   const btn=sel.querySelector('.cs-selected');
   const menu=sel.querySelector('.cs-dropdown');
   if(!btn||!menu)return;
-  // position portal under the trigger button
+  const isOpen=menu.classList.contains('open');
+  closeAllCS();
+  if(isOpen)return;
   const rect=btn.getBoundingClientRect();
-  _csPortal.innerHTML=menu.innerHTML;
-  _csPortal.className='cs-dropdown open';
-  _csPortal.style.cssText=`position:fixed;z-index:99999;left:${rect.left}px;top:${rect.bottom}px;width:${rect.width}px;display:block;background:var(--bg3);border:1px solid var(--p);border-top:none;border-bottom-left-radius:var(--r);border-bottom-right-radius:var(--r);max-height:260px;overflow-y:auto;box-shadow:0 16px 40px rgba(0,0,0,0.85);animation:ddO .15s ease;`;
+  menu.style.cssText='position:fixed!important;top:'+rect.bottom+'px;left:'+rect.left+'px;width:'+rect.width+'px;z-index:99999;max-height:300px;overflow-y:auto;display:block;';
   btn.classList.add('open');
-  _csActiveId=id;
-  // onclick attributes in the cloned HTML fire naturally — no manual wiring needed
+  menu.classList.add('open');
 }
 function selectCS(id, val, label){
   const hiddenId=id.replace('cs-','g-');
@@ -2327,17 +2310,18 @@ function selectCS(id, val, label){
   if(menu)menu.querySelectorAll('.cs-opt').forEach(o=>{
     o.classList.toggle('selected', o.dataset.val===String(val));
   });
-  if(id==='cs-count'||id==='cs-days'||id==='cs-uses')gkUpdateSummary&&gkUpdateSummary();
+  if(id==='cs-count'||id==='cs-days'||id==='cs-uses')typeof gkUpdateSummary==='function'&&gkUpdateSummary();
   closeAllCS();
 }
 function closeAllCS(){
   document.querySelectorAll('.cs-selected').forEach(b=>b.classList.remove('open'));
-  document.querySelectorAll('.cs-dropdown').forEach(m=>m.classList.remove('open'));
-  if(_csPortal){_csPortal.style.display='none';_csPortal.innerHTML='';}
-  _csActiveId=null;
+  document.querySelectorAll('.cs-dropdown').forEach(m=>{
+    m.classList.remove('open');
+    m.style.cssText='';
+  });
 }
 document.addEventListener('click',e=>{
-  if(!e.target.closest('.custom-select')&&e.target.id!=='cs-portal'&&!e.target.closest('#cs-portal'))closeAllCS();
+  if(!e.target.closest('.custom-select'))closeAllCS();
   if(!e.target.closest('.dropdown'))closeDD();
 });
 
