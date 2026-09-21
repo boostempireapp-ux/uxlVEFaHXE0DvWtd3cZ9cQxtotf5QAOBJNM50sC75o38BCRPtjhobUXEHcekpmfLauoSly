@@ -852,6 +852,19 @@ app.post('/api/admin/apps/:id/set-dll', requireAdmin, async (req, res) => {
   res.json({ success: true, dllUrl: val });
 });
 
+// POST /api/admin/apps/:id/set-expiry  { days: 30 }  (0 or null = never)
+app.post('/api/admin/apps/:id/set-expiry', requireAdmin, async (req, res) => {
+  const doc = await appsCol.findOne({ _id: new ObjectId(req.params.id) });
+  if (!doc) return res.json({ success: false, message: 'App not found' });
+  const days = parseInt(req.body.days) || 0;
+  const keyExpiresAt = (days > 0)
+    ? new Date(Date.now() + days * 86400000).toISOString()
+    : null;
+  await appsCol.updateOne({ _id: new ObjectId(req.params.id) }, { $set: { keyExpiresAt } });
+  auditLog(req.adminIP, 'SET_APP_KEY_EXPIRY', { appId: req.params.id, days: days || 'never', keyExpiresAt });
+  res.json({ success: true, keyExpiresAt });
+});
+
 // GET /api/admin/apps/:id/dll-info  — returns the stored URL (admin only)
 app.get('/api/admin/apps/:id/dll-info', requireAdmin, async (req, res) => {
   const doc = await appsCol.findOne({ _id: new ObjectId(req.params.id) }, { projection: { dllUrl: 1, name: 1 } });
