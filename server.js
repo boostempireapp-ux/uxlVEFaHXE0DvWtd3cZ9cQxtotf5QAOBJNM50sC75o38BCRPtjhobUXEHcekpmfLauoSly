@@ -265,14 +265,7 @@ function _pingExternal() {
   req.on('error',   (e) => { console.warn(`[keep-alive] ⚠️  External ping error: ${e.message}`); });
 }
 
-// ── 3. CPU tickle — runs a tiny no-op to prevent V8 from idling too deeply ────
-function _tickleCPU() {
-  let x = 0;
-  for (let i = 0; i < 1e5; i++) x += Math.sqrt(i);
-  return x; // value discarded — just keeps the event loop busy for ~1 ms
-}
-
-// ── 4. Watchdog — restarts the process if health has been failing >3 minutes ──
+// ── 3. Watchdog — restarts the process if health has been failing >3 minutes ──
 function _watchdog() {
   const silentMs = Date.now() - _kaLastSuccess;
   if (silentMs > 3 * 60 * 1000 && _kaFailStreak > 5) {
@@ -287,7 +280,6 @@ function startKeepAlive() {
 
   setInterval(_pingLocal,    PING_INTERVAL_MS);
   setInterval(_pingExternal, EXTERNAL_INTERVAL_MS);
-  setInterval(_tickleCPU,    PING_INTERVAL_MS);
   setInterval(_watchdog,     60 * 1000);        // check every minute
 
   console.log(`[keep-alive] 🔄  Local ping every ${PING_INTERVAL_MS/1000}s`);
@@ -351,6 +343,23 @@ const nonceCache  = new Map();
 const NONCE_TTL   = 5 * 60 * 1000;
 const TS_SKEW_MAX = 5 * 60 * 1000;
 setInterval(() => { const n=Date.now(); for(const[k,v] of nonceCache) if(n>v) nonceCache.delete(k); }, 60_000);
+
+// ── Periodic cleanup of unbounded in-memory Maps (every 5 min) ───────────────
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, hits] of rateLimitMap) {
+    const recent = hits.filter(t => now - t < RATE_WINDOW);
+    if (recent.length === 0) rateLimitMap.delete(ip); else rateLimitMap.set(ip, recent);
+  }
+  for (const [key, rec] of recentAuthIPs)
+    if (now - rec.time > CONCURRENT_WINDOW_MS * 6) recentAuthIPs.delete(key);
+  for (const [key, rec] of keyMismatch)
+    if (now - rec.windowStart > MISMATCH_WINDOW) keyMismatch.delete(key);
+  for (const [ip, entry] of geoCache)
+    if (now - entry.t >= GEO_TTL_MS) geoCache.delete(ip);
+  for (const [ip] of failCounts)
+    if (!rateLimitMap.has(ip)) failCounts.delete(ip);
+}, 5 * 60 * 1000);
 
 // ── PER-KEY HWID MISMATCH FLOOD AUTO-FREEZE ───────────────────────────────────
 const keyMismatch        = new Map();
