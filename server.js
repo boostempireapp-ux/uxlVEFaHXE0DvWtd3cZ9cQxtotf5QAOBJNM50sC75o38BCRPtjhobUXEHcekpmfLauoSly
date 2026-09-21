@@ -607,6 +607,12 @@ app.post('/api/auth', rateLimit, async (req, res) => {
   }
   if (!appDoc.active) return res.json({ success:false, code:'APP_DISABLED', message:'This application is disabled' });
 
+  // ── API key expiry check ──────────────────────────────────────────────────
+  if (appDoc.keyExpiresAt && new Date(appDoc.keyExpiresAt) < new Date()) {
+    log(appDoc._id,key,hwid,app_name||appDoc.name,'AUTH','API_KEY_EXPIRED',ip,'App API key has expired');
+    return res.json({ success:false, code:'API_KEY_EXPIRED', message:'This application\'s API key has expired' });
+  }
+
   // ── HMAC signature check (optional per-app) ───────────────────────────────
   if (!validateHmac(req, appDoc)) {
     log(appDoc._id,key,hwid,app_name||appDoc.name,'AUTH','INVALID_SIGNATURE',ip,'HMAC mismatch');
