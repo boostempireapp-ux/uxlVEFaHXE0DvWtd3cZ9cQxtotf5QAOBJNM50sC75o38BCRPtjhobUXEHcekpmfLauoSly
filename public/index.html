@@ -2244,11 +2244,11 @@ async function loadApps(){
       <div style="margin-top:10px;padding:8px 13px;background:#000;border-radius:var(--r);font-size:11px;color:var(--text3)">
         In your code: &nbsp;<span style="color:var(--p3);font-family:'JetBrains Mono',monospace;font-size:11px">x-public-key: ${a.publicKey}</span>
       </div>
-      <div style="margin-top:8px;padding:8px 13px;background:#1a0a2e;border:1px solid #7c3aed33;border-radius:var(--r);font-size:11px;display:flex;align-items:center;gap:8px">
-        <span style="color:#c084fc;font-weight:600">🟣 DLL:</span>
+      <div style="margin-top:8px;padding:8px 13px;background:${a.dllUrl?'#1a0a2e':'rgba(245,158,11,0.06)'};border:1px solid ${a.dllUrl?'#7c3aed33':'rgba(245,158,11,0.35)'};border-radius:var(--r);font-size:11px;display:flex;align-items:center;gap:8px">
+        <span style="color:#c084fc;font-weight:600;flex-shrink:0">🟣 DLL:</span>
         ${a.dllUrl
           ? `<span style="color:#a855f7;font-family:'JetBrains Mono',monospace;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.dllUrl}">${a.dllUrl}</span><span style="color:#4ade80;font-weight:600">✅ Set</span>`
-          : `<span style="color:#64748b">Not configured — click 🟣 DLL to add a Catbox link</span>`}
+          : `<span style="color:#f59e0b;font-weight:700;letter-spacing:.2px">⚠️ Not configured — click <span style="color:#c084fc">🟣 DLL</span> to add a Catbox link</span>`}
       </div>
     </div>
   `).join('');
