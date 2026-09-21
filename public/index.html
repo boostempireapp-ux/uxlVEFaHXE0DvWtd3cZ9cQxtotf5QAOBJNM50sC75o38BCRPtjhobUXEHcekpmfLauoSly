@@ -7,9 +7,9 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 :root{
-  --bg:#000;--bg2:#080808;--bg3:#0f0f0f;--bg4:#141414;
+  --bg:#000000;--bg2:#000000;--bg3:#000000;--bg4:#000000;
   --border:rgba(139,92,246,0.1);--border2:rgba(139,92,246,0.22);
-  --glass:rgba(139,92,246,0.04);--glassh:rgba(139,92,246,0.09);
+  --glass:#000000;--glassh:rgba(139,92,246,0.06);
   --p:#8b5cf6;--p2:#6d28d9;--p3:#a78bfa;--p4:#c4b5fd;--p5:#7c3aed;
   --pdim:rgba(139,92,246,0.12);--p2dim:rgba(109,40,217,0.12);
   --text:#e8e8ff;--text2:#9090c0;--text3:#4a4a7a;
@@ -50,7 +50,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 
 /* right panel */
 .login-right{width:480px;min-width:380px;display:flex;align-items:center;justify-content:center;
-  background:#0a0a0a;border-left:1px solid rgba(139,92,246,0.1);}
+  background:#000000;border-left:1px solid rgba(139,92,246,0.1);}
 .login-box{width:100%;max-width:340px;padding:0 10px;}
 .login-box h2{font-family:'Inter',sans-serif;font-size:24px;font-weight:700;color:var(--text);
   margin-bottom:28px;letter-spacing:-.3px;}
@@ -115,7 +115,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 /* LAYOUT */
 #app{display:none;height:100vh;position:relative;z-index:1;}
 #app.on{display:flex;}
-.sidebar{width:var(--sb);min-width:var(--sb);height:100vh;background:rgba(4,4,4,0.99);
+.sidebar{width:var(--sb);min-width:var(--sb);height:100vh;background:#000000;
   border-right:1px solid var(--border);display:flex;flex-direction:column;position:relative;z-index:10;}
 .sidebar::after{content:'';position:absolute;top:0;right:-1px;bottom:0;width:1px;
   background:linear-gradient(180deg,transparent 0%,var(--p) 50%,transparent 100%);opacity:0.22;}
@@ -161,7 +161,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 
 /* STATS */
 .stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;margin-bottom:22px;}
-.stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);
+.stat{background:#000000;border:1px solid var(--border);border-radius:var(--r2);
   padding:18px 16px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s;}
 .stat:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(139,92,246,0.09);}
 .stat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
@@ -179,7 +179,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 .stat-icon{position:absolute;top:12px;right:12px;font-size:16px;opacity:0.3;}
 
 /* CARD */
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:16px;}
+.card{background:#000000;border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:16px;}
 .card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .card-title{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;
   color:var(--p3);text-transform:uppercase;display:flex;align-items:center;gap:7px;}
@@ -472,7 +472,7 @@ tbody td{padding:9px 13px;vertical-align:middle;}
 .hwid-mismatch-row{border-left:3px solid rgba(220,38,38,0.35);}
 .hwid-mismatch-row:hover{background:rgba(220,38,38,0.04) !important;}
 /* RESELLER REDESIGN */
-.rs-hero{background:linear-gradient(135deg,rgba(139,92,246,0.1) 0%,rgba(0,0,0,0) 60%),rgba(8,8,8,0.95);border:1px solid var(--border2);border-radius:16px;padding:22px 26px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden;}
+.rs-hero{background:linear-gradient(135deg,rgba(139,92,246,0.1) 0%,rgba(0,0,0,0) 60%),rgba(0,0,0,1);border:1px solid var(--border2);border-radius:16px;padding:22px 26px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden;}
 .rs-hero::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--p),transparent);}
 .rs-hero-name{font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;background:linear-gradient(135deg,#c4b5fd,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
 .rs-hero-sub{font-size:11px;color:var(--text3);margin-top:4px;letter-spacing:.5px;}
@@ -1542,116 +1542,6 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
             <div class="settings-row" style="padding:9px 14px"><span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Status</span><div style="display:flex;align-items:center;gap:6px"><div style="width:6px;height:6px;border-radius:50%;background:var(--p);box-shadow:0 0 6px var(--p);animation:blink 2s infinite"></div><span style="font-size:11px;color:var(--p3)">Online</span></div></div>
             <div class="settings-row" style="padding:9px 14px"><span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Sessions</span><span style="font-size:11px;color:var(--text2)">In-memory (per restart)</span></div>
           </div>
-        </div>
-      </div>
-
-      <!-- ROW 2: Security Grid (2x8 card grid) -->
-      <div class="card" style="max-width:900px;margin-bottom:16px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
-          <div style="width:32px;height:32px;background:var(--pdim);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px">🛡️</div>
-          <div>
-            <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--p3);letter-spacing:1px;text-transform:uppercase">Security Features</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:1px">16 active protection layers — C++ client + server</div>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
-
-          <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;font-weight:700;color:var(--p3)">① Code Integrity</span><span class="badge b-active" style="font-size:9px">60s</span></div>
-            <div style="font-size:9px;color:var(--text3);line-height:1.5">Hashes .exe at startup + every 60s — patched binary triggers BSOD loop</div>
-            <div style="font-size:9px;color:var(--text3);margin-top:auto"><span style="color:var(--p)">●</span> C++ Client</div>
-          </div>
-
-          <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;font-weight:700;color:var(--p3)">② Import Obfuscation</span><span class="badge b-active" style="font-size:9px">Active</span></div>
-            <div style="font-size:9px;color:var(--text3);line-height:1.5">WinAPI resolved dynamically — invisible to IDA/Ghidra static analysis</div>
-            <div style="font-size:9px;color:var(--text3);margin-top:auto"><span style="color:var(--p)">●</span> C++ Client</div>
-          </div>
-
-          <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;font-weight:700;color:var(--p3)">③ Anti-Dump</span><span class="badge b-active" style="font-size:9px">Active</span></div>
-            <div style="font-size:9px;color:var(--text3);line-height:1.5">PE header erased from memory at startup — dumped files are broken</div>
-            <div style="font-size:9px;color:var(--text3);margin-top:auto"><span style="color:var(--p)">●</span> C++ Client</div>
-          </div>
-
-          <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;font-weight:700;color:var(--p3)">④ Timing Jitter</span><span class="badge b-info" style="font-size:9px">Server</span></div>
-            <div style="font-size:9px;color:var(--text3);line-height:1.5">80–350ms random delay per auth — blocks automated key-testing scripts</div>
-            <div style="font-size:9px;color:var(--text3);margin-top:auto"><span style="color:#c4b5fd">●</span> Server-side</div>
-          </div>
-
-          <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;font-weight:700;color:var(--p3)">⑤ Stack Canary</span><span class="badge b-active" style="font-size:9px">Active</span></div>
-            <div style="font-size:9px;color:var(--text3);line-height:1.5">Random sentinel on auth stack — catches ROP attacks and stack smashing</div>
-            <div style="font-size:9px;color:var(--text3);margin-top:auto"><span style="color:var(--p)">●</span> C++ Client</div>
-          </div>
-
-          <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;font-weight:700;color:var(--p3)">⑥ Thread Anomaly</span><span class="badge b-active" style="font-size:9px">Active</span></div>
-            <div style="font-size:9px;color:var(--text3);line-height:1.5">Baseline set at startup — DLL injection causes thread spike → BSOD</div>
-            <div style="font-size:9px;color:var(--text3);margin-top:auto"><span style="color:var(--p)">●</span> C++ Client</div>
-          </div>
-
-          <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;font-weight:700;color:var(--p3)">⑦ Fake Exports</span><span class="badge b-active" style="font-size:9px">5 Decoys</span></div>
-            <div style="font-size:9px;color:var(--text3);line-height:1.5">ValidateLicense, CheckLicense, IsAuthenticated exports → instant BSOD</div>
-            <div style="font-size:9px;color:var(--text3);margin-top:auto"><span style="color:var(--p)">●</span> C++ Client</div>
-          </div>
-
-          <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;font-weight:700;color:var(--p3)">⑧ Anti-Screenshot</span><span class="badge b-active" style="font-size:9px">Active</span></div>
-            <div style="font-size:9px;color:var(--text3);line-height:1.5">Window excluded from OBS, capture tools, screenshots — shows black</div>
-            <div style="font-size:9px;color:var(--text3);margin-top:auto"><span style="color:var(--p)">●</span> C++ Client</div>
-          </div>
-
-          <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;font-weight:700;color:var(--p3)">⑨ Watchdog Guard</span><span class="badge b-active" style="font-size:9px">15s</span></div>
-            <div style="font-size:9px;color:var(--text3);line-height:1.5">Detects watchdog suspended/killed by cracker — BSOD within 15s</div>
-            <div style="font-size:9px;color:var(--text3);margin-top:auto"><span style="color:var(--p)">●</span> C++ Client</div>
-          </div>
-
-          <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;font-weight:700;color:var(--p3)">⑩ Multi-Machine</span><span class="badge b-info" style="font-size:9px">Server</span></div>
-            <div style="font-size:9px;color:var(--text3);line-height:1.5">Same key from 2 different CPUs within 60s → permanent ban</div>
-            <div style="font-size:9px;color:var(--text3);margin-top:auto"><span style="color:#c4b5fd">●</span> Server-side</div>
-          </div>
-
-          <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;font-weight:700;color:var(--p3)">BSOD Loop</span><span class="badge b-active" style="font-size:9px">Active</span></div>
-            <div style="font-size:9px;color:var(--text3);line-height:1.5">Cracker detected → registry persist → BSOD on every reboot forever</div>
-            <div style="font-size:9px;color:var(--text3);margin-top:auto"><span style="color:var(--p)">●</span> C++ Client</div>
-          </div>
-
-          <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;font-weight:700;color:var(--p3)">Anti-Debug</span><span class="badge b-active" style="font-size:9px">7 Layers</span></div>
-            <div style="font-size:9px;color:var(--text3);line-height:1.5">PEB, NtQuery, RDTSC timing, HW breakpoints, heap flags, remote debugger</div>
-            <div style="font-size:9px;color:var(--text3);margin-top:auto"><span style="color:var(--p)">●</span> C++ Client</div>
-          </div>
-
-          <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;font-weight:700;color:var(--p3)">Process Blacklist</span><span class="badge b-active" style="font-size:9px">15+ Tools</span></div>
-            <div style="font-size:9px;color:var(--text3);line-height:1.5">x64dbg, IDA, CheatEngine, dnSpy, Ghidra, WireShark, Fiddler, PE-Bear…</div>
-            <div style="font-size:9px;color:var(--text3);margin-top:auto"><span style="color:var(--p)">●</span> C++ Client</div>
-          </div>
-
-          <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;font-weight:700;color:var(--p3)">Anti-VM</span><span class="badge b-active" style="font-size:9px">5 Layers</span></div>
-            <div style="font-size:9px;color:var(--text3);line-height:1.5">VMware, VirtualBox, QEMU, KVM, Hyper-V via CPUID + registry checks</div>
-            <div style="font-size:9px;color:var(--text3);margin-top:auto"><span style="color:var(--p)">●</span> C++ Client</div>
-          </div>
-
-          <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;font-weight:700;color:var(--p3)">Rate Limiting</span><span class="badge b-info" style="font-size:9px">Server</span></div>
-            <div style="font-size:9px;color:var(--text3);line-height:1.5">30 req/min per IP — auto-block after 80 failed auths permanently</div>
-            <div style="font-size:9px;color:var(--text3);margin-top:auto"><span style="color:#c4b5fd">●</span> Server-side</div>
-          </div>
-
-          <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:10px;padding:13px;display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;font-weight:700;color:var(--p3)">HWID Lock</span><span class="badge b-info" style="font-size:9px">Server</span></div>
-            <div style="font-size:9px;color:var(--text3);line-height:1.5">Key locks to first machine — hardware ID stored as SHA-256 hash</div>
-            <div style="font-size:9px;color:var(--text3);margin-top:auto"><span style="color:#c4b5fd">●</span> Server-side</div>
-          </div>
-
         </div>
       </div>
 
