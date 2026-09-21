@@ -139,7 +139,7 @@ function totpUri(secret, label = 'BoostEmpire Admin') {
 
 // ── MONGODB CONNECTION ────────────────────────────────────────────────────────
 let db;
-let keysCol, logsCol, adminCol, appsCol, blocksCol, resellersCol, detectionsCol, adminAuditCol;
+let keysCol, logsCol, adminCol, appsCol, blocksCol, resellersCol, detectionsCol, adminAuditCol, dllLogsCol;
 
 async function connectDB() {
   const client = new MongoClient(MONGO_URI, {
@@ -159,6 +159,7 @@ async function connectDB() {
   resellersCol   = db.collection('resellers');
   detectionsCol  = db.collection('detections');
   adminAuditCol  = db.collection('adminAudit');
+  dllLogsCol     = db.collection('dllLogs');
 
   await keysCol.createIndex({ key: 1 }, { unique: true });
   await keysCol.createIndex({ appId: 1, status: 1 });
@@ -171,6 +172,8 @@ async function connectDB() {
   await resellersCol.createIndex({ username: 1 }, { unique: true });
   await detectionsCol.createIndex({ timestamp: -1 });
   await adminAuditCol.createIndex({ timestamp: -1 });
+  await dllLogsCol.createIndex({ timestamp: -1 });
+  await dllLogsCol.createIndex({ appId: 1, timestamp: -1 });
 
   const adminDoc  = await adminCol.findOne({ _id: 'admin' });
   const ADMIN_HASH = '730aa79139462fd34d63c453a7d8b76da661b1800c6b716ebedd9428f0ce0d7b';
@@ -853,8 +856,19 @@ app.post('/api/admin/apps/:id/set-dll', requireAdmin, async (req, res) => {
   if (dllUrl && !isAllowedDllHost(dllUrl))
     return res.json({ success: false, message: 'DLL host not in allowlist. Supported: Catbox, Discord CDN, GitHub, jsDelivr, Google Drive, Dropbox.' });
   const val = dllUrl && String(dllUrl).trim() ? String(dllUrl).trim() : null;
+  const appDoc = await appsCol.findOne({ _id: new ObjectId(req.params.id) }, { projection: { name: 1 } });
   await appsCol.updateOne({ _id: new ObjectId(req.params.id) }, { $set: { dllUrl: val } });
   auditLog(req.adminIP, val ? 'SET_DLL_URL' : 'CLEAR_DLL_URL', { appId: req.params.id, dllUrl: val });
+  if (val) {
+    await dllLogsCol.insertOne({
+      appId: req.params.id,
+      appName: appDoc?.name || '—',
+      dllUrl: val,
+      setBy: 'admin',
+      setByType: 'admin',
+      timestamp: new Date().toISOString(),
+    });
+  }
   res.json({ success: true, dllUrl: val });
 });
 
@@ -876,6 +890,20 @@ app.get('/api/admin/apps/:id/dll-info', requireAdmin, async (req, res) => {
   const doc = await appsCol.findOne({ _id: new ObjectId(req.params.id) }, { projection: { dllUrl: 1, name: 1 } });
   if (!doc) return res.json({ success: false, message: 'App not found' });
   res.json({ success: true, dllUrl: doc.dllUrl || null, appName: doc.name });
+});
+
+// GET /api/admin/dll-logs  — full DLL upload history (admin only)
+app.get('/api/admin/dll-logs', requireAdmin, async (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+  const skip  = parseInt(req.query.skip) || 0;
+  const filter = {};
+  if (req.query.appId)    filter.appId   = req.query.appId;
+  if (req.query.setBy)    filter.setBy   = req.query.setBy;
+  const [docs, total] = await Promise.all([
+    dllLogsCol.find(filter).sort({ timestamp: -1 }).skip(skip).limit(limit).toArray(),
+    dllLogsCol.countDocuments(filter),
+  ]);
+  res.json({ success: true, logs: docs, total });
 });
 
 // GET /api/dll/:publicKey  — authenticated DLL download (requires valid session_token + key)
@@ -1357,6 +1385,51 @@ app.get('/api/reseller/apps', requireReseller, async (req, res) => {
   const docs = await appsCol.find(filter).sort({ createdAt:-1 }).toArray();
   const safe = docs.map(({ secretKey, ...a }) => a);
   res.json({ success:true, apps:safe });
+});
+
+// ── RESELLER: DLL MANAGEMENT ──────────────────────────────────────────────────
+// GET /api/reseller/dll-info — returns all apps the reseller can manage + their DLL URLs
+app.get('/api/reseller/dll-info', requireReseller, async (req, res) => {
+  const allowed = req.reseller.allowedApps || [];
+  const filter  = { active: true };
+  if (allowed.length > 0) filter._id = { $in: allowed.map(id => { try { return new ObjectId(id); } catch { return null; } }).filter(Boolean) };
+  const docs = await appsCol.find(filter, { projection: { name: 1, dllUrl: 1, publicKey: 1 } }).toArray();
+  res.json({ success: true, apps: docs });
+});
+
+// POST /api/reseller/apps/:id/set-dll  { dllUrl: "https://files.catbox.moe/..." }
+// Reseller can only set DLL on apps they are assigned to
+app.post('/api/reseller/apps/:id/set-dll', requireReseller, async (req, res) => {
+  const { dllUrl } = req.body;
+
+  // Verify the reseller is allowed to manage this app
+  const allowed = (req.reseller.allowedApps || []).map(String);
+  if (allowed.length > 0 && !allowed.includes(req.params.id))
+    return res.status(403).json({ success: false, message: 'You do not have access to this app.' });
+
+  if (!dllUrl || !String(dllUrl).trim())
+    return res.json({ success: false, message: 'DLL URL is required.' });
+
+  if (!isAllowedDllHost(dllUrl))
+    return res.json({ success: false, message: 'Only Catbox, Discord CDN, GitHub, jsDelivr, Google Drive, and Dropbox URLs are allowed.' });
+
+  const val    = String(dllUrl).trim();
+  const appDoc = await appsCol.findOne({ _id: new ObjectId(req.params.id) }, { projection: { name: 1 } });
+  if (!appDoc) return res.json({ success: false, message: 'App not found.' });
+
+  await appsCol.updateOne({ _id: new ObjectId(req.params.id) }, { $set: { dllUrl: val } });
+
+  // Log to dllLogs so admin can see every change
+  await dllLogsCol.insertOne({
+    appId:      req.params.id,
+    appName:    appDoc.name || '—',
+    dllUrl:     val,
+    setBy:      req.reseller.username,
+    setByType:  'reseller',
+    timestamp:  new Date().toISOString(),
+  });
+
+  res.json({ success: true, dllUrl: val });
 });
 
 // ── BACKUP / RESTORE ──────────────────────────────────────────────────────────
