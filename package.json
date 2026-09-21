@@ -4,9 +4,10 @@
   "description": "BoostEmpire Local KeyAuth System",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node --max-old-space-size=256 server.js"
   },
   "dependencies": {
+    "compression": "^1.7.4",
     "express": "^4.22.2",
     "mongodb": "^6.3.0"
   }
