@@ -1714,82 +1714,152 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
 
     <!-- RESELLER DASHBOARD -->
     <div class="page" id="page-r-dashboard">
-      <div class="rs-hero">
-        <div style="display:flex;align-items:center;gap:16px">
-          <div style="width:50px;height:50px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">&#x1F511;</div>
+
+      <!-- HERO BANNER -->
+      <div style="background:linear-gradient(135deg,rgba(139,92,246,0.12) 0%,rgba(109,40,217,0.06) 50%,rgba(0,0,0,0) 100%);border:1px solid rgba(139,92,246,0.2);border-radius:18px;padding:24px 28px;margin-bottom:20px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;">
+        <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(139,92,246,0.6),transparent);"></div>
+        <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(139,92,246,0.08) 0%,transparent 70%);pointer-events:none;"></div>
+        <div style="display:flex;align-items:center;gap:18px">
+          <div style="width:56px;height:56px;background:linear-gradient(135deg,rgba(139,92,246,0.3),rgba(109,40,217,0.15));border:1px solid rgba(139,92,246,0.35);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;box-shadow:0 4px 20px rgba(139,92,246,0.15)">🔑</div>
           <div>
-            <div class="rs-hero-name" id="r-display-name">Reseller Portal</div>
-            <div class="rs-hero-sub">Reseller Account &middot; BoostEmpire KeyAuth</div>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;background:linear-gradient(135deg,#e2d9ff,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.1" id="r-display-name">Reseller Portal</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:5px;letter-spacing:0.4px">Reseller Account &middot; BoostEmpire KeyAuth</div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
-          <div class="rs-hero-tag"><div class="rs-hero-tag-val" id="rs-slots-left">&#x221E;</div><div class="rs-hero-tag-label">Slots Left</div></div>
-          <div class="rs-hero-tag"><div class="rs-hero-tag-val" id="rs-total-2">0</div><div class="rs-hero-tag-label">Total Keys</div></div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
-        <div class="rs-stat s-gold">
-          <div class="rs-stat-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div>
-          <div class="rs-stat-val" id="rs-total">0</div><div class="rs-stat-label">My Keys</div>
-          <div style="height:2px;background:rgba(245,158,11,0.08);border-radius:2px;margin-top:8px;overflow:hidden"><div style="height:100%;background:var(--p);border-radius:2px;width:100%"></div></div>
-        </div>
-        <div class="rs-stat s-gold">
-          <div class="rs-stat-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="rs-stat-val" id="rs-active">0</div><div class="rs-stat-label">Active</div>
-          <div style="height:2px;background:rgba(245,158,11,0.08);border-radius:2px;margin-top:8px;overflow:hidden"><div id="rs-active-bar" style="height:100%;background:var(--p);border-radius:2px;width:0%"></div></div>
-        </div>
-        <div class="rs-stat" style="border-color:var(--border2)">
-          <div style="width:34px;height:34px;border-radius:10px;background:rgba(109,40,217,0.1);display:flex;align-items:center;justify-content:center;margin-bottom:12px;color:#9333ea">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></div>
-          <div style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:var(--p3);margin-bottom:3px" id="rs-banned">0</div>
-          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-weight:600">Banned</div>
-          <div style="height:2px;background:rgba(109,40,217,0.08);border-radius:2px;margin-top:8px;overflow:hidden"><div id="rs-banned-bar" style="height:100%;background:var(--p2);border-radius:2px;width:0%"></div></div>
-        </div>
-        <div class="rs-stat" style="border-color:rgba(245,158,11,0.2)">
-          <div class="rs-stat-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
-          <div class="rs-stat-val" id="rs-quota" style="font-size:26px;color:var(--p3)">&#x221E;</div><div class="rs-stat-label">Quota Used</div>
-          <div class="quota-bar" style="margin-top:8px"><div class="quota-fill" id="rs-quota-fill" style="width:0%"></div></div>
-          <div style="font-size:9px;color:var(--text3);margin-top:4px" id="rs-quota-label"></div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px">
-        <div class="card" style="padding:0;border-color:var(--border2)">
-          <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-            <div style="display:flex;align-items:center;gap:8px">
-              <div style="width:26px;height:26px;background:var(--pdim);border-radius:7px;display:flex;align-items:center;justify-content:center">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--p3)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              </div>
-              <span style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--p3);text-transform:uppercase">Recent Activity</span>
-            </div>
-            <button class="btn btn-ghost btn-sm" onclick="go('r-logs')" id="r-view-logs-btn" style="display:none;font-size:11px;border-color:var(--border2);color:var(--p3)">View All &#x2192;</button>
+          <div style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.2);border-radius:12px;padding:12px 20px;text-align:center;min-width:80px">
+            <div style="font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;color:#a78bfa;line-height:1" id="rs-slots-left">&#x221E;</div>
+            <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px;margin-top:4px;font-weight:600">Slots Left</div>
           </div>
-          <div id="r-dash-activity" style="padding:4px 0"><div style="text-align:center;padding:36px;color:var(--text3);font-size:12px">No activity yet</div></div>
+          <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:12px;padding:12px 20px;text-align:center;min-width:80px">
+            <div style="font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;color:var(--p3);line-height:1" id="rs-total-2">0</div>
+            <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px;margin-top:4px;font-weight:600">Total Keys</div>
+          </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:14px">
-          <div class="card" style="padding:18px;border-color:var(--border2)">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-              <div style="width:26px;height:26px;background:var(--pdim);border-radius:7px;display:flex;align-items:center;justify-content:center">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--p3)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+
+      <!-- STAT CARDS -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+
+        <!-- My Keys -->
+        <div style="background:var(--bg2);border:1px solid rgba(139,92,246,0.2);border-radius:14px;padding:18px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 28px rgba(139,92,246,0.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+          <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#8b5cf6,transparent)"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="width:36px;height:36px;border-radius:10px;background:rgba(139,92,246,0.12);display:flex;align-items:center;justify-content:center;color:#a78bfa">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+            </div>
+            <span style="font-size:9px;color:#a78bfa;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.2);padding:3px 8px;border-radius:20px;font-weight:600;letter-spacing:.5px;text-transform:uppercase">Total</span>
+          </div>
+          <div style="font-family:'Rajdhani',sans-serif;font-size:36px;font-weight:700;color:#c4b5fd;line-height:1;margin-bottom:4px" id="rs-total">0</div>
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-weight:600">My Keys</div>
+          <div style="height:3px;background:rgba(139,92,246,0.1);border-radius:2px;margin-top:12px;overflow:hidden"><div style="height:100%;background:linear-gradient(90deg,#8b5cf6,#a78bfa);border-radius:2px;width:100%"></div></div>
+        </div>
+
+        <!-- Active -->
+        <div style="background:var(--bg2);border:1px solid rgba(74,222,128,0.15);border-radius:14px;padding:18px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 28px rgba(74,222,128,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+          <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#4ade80,transparent)"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="width:36px;height:36px;border-radius:10px;background:rgba(74,222,128,0.1);display:flex;align-items:center;justify-content:center;color:#4ade80">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <span style="font-size:9px;color:#4ade80;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);padding:3px 8px;border-radius:20px;font-weight:600;letter-spacing:.5px;text-transform:uppercase">Live</span>
+          </div>
+          <div style="font-family:'Rajdhani',sans-serif;font-size:36px;font-weight:700;color:#4ade80;line-height:1;margin-bottom:4px" id="rs-active">0</div>
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-weight:600">Active</div>
+          <div style="height:3px;background:rgba(74,222,128,0.08);border-radius:2px;margin-top:12px;overflow:hidden"><div id="rs-active-bar" style="height:100%;background:linear-gradient(90deg,#22c55e,#4ade80);border-radius:2px;width:0%"></div></div>
+        </div>
+
+        <!-- Banned -->
+        <div style="background:var(--bg2);border:1px solid rgba(248,113,113,0.15);border-radius:14px;padding:18px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 28px rgba(248,113,113,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+          <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#f87171,transparent)"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="width:36px;height:36px;border-radius:10px;background:rgba(248,113,113,0.1);display:flex;align-items:center;justify-content:center;color:#f87171">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+            </div>
+            <span style="font-size:9px;color:#f87171;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);padding:3px 8px;border-radius:20px;font-weight:600;letter-spacing:.5px;text-transform:uppercase">Blocked</span>
+          </div>
+          <div style="font-family:'Rajdhani',sans-serif;font-size:36px;font-weight:700;color:#f87171;line-height:1;margin-bottom:4px" id="rs-banned">0</div>
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-weight:600">Banned</div>
+          <div style="height:3px;background:rgba(248,113,113,0.08);border-radius:2px;margin-top:12px;overflow:hidden"><div id="rs-banned-bar" style="height:100%;background:linear-gradient(90deg,#ef4444,#f87171);border-radius:2px;width:0%"></div></div>
+        </div>
+
+        <!-- Quota -->
+        <div style="background:var(--bg2);border:1px solid rgba(251,191,36,0.15);border-radius:14px;padding:18px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 28px rgba(251,191,36,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+          <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#fbbf24,transparent)"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="width:36px;height:36px;border-radius:10px;background:rgba(251,191,36,0.1);display:flex;align-items:center;justify-content:center;color:#fbbf24">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            </div>
+            <span style="font-size:9px;color:#fbbf24;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);padding:3px 8px;border-radius:20px;font-weight:600;letter-spacing:.5px;text-transform:uppercase">Usage</span>
+          </div>
+          <div style="font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:#fcd34d;line-height:1;margin-bottom:4px" id="rs-quota">&#x221E;</div>
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-weight:600">Quota Used</div>
+          <div style="height:3px;background:rgba(251,191,36,0.08);border-radius:2px;margin-top:12px;overflow:hidden"><div class="quota-fill" id="rs-quota-fill" style="width:0%;background:linear-gradient(90deg,#d97706,#fbbf24)"></div></div>
+          <div style="font-size:9px;color:var(--text3);margin-top:5px" id="rs-quota-label"></div>
+        </div>
+
+      </div>
+
+      <!-- BOTTOM GRID -->
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px">
+
+        <!-- Recent Activity -->
+        <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;overflow:hidden">
+          <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(139,92,246,0.03)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:28px;height:28px;background:rgba(139,92,246,0.12);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               </div>
-              <span style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--p3);text-transform:uppercase">Your Access</span>
+              <span style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:#c4b5fd;text-transform:uppercase">Recent Activity</span>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="go('r-logs')" id="r-view-logs-btn" style="display:none;font-size:11px;color:#a78bfa;border-color:rgba(139,92,246,0.3)">View All →</button>
+          </div>
+          <div id="r-dash-activity" style="padding:4px 0;min-height:120px"><div style="display:flex;align-items:center;justify-content:center;padding:48px 20px;color:var(--text3);font-size:12px;flex-direction:column;gap:8px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity=".3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>No activity yet</div></div>
+        </div>
+
+        <!-- Right column -->
+        <div style="display:flex;flex-direction:column;gap:12px">
+
+          <!-- Your Access -->
+          <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:18px;overflow:hidden">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+              <div style="width:28px;height:28px;background:rgba(139,92,246,0.12);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <span style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:#c4b5fd;text-transform:uppercase">Your Access</span>
             </div>
             <div class="rs-perm-grid" id="r-permissions-display"></div>
-            <div class="rs-notice">Need more access? Contact your admin.</div>
+            <div style="margin-top:12px;padding:9px 12px;background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-left:3px solid rgba(139,92,246,0.5);border-radius:8px;font-size:11px;color:var(--text2)">Need more access? Contact your admin.</div>
           </div>
-          <div class="card" style="padding:18px;border-color:var(--border2)">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-              <div style="width:26px;height:26px;background:var(--pdim);border-radius:7px;display:flex;align-items:center;justify-content:center">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--p3)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+
+          <!-- Quick Actions -->
+          <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:18px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+              <div style="width:28px;height:28px;background:rgba(139,92,246,0.12);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
               </div>
-              <span style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--p3);text-transform:uppercase">Quick Actions</span>
+              <span style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:#c4b5fd;text-transform:uppercase">Quick Actions</span>
             </div>
-            <div style="display:flex;flex-direction:column;gap:7px">
-              <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:flex-start;gap:9px;border-color:var(--border2);color:var(--p3)" onclick="go('r-generate')" id="r-qa-generate"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Generate New Keys</button>
-              <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:flex-start;gap:9px" onclick="go('r-keys')" id="r-qa-keys"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778"/></svg>View My Keys</button>
-              <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:flex-start;gap:9px" onclick="go('r-logs')" id="r-qa-logs"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Auth Logs</button>
-              <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:flex-start;gap:9px" onclick="logout()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</button>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <button id="r-qa-generate" onclick="go('r-generate')" style="width:100%;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);border-radius:9px;padding:9px 13px;display:flex;align-items:center;gap:10px;cursor:pointer;color:#c4b5fd;font-size:12px;font-weight:500;transition:all .15s;text-align:left" onmouseover="this.style.background='rgba(139,92,246,0.15)';this.style.borderColor='rgba(139,92,246,0.35)'" onmouseout="this.style.background='rgba(139,92,246,0.08)';this.style.borderColor='rgba(139,92,246,0.2)'">
+                <span style="width:26px;height:26px;background:rgba(139,92,246,0.15);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+                Generate New Keys
+              </button>
+              <button id="r-qa-keys" onclick="go('r-keys')" style="width:100%;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:9px;padding:9px 13px;display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--text2);font-size:12px;font-weight:500;transition:all .15s;text-align:left" onmouseover="this.style.background='rgba(139,92,246,0.06)';this.style.borderColor='rgba(139,92,246,0.2)';this.style.color='#c4b5fd'" onmouseout="this.style.background='rgba(255,255,255,0.03)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
+                <span style="width:26px;height:26px;background:rgba(255,255,255,0.05);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778"/></svg></span>
+                View My Keys
+              </button>
+              <button id="r-qa-logs" onclick="go('r-logs')" style="width:100%;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:9px;padding:9px 13px;display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--text2);font-size:12px;font-weight:500;transition:all .15s;text-align:left" onmouseover="this.style.background='rgba(139,92,246,0.06)';this.style.borderColor='rgba(139,92,246,0.2)';this.style.color='#c4b5fd'" onmouseout="this.style.background='rgba(255,255,255,0.03)';this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
+                <span style="width:26px;height:26px;background:rgba(255,255,255,0.05);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+                Auth Logs
+              </button>
+              <button onclick="logout()" style="width:100%;background:rgba(248,113,113,0.04);border:1px solid rgba(248,113,113,0.12);border-radius:9px;padding:9px 13px;display:flex;align-items:center;gap:10px;cursor:pointer;color:rgba(248,113,113,0.7);font-size:12px;font-weight:500;transition:all .15s;text-align:left" onmouseover="this.style.background='rgba(248,113,113,0.1)';this.style.borderColor='rgba(248,113,113,0.25)';this.style.color='#f87171'" onmouseout="this.style.background='rgba(248,113,113,0.04)';this.style.borderColor='rgba(248,113,113,0.12)';this.style.color='rgba(248,113,113,0.7)'">
+                <span style="width:26px;height:26px;background:rgba(248,113,113,0.08);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
+                Sign Out
+              </button>
             </div>
           </div>
+
         </div>
       </div>
 
