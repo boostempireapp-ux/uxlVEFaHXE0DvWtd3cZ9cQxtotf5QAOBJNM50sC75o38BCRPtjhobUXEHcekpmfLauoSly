@@ -673,129 +673,184 @@ inline void NukePEHeader() {
 }
 
 // ============================================================================
-// ANTI-PROCESS (extended — includes all IDA variants + static tools)
+// ANTI-PROCESS (extended — 444 crack/debug/cheat tools)
 // ============================================================================
 inline bool CrackToolRunning() {
     static const char* blacklist[] = {
-        // ── IDA Pro — all variants (running & headless) ──
-        "ida",              // ida.exe — main GUI
-        "ida64",            // ida64.exe — 64-bit GUI
-        "idaq",             // idaq.exe — old GUI name
-        "idaq64",           // idaq64.exe
-        "idag",             // idag.exe — GUI batch mode
-        "idaw",             // idaw.exe — Windows console
-        "idat",             // idat.exe — HEADLESS IDA (no GUI, still analyzes!)
-        "idat64",           // idat64.exe — headless 64-bit
-        "ida_export",       // IDA export scripts
-        "ida_server",       // IDA remote debug server
-        "win32_remote",     // IDA win32 remote debug stub
-        "win64_remote",     // IDA win64 remote debug stub
-        "armlinux_server",  // IDA ARM remote debug
-        "idp",              // IDA plugin host
 
-        // ── Ghidra ──
-        "ghidra",
-        "analyzeheadless",  // Ghidra headless analyzer — runs without GUI!
-        "ghidrarun",
+        // ══ IDA Pro — every variant including headless ══
+        "ida",              "ida64",            "idaq",             "idaq64",
+        "idag",             "idag64",           "idaw",             "idaw64",
+        "idat",             "idat64",           "ida_export",       "ida_server",
+        "win32_remote",     "win64_remote",     "armlinux_server",  "idp",
+        "ida.exe",          "ida64.exe",        "idat.exe",         "idat64.exe",
+        "hexrays",          "hex-rays",
 
-        // ── x64dbg family ──
-        "x64dbg", "x32dbg", "x96dbg",
+        // ══ Ghidra ══
+        "ghidra",           "analyzeheadless",  "ghidrarun",        "ghidrasymbols",
+        "support",          "ghidra_server",
 
-        // ── OllyDbg family ──
-        "ollydbg", "odbgscript", "ollydbg2",
+        // ══ x64dbg / x32dbg family ══
+        "x64dbg",           "x32dbg",           "x96dbg",           "x64netdumper",
+        "x64_dbg",          "x32_dbg",          "dbgsym",
 
-        // ── Cheat Engine ──
-        "cheatengine", "cheat engine", "cheatengine-x86_64",
+        // ══ OllyDbg family ══
+        "ollydbg",          "odbgscript",       "ollydbg2",         "ollyice",
+        "odbg110",          "odbg200",          "odbg_script",
 
-        // ── WinDbg ──
-        "windbg", "windbg64", "kd", "ntsd", "cdb",
+        // ══ WinDbg family ══
+        "windbg",           "windbg64",         "kd",               "ntsd",
+        "cdb",              "windbgx",          "dbgeng",           "dbgsrv",
+        "dbgsrv64",         "dbgview",          "dbgview64",        "debugview",
+        "debugview64",
 
-        // ── .NET reversing ──
-        "dnspy", "de4dot", "ilspy", "dotpeek", "justdecompile",
-        "reflexil", "dnlib",
+        // ══ Immunity Debugger ══
+        "immunity debugger","immunitydebugger",  "immunitydbg",      "odbg",
 
-        // ── Process inspection ──
-        "processhacker", "procmon", "procmon64", "procexp", "procexp64",
-        "procmon32", "process monitor",
+        // ══ SoftICE / old school ══
+        "softice",          "syser",            "syserdbg",         "ntice",
 
-        // ── PE analysis (static, no execution needed) ──
-        "pestudio",         // PE Studio — analyzes without running
-        "pe-sieve",         // scans running process for injections
-        "pe-bear",          // PE-Bear static analyzer
-        "cffexplorer",      // CFF Explorer
-        "exeinfope",        // Exe Info PE (packer detector)
-        "peid",             // PEiD packer identifier
-        "lordpe",           // Lord PE (PE editor + dumper)
-        "pe explorer",
-        "reshacker",        // Resource Hacker
-        "resource hacker",
-        "peview",           // PEview
-        "dumpbin",          // MSVC dumpbin (dumps PE info)
-        "link",             // Can be used as PE inspector
+        // ══ EDB — Evan's Debugger ══
+        "edb",              "edb-debugger",
 
-        // ── Network sniffers ──
-        "wireshark",
-        "rawcap",
-        "fiddler",
-        "httpdebugger",
-        "charlesproxy",
-        "charles",
-        "mitmproxy",
-        "burpsuite",
-        "burp suite",
+        // ══ Cheat Engine ══
+        "cheatengine",      "cheat engine",     "cheatengine-x86_64","cheatengine-i386",
+        "cheat_engine",     "ce.exe",           "cheatengine64",
 
-        // ── Import reconstruction ──
-        "scylla",           // Scylla import reconstruction
-        "scylla_x64",
-        "scylla_x86",
-        "importrec",        // ImpREC
-        "imprec",
+        // ══ ArtMoney ══
+        "artmoney",         "artmoney64",       "artm",
 
-        // ── Deobfuscators / unpackers ──
-        "mal_unpack",
-        "hollows_hunter",
-        "pe-unmapper",
-        "unpacker",
-        "genericunpacker",
+        // ══ Squalr ══
+        "squalr",           "squalr.engine",
 
-        // ── Binary Ninja ──
-        "binaryninja",
-        "binary ninja",
+        // ══ WeMod ══
+        "wemod",            "wemod.exe",        "wemodupdater",
 
-        // ── Radare2 ──
-        "radare2",
-        "r2",
-        "iaito",            // Radare2 GUI
+        // ══ ReClass ══
+        "reclass",          "reclass64",        "reclass.net",      "reclass_net",
 
-        // ── Cutter ──
-        "cutter",           // Cutter (Radare2 frontend)
+        // ══ .NET reversing ══
+        "dnspy",            "de4dot",           "ilspy",            "dotpeek",
+        "justdecompile",    "reflexil",         "dnlib",            "avaloniailspy",
+        "recaf",            "jd-gui",           "jadx",             "jadx-gui",
+        "bytecodeviewer",   "bytecode-viewer",  "netreactorslayer", "eazfixer",
+        "confuserex",       "deobfuscator",     "asmresolver",      "netunpack",
+        "dotnetdatacollector","dotnetreflector", "reflector",       "telerikjustdecompile",
+        "dotdumper",        "netshrink",        "nethider",         "spicelogicdecompiler",
+        "denodoferret",     "sharplab",         "ilstudio",         "nasmx",
+        "cil",              "msildasm",         "ildasm",           "ilasm",
+        "dotnetspy",        "mddumper",         "mddump",           "mdv",
+        "dotnetdumper",     "mdv2",
 
-        // ── API monitoring ──
-        "apimonitor",
-        "api monitor",
-        "apispy",
-        "apitrace",
+        // ══ Process inspection ══
+        "processhacker",    "processhacker2",   "processhacker3",   "procmon",
+        "procmon64",        "procexp",          "procexp64",        "procmon32",
+        "process monitor",  "process hacker",   "system explorer",  "systemexplorer",
+        "taskexplorer",     "pe-sieve64",       "pe_sieve",         "hollows_hunter64",
 
-        // ── Registry/system monitoring ──
-        "regshot",
-        "regmon",
-        "filemon",
+        // ══ PE analysis / static tools ══
+        "pestudio",         "pe-sieve",         "pe-bear",          "cffexplorer",
+        "exeinfope",        "peid",             "lordpe",           "pe explorer",
+        "reshacker",        "resource hacker",  "peview",           "dumpbin",
+        "studpe",           "stud_pe",          "bearparser",       "pebrowpro",
+        "pebroPro",         "trid",             "triddefs",         "die",
+        "detect-it-easy",   "diec",             "fileaLyzer",       "exeanalyzer",
+        "pe_analyzer",      "peanalyst",        "nauz file analyzer","nfa",
+        "exeinfo",          "pexplorer",        "pe_tools",         "petools",
+        "pespin",           "pelock",           "pelocknt",         "themida",
+        "winlicense",       "enigmavb",         "obsidium",         "asprotect",
+        "aspack",           "upx",              "exepack",          "pecrypt32",
+        "mpress",           "fsg",              "upack",            "petite",
+        "yodas crypter",    "hxd",              "010editor",        "hexworkshop",
+        "winhex",           "hiew",             "hiew32",           "hexedit",
+        "frhed",            "wxhexeditor",      "hexpad",           "xvi32",
+        "ultraedit",        "bless",            "vbindiff",         "dhex",
 
-        // ── Misc reversal tools ──
-        "snowman",          // Snowman decompiler
-        "retdec",           // RetDec decompiler
-        "immunity debugger",
-        "odbg",
-        "softice",
-        "syser",
-        "hiew",             // HIEW hex editor with disasm
-        "hxd",              // HxD (hex editor, used for patching)
-        "010editor",        // 010 Editor (binary template editor)
-        "hexworkshop",
-        "winhex",
-        "frida",            // Frida dynamic instrumentation
-        "frida-server",
-        "frida-gadget",
+        // ══ Import reconstruction ══
+        "scylla",           "scylla_x64",       "scylla_x86",       "importrec",
+        "imprec",           "imprecator",       "buildiat",
+
+        // ══ Deobfuscators / unpackers ══
+        "mal_unpack",       "hollows_hunter",   "pe-unmapper",      "unpacker",
+        "genericunpacker",  "universal_unpacker","pe_unmapper",      "stripper",
+        "asdepack",         "codeinjectdetect", "unpacme",          "qunpack",
+        "yuntools",         "fread",
+
+        // ══ Binary Ninja ══
+        "binaryninja",      "binary ninja",     "binja",
+
+        // ══ Radare2 & frontends ══
+        "radare2",          "r2",               "iaito",            "cutter",
+        "r2frida",          "r2ghidra",         "r2dec",            "r2pipe",
+        "rizin",            "rz-bin",           "rz-asm",           "rz-debug",
+        "rz-diff",          "rz-find",
+
+        // ══ Snowman / RetDec / Hopper decompilers ══
+        "snowman",          "retdec",           "hopper",           "hopperv4",
+        "hopperv3",         "recstudio",        "jakstab",          "reko",
+        "decomp2dbg",       "plasma",           "pycdc",
+
+        // ══ Network sniffers / proxies ══
+        "wireshark",        "rawcap",           "fiddler",          "httpdebugger",
+        "charlesproxy",     "charles",          "mitmproxy",        "burpsuite",
+        "burp suite",       "httpanalyzer",     "networkminer",     "tcpview",
+        "smartsniff",       "proxifier",        "httptoolkit",      "http toolkit",
+        "echo mirage",      "echomirage",       "hettyproxy",       "hetty",
+        "reqable",          "apidog",           "insomnia",
+
+        // ══ API monitoring ══
+        "apimonitor",       "api monitor",      "apispy",           "apitrace",
+        "spyxx",            "spyxx64",          "apilogger",        "apihooks",
+        "hookshark",        "pespin",           "spy++",
+
+        // ══ Registry / system monitoring ══
+        "regshot",          "regmon",           "filemon",          "winobj",
+        "autoruns",         "autorunsc",        "registrymon",      "regcapture",
+        "regdiff",
+
+        // ══ Frida & dynamic instrumentation ══
+        "frida",            "frida-server",     "frida-gadget",     "frida-tools",
+        "frida-inject",     "frida-trace",      "frida-discover",   "objection",
+        "r2frida-server",   "dbi-runner",       "dynamorio",        "pintools",
+        "pin",              "qbdi",             "stalker",
+
+        // ══ Injection tools ══
+        "extreme injector", "extremeinjector",  "xenos",            "xenos injector",
+        "gh injector",      "gh-injector",      "ghinjector",       "manual mapper",
+        "manualmapper",     "loadlibrary injector","dll injector",  "dllinjector",
+        "sharpdllloader",   "sharpinjector",    "reflective injector","winject",
+        "simple injector",  "simpleinjector",   "procinjector",     "remoteinjector",
+        "codeinjector",     "codecave injector","injector",
+
+        // ══ Kernel / driver analysis ══
+        "winpmem",          "memoryze",         "rweverything",     "rw",
+        "physmem",          "pcileech",         "wpcap",            "npcap",
+        "kprocesshacker",   "kphd",             "ssdt view",        "ssdtview",
+        "kernelexplorer",   "drivermon",        "driverquery",      "driverview",
+        "wdk",              "kdexplorer",
+
+        // ══ Sandbox / analysis environments ══
+        "sandboxie",        "sandboxie-plus",   "sbiesvc",          "sbiectrl",
+        "sbieini",          "cuckoo",           "cuckooanalyzer",   "any.run",
+        "vxstream",         "hatching",         "triage",
+
+
+
+        // ══ Binary diff / patching ══
+        "bindiff",          "diaphora",         "turbodiff",        "patchdiff2",
+        "vcdiff",           "bsdiff",           "patchmaker",
+
+        // ══ Vulnerability / fuzzing ══
+        "winafl",           "afl",              "libfuzzer",        "boofuzz",
+        "peach",            "spike fuzzer",     "trinity",
+
+        // ══ Shellcode / payload tools ══
+        "donut",            "pe2shellcode",     "sRDI",             "shellter",
+        "veil",             "scarecrow",        "pezor",            "amber",
+        "reflectivedllinjection",
+
+
+
         nullptr
     };
 
@@ -823,9 +878,45 @@ inline bool CrackToolRunning() {
     // Also check window titles — IDA has distinctive window captions
     if (!found) {
         static const wchar_t* idaTitles[] = {
-            L"IDA - ", L"IDA Pro", L"IDA View", L"Hex-Rays",
-            L"Ghidra:", L"x64dbg", L"x32dbg",
-            L"OllyDbg", L"WinDbg",
+            // IDA Pro
+            L"IDA - ",          L"IDA Pro",         L"IDA View",        L"Hex-Rays",
+            L"IDA64",           L"IDA 64",          L"Hex Rays",        L"IDAPython",
+            // Ghidra
+            L"Ghidra:",         L"Ghidra ",         L"CodeBrowser",     L"Ghidra Project",
+            // x64dbg / x32dbg
+            L"x64dbg",          L"x32dbg",          L"x96dbg",
+            // OllyDbg
+            L"OllyDbg",         L"OllyIce",         L"OllyDbg 2",
+            // WinDbg
+            L"WinDbg",          L"WinDbg:",         L"Kernel Debugger",
+            // Immunity
+            L"Immunity Debugger",
+            // Cheat Engine
+            L"Cheat Engine",    L"Cheat engine",
+            // Binary Ninja
+            L"Binary Ninja",    L"binaryninja",
+            // Radare2 / Cutter / Rizin
+            L"Cutter",          L"iaito",           L"Rizin",
+            // dnSpy / .NET
+            L"dnSpy",           L"ILSpy",           L"dotPeek",         L"JustDecompile",
+            L"de4dot",          L"Recaf",           L"JD-GUI",          L"Jadx",
+            // PE tools
+            L"PE Studio",       L"PE-bear",         L"CFF Explorer",    L"PE Explorer",
+            L"Resource Hacker", L"ResHacker",       L"Lord PE",         L"Detect It Easy",
+            L"PEview",          L"PEiD",            L"Stud_PE",
+            // Network / proxy
+            L"Wireshark",       L"Fiddler",         L"Charles",         L"mitmproxy",
+            L"Burp Suite",      L"HTTP Debugger",   L"HTTP Toolkit",    L"API Monitor",
+            // Process tools
+            L"Process Hacker",  L"System Explorer",
+            // Hex editors
+            L"HxD",             L"010 Editor",      L"HexWorkshop",     L"WinHex",
+            L"HIEW",            L"Frhed",
+            // Frida
+            L"Frida",           L"Objection",
+            // Injection tools
+            L"Xenos",           L"Extreme Injector",L"GH Injector",
+            L"Cheat Engine Tutorial",
             nullptr
         };
         for (int i = 0; idaTitles[i]; i++) {
@@ -1516,7 +1607,7 @@ inline AuthResult validate(const std::string& key,
   DYNAMIC ANALYSIS BLOCKERS:
     ✓ 7-layer anti-debug (PEB, NtQuery, timing, HW BPs, heap, remote, sysinfo)
     ✓ TLS callback fires before main()    — catches early debugger attach
-    ✓ Process blacklist: 60+ crack tools  — x64dbg, Ghidra, CE, dnSpy, Frida…
+    ✓ Process blacklist: crack tools — x64dbg, Ghidra, CE, dnSpy, Frida, debuggers, injectors…
     ✓ IDA headless (idat.exe) in list     — runs without GUI, still detected
     ✓ Code integrity thread (60s)         — patch detection → BSOD loop
     ✓ Multi-machine CPU detection         — same key, 2 CPUs in 60s = ban
