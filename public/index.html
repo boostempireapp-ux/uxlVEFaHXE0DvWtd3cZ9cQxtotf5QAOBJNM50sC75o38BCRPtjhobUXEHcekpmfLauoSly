@@ -3330,9 +3330,11 @@ async function clearDll() {
 
 // ── API KEY EXPIRY ────────────────────────────────────────────────────────────
 let _expiryKey = null;
+let _expiryAppId = null; // set when editing an app's API key expiry (not a license key)
 
 function openKeyExpiry(keyVal, currentExpiry) {
   _expiryKey = keyVal;
+  _expiryAppId = null;
   document.getElementById('expiry-modal-appname').textContent = keyVal.substring(0, 20) + '…';
   document.getElementById('expiry-days-input').value = '';
   document.getElementById('expiry-modal-result').innerHTML = '';
@@ -3342,8 +3344,18 @@ function openKeyExpiry(keyVal, currentExpiry) {
   document.getElementById('modal-expiry').classList.add('open');
 }
 
-// Keep old name for app card button (not used now but safe to keep)
-function openExpiryModal(appId, appName, currentExpiry) { openKeyExpiry(appId, currentExpiry); }
+// App API key expiry — routes to /api/admin/apps/:id/set-expiry
+function openExpiryModal(appId, appName, currentExpiry) {
+  _expiryKey = null;
+  _expiryAppId = appId;
+  document.getElementById('expiry-modal-appname').textContent = appName || appId.substring(0, 20) + '…';
+  document.getElementById('expiry-days-input').value = '';
+  document.getElementById('expiry-modal-result').innerHTML = '';
+  const prev = document.getElementById('expiry-preview');
+  prev.textContent = currentExpiry ? 'Current expiry: ' + currentExpiry.substring(0, 10) : 'Current expiry: Never';
+  prev.style.color = 'var(--text3)';
+  document.getElementById('modal-expiry').classList.add('open');
+}
 
 function setExpiryPreset(days) {
   document.getElementById('expiry-days-input').value = days;
@@ -3368,11 +3380,24 @@ document.addEventListener('input', e => { if (e.target.id === 'expiry-days-input
 async function saveExpiry() {
   const days = parseInt(document.getElementById('expiry-days-input').value) || 0;
   const res = document.getElementById('expiry-modal-result');
-  const d = await post('/api/admin/keys/' + encodeURIComponent(_expiryKey) + '/set-expiry', { days });
+  let d, expiresAtField;
+  if (_expiryAppId) {
+    // App API key expiry
+    d = await post('/api/admin/apps/' + encodeURIComponent(_expiryAppId) + '/set-expiry', { days });
+    expiresAtField = d && d.keyExpiresAt;
+  } else {
+    // License key expiry
+    d = await post('/api/admin/keys/' + encodeURIComponent(_expiryKey) + '/set-expiry', { days });
+    expiresAtField = d && d.expiresAt;
+  }
   if (d && d.success) {
     toast(days > 0 ? 'Expiry set!' : 'Expiry removed — key never expires', 'success');
-    res.innerHTML = '<div style="color:#4ade80;font-size:12px">✅ Saved' + (d.expiresAt ? ' — expires ' + d.expiresAt.substring(0,10) : ' — never expires') + '</div>';
-    setTimeout(() => { closeModal('modal-expiry'); loadKeys(); }, 1200);
+    res.innerHTML = '<div style="color:#4ade80;font-size:12px">✅ Saved' + (expiresAtField ? ' — expires ' + expiresAtField.substring(0,10) : ' — never expires') + '</div>';
+    if (_expiryAppId) {
+      setTimeout(() => { closeModal('modal-expiry'); loadApps(); }, 1200);
+    } else {
+      setTimeout(() => { closeModal('modal-expiry'); loadKeys(); }, 1200);
+    }
   } else {
     res.innerHTML = '<div style="color:#f87171;font-size:12px">❌ ' + (d && d.message ? d.message : 'Error saving expiry') + '</div>';
   }
