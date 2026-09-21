@@ -683,6 +683,10 @@ tbody td{padding:9px 13px;vertical-align:middle;}
         <span style="color:#fb923c">Detection Events</span>
         <span class="nav-badge" id="detect-badge" style="background:#ea580c;display:none"></span>
       </div>
+      <div class="nav-item" data-page="dll-logs" onclick="go('dll-logs')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+        DLL Upload Log
+      </div>
       <div class="nav-item" data-page="hwid-mismatches" onclick="go('hwid-mismatches')" style="color:#f87171">
         <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><line x1="12" y1="15" x2="12" y2="17" stroke-linecap="round"/></svg>
         <span style="color:#f87171">HWID Mismatches</span>
@@ -726,6 +730,8 @@ tbody td{padding:9px 13px;vertical-align:middle;}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         Generate Keys
       </div>
+      <div class="nav-sec" id="r-nav-dll-sec" style="display:none">DLL Hosting</div>
+      <div class="nav-item r-item" data-page="r-dll" onclick="go('r-dll')" id="r-nav-dll" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>DLL Manager</div>
       <div class="nav-sec" id="r-nav-mon-sec" style="display:none">Monitoring</div>
       <div class="nav-item r-item" data-page="r-logs" onclick="go('r-logs')" id="r-nav-logs" style="display:none">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -2042,6 +2048,12 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
       <div class="card" style="padding:0;overflow:hidden"><div class="tbl-wrap"><table><thead><tr><th>IP Address</th><th>Reason</th><th>Blocked At</th></tr></thead><tbody id="r-blocks-body"></tbody></table></div></div>
     </div>
 
+    <!-- RESELLER: DLL MANAGER PAGE -->
+    <div class="page" id="page-r-dll">
+      <div class="ph"><div class="pt">DLL <span>Manager</span></div><div class="pa"><button class="btn btn-ghost btn-sm" onclick="loadResellerDLL()">↻ Refresh</button></div></div>
+      <div id="r-dll-content"><div class="empty"><div class="empty-icon">⏳</div><div class="empty-text">Loading apps...</div></div></div>
+    </div>
+
     <!-- DETECTION EVENTS PAGE -->
     <div class="page" id="page-detections">
       <div class="ph" style="margin-bottom:20px">
@@ -2118,6 +2130,42 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
           <div style="display:flex;gap:8px">
             <button class="btn btn-ghost btn-sm" id="detect-prev-btn" onclick="detectPrev()" disabled>← Prev</button>
             <button class="btn btn-ghost btn-sm" id="detect-next-btn" onclick="detectNext()" disabled>Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN: DLL UPLOAD LOG PAGE -->
+    <div class="page" id="page-dll-logs">
+      <div class="ph" style="margin-bottom:20px">
+        <div>
+          <div class="pt" style="display:flex;align-items:center;gap:10px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--p3)" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+            DLL <span>Upload Log</span>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">Every DLL URL submitted by admins and resellers — click a URL to open it</div>
+        </div>
+        <div class="pa" style="gap:8px">
+          <select id="dll-log-filter-type" class="inp" style="width:auto;padding:7px 10px;font-size:12px" onchange="loadDLLLogs()">
+            <option value="">All Sources</option>
+            <option value="admin">Admin</option>
+            <option value="reseller">Reseller</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="loadDLLLogs()">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th style="width:150px">Timestamp</th><th>App</th><th>Set By</th><th>Type</th><th>DLL URL</th></tr></thead>
+            <tbody id="dll-logs-body"><tr><td colspan="5" style="text-align:center;color:var(--text3);padding:32px">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <div style="font-size:11px;color:var(--text3)" id="dll-log-count-label">—</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" id="dll-log-prev-btn" onclick="dllLogPrev()" disabled>← Prev</button>
+            <button class="btn btn-ghost btn-sm" id="dll-log-next-btn" onclick="dllLogNext()" disabled>Next →</button>
           </div>
         </div>
       </div>
@@ -2301,7 +2349,7 @@ function go(page){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>{if(n.dataset.page===page)n.classList.add('active');});
-  const pageActions={dashboard:loadDashboard,apps:loadApps,keys:loadKeys,logs:loadLogs,blocks:loadBlocks,resellers:loadResellers,'hwid-mismatches':loadHwidMismatches,detections:loadDetections,'r-dashboard':loadResellerDashboard,'r-keys':loadResellerKeys,'r-generate':loadResellerGeneratePage,'r-logs':loadResellerLogs,'r-blocks':loadResellerBlocks,audit:loadAudit,settings:()=>{load2FAStatus();loadCountryAllowlist();},generate:loadApps};
+  const pageActions={dashboard:loadDashboard,apps:loadApps,keys:loadKeys,logs:loadLogs,blocks:loadBlocks,resellers:loadResellers,'hwid-mismatches':loadHwidMismatches,detections:loadDetections,'r-dashboard':loadResellerDashboard,'r-keys':loadResellerKeys,'r-generate':loadResellerGeneratePage,'r-logs':loadResellerLogs,'r-blocks':loadResellerBlocks,'r-dll':loadResellerDLL,'dll-logs':loadDLLLogs,audit:loadAudit,settings:()=>{load2FAStatus();loadCountryAllowlist();},generate:loadApps};
   if(pageActions[page]) pageActions[page]();
 }
 
@@ -3155,7 +3203,7 @@ function buildResellerNav(){
   document.getElementById('r-nav-keys-sec').style.display=hasKeys?'':'none';
   document.getElementById('r-nav-keys').style.display=p.viewKeys?'':'none';
   document.getElementById('r-nav-generate').style.display=p.generateKeys?'':'none';
-  document.getElementById('r-nav-mon-sec').style.display=hasMon?'':'none';
+  document.getElementById('r-nav-dll-sec').style.display='';document.getElementById('r-nav-dll').style.display='';document.getElementById('r-nav-mon-sec').style.display=hasMon?'':'none';
   document.getElementById('r-nav-logs').style.display=p.viewLogs?'':'none';
   document.getElementById('r-nav-blocks').style.display=p.viewBlocks?'':'none';
   const gb=document.getElementById('r-gen-btn'); if(gb) gb.style.display=p.generateKeys?'':'none';
@@ -3671,6 +3719,115 @@ async function saveExpiry() {
     res.innerHTML = '<div style="color:#f87171;font-size:12px">❌ ' + (d && d.message ? d.message : 'Error saving expiry') + '</div>';
   }
 }
+
+// ═══════════════ RESELLER: DLL MANAGER ═══════════════
+async function loadResellerDLL() {
+  const wrap = document.getElementById('r-dll-content');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="empty"><div class="empty-icon">⏳</div><div class="empty-text">Loading apps…</div></div>';
+  const r = await rget('/api/reseller/dll-info');
+  if (!r.success) { wrap.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Failed to load apps</div></div>'; return; }
+  if (!r.apps || !r.apps.length) {
+    wrap.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No apps assigned to your account yet. Contact your admin.</div></div>';
+    return;
+  }
+  wrap.innerHTML = r.apps.map(app => `
+    <div class="card" style="padding:22px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;border-radius:10px;background:rgba(139,92,246,0.12);display:flex;align-items:center;justify-content:center;font-size:18px">📱</div>
+          <div>
+            <div style="font-weight:700;font-size:14px;color:var(--text)">${app.name}</div>
+            <div style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace">${String(app._id).slice(-8)}</div>
+          </div>
+        </div>
+        ${app.dllUrl
+          ? `<a href="${app.dllUrl}" target="_blank" rel="noopener" style="font-size:11px;color:#a78bfa;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.25);padding:4px 10px;border-radius:6px;text-decoration:none">🔗 Current DLL</a>`
+          : '<span style="font-size:11px;color:#f87171;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);padding:4px 10px;border-radius:6px">No DLL set</span>'}
+      </div>
+      ${app.dllUrl ? `<div style="background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);word-break:break-all;margin-bottom:14px">${app.dllUrl}</div>` : ''}
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="fg" style="flex:1;min-width:260px;margin:0">
+          <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;display:block;margin-bottom:6px">Catbox / CDN URL</label>
+          <input type="text" id="dll-url-${app._id}" value="${app.dllUrl||''}" placeholder="https://files.catbox.moe/xxxxxx.dll"
+            style="width:100%;background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none"
+            onfocus="this.style.borderColor='rgba(139,92,246,0.5)'" onblur="this.style.borderColor='var(--border)'"/>
+        </div>
+        <button class="btn btn-purple" style="padding:9px 18px;white-space:nowrap" onclick="resellerSetDLL('${app._id}')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Save URL
+        </button>
+      </div>
+      <div id="dll-res-${app._id}" style="margin-top:8px;font-size:12px"></div>
+    </div>
+  `).join('');
+}
+
+async function resellerSetDLL(appId) {
+  const inp = document.getElementById('dll-url-' + appId);
+  const res = document.getElementById('dll-res-' + appId);
+  const url = inp ? inp.value.trim() : '';
+  if (!url) { res.innerHTML = '<span style="color:#f87171">Please enter a URL.</span>'; return; }
+  res.innerHTML = '<span style="color:var(--text3)">Saving…</span>';
+  const r = await rpost('/api/reseller/apps/' + appId + '/set-dll', { dllUrl: url });
+  if (r.success) {
+    res.innerHTML = '<span style="color:#a78bfa">✓ DLL URL updated successfully.</span>';
+    setTimeout(() => loadResellerDLL(), 1200);
+  } else {
+    res.innerHTML = '<span style="color:#f87171">❌ ' + (r.message || 'Failed to save.') + '</span>';
+  }
+}
+
+// ═══════════════ ADMIN: DLL UPLOAD LOG ═══════════════
+let dllLogPage = 0;
+const DLL_LOG_LIMIT = 50;
+let dllLogTotal = 0;
+
+async function loadDLLLogs() {
+  const tb    = document.getElementById('dll-logs-body');
+  const label = document.getElementById('dll-log-count-label');
+  if (!tb) return;
+  tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:32px">Loading…</td></tr>';
+  const type = (document.getElementById('dll-log-filter-type') || {}).value || '';
+  const params = new URLSearchParams({ limit: DLL_LOG_LIMIT, skip: dllLogPage * DLL_LOG_LIMIT });
+  if (type) params.set('setBy', type);
+  const r = await get('/api/admin/dll-logs?' + params.toString());
+  if (!r.success) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#f87171;padding:32px">Failed to load</td></tr>'; return; }
+  dllLogTotal = r.total || 0;
+  if (!r.logs.length) {
+    tb.innerHTML = '<tr><td colspan="5"><div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No DLL uploads logged yet</div></div></td></tr>';
+    if (label) label.textContent = '0 entries';
+    return;
+  }
+  tb.innerHTML = r.logs.map(l => {
+    const typeBadge = l.setByType === 'admin'
+      ? '<span style="font-size:10px;background:rgba(139,92,246,0.15);color:#a78bfa;border:1px solid rgba(139,92,246,0.3);padding:2px 8px;border-radius:4px;font-weight:600">ADMIN</span>'
+      : '<span style="font-size:10px;background:rgba(251,191,36,0.12);color:#fbbf24;border:1px solid rgba(251,191,36,0.25);padding:2px 8px;border-radius:4px;font-weight:600">RESELLER</span>';
+    const shortUrl = l.dllUrl && l.dllUrl.length > 52 ? l.dllUrl.slice(0, 49) + '…' : (l.dllUrl || '—');
+    return `<tr>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;white-space:nowrap">${fmtTime(l.timestamp)}</td>
+      <td style="font-weight:600;color:var(--text)">${l.appName || '—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#c4b5fd">${l.setBy || '—'}</td>
+      <td>${typeBadge}</td>
+      <td style="max-width:360px">
+        <a href="${l.dllUrl||'#'}" target="_blank" rel="noopener"
+           title="${l.dllUrl||''}"
+           style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#a78bfa;text-decoration:none;word-break:break-all"
+           onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+          🔗 ${shortUrl}
+        </a>
+      </td>
+    </tr>`;
+  }).join('');
+  const showing = dllLogPage * DLL_LOG_LIMIT + r.logs.length;
+  if (label) label.textContent = `Showing ${dllLogPage * DLL_LOG_LIMIT + 1}–${showing} of ${dllLogTotal}`;
+  const prev = document.getElementById('dll-log-prev-btn');
+  const next = document.getElementById('dll-log-next-btn');
+  if (prev) prev.disabled = dllLogPage === 0;
+  if (next) next.disabled = showing >= dllLogTotal;
+}
+function dllLogPrev() { if (dllLogPage > 0) { dllLogPage--; loadDLLLogs(); } }
+function dllLogNext() { dllLogPage++; loadDLLLogs(); }
 
 </script>
 
