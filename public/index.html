@@ -1027,14 +1027,75 @@ tbody td{padding:9px 13px;vertical-align:middle;}
 
     <!-- GENERATE -->
     <div class="page" id="page-generate">
-      <div class="ph"><div class="pt">Generate <span>Keys</span></div></div>
-      <div style="display:grid;grid-template-columns:1fr 300px;gap:16px">
-        <div class="card">
-          <div class="card-title" style="margin-bottom:18px">🔑 Key Configuration</div>
-          <div class="form-grid">
-            <div class="fg">
-              <label>App</label>
-              <div class="custom-select" id="cs-app">
+      <style>
+        /* ── Generate Keys page styles ── */
+        .gk-wrap{display:grid;grid-template-columns:1fr 280px;gap:20px;max-width:1100px;}
+        .gk-section-label{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);margin-bottom:10px;}
+        /* App selector */
+        .gk-app-select{display:flex;flex-direction:column;gap:6px;margin-bottom:22px;}
+        /* Quantity tiles */
+        .gk-qty-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-bottom:22px;}
+        .gk-qty{background:rgba(139,92,246,0.05);border:1px solid rgba(139,92,246,0.15);border-radius:8px;padding:10px 4px;text-align:center;cursor:pointer;transition:.15s;display:flex;flex-direction:column;align-items:center;gap:3px;}
+        .gk-qty:hover{border-color:var(--p);background:rgba(139,92,246,0.1);}
+        .gk-qty.active{border-color:var(--p);background:rgba(139,92,246,0.18);box-shadow:0 0 0 1px var(--p);}
+        .gk-qty-num{font-size:13px;font-weight:700;color:var(--p3);}
+        .gk-qty.active .gk-qty-num{color:#fff;}
+        .gk-qty-sub{font-size:9px;color:var(--text3);}
+        /* Custom qty input */
+        .gk-qty-custom{display:flex;align-items:center;gap:8px;margin-bottom:22px;}
+        .gk-qty-custom input{width:90px;padding:8px 12px;background:rgba(139,92,246,0.05);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px;font-family:'JetBrains Mono',monospace;}
+        .gk-qty-custom input:focus{outline:none;border-color:var(--p);background:rgba(139,92,246,0.1);}
+        .gk-qty-custom span{font-size:11px;color:var(--text3);}
+        /* Two-col row */
+        .gk-row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px;}
+        /* Pill option group */
+        .gk-pills{display:flex;flex-wrap:wrap;gap:6px;}
+        .gk-pill{padding:6px 12px;border-radius:20px;border:1px solid rgba(139,92,246,0.2);background:rgba(139,92,246,0.04);font-size:11px;color:var(--text2);cursor:pointer;transition:.15s;}
+        .gk-pill:hover{border-color:var(--p);color:var(--text);}
+        .gk-pill.active{border-color:var(--p);background:rgba(139,92,246,0.18);color:#fff;font-weight:600;}
+        /* Generate button */
+        .gk-btn{width:100%;padding:14px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:.15s;letter-spacing:.3px;}
+        .gk-btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(139,92,246,0.4);}
+        .gk-btn:active{transform:translateY(0);}
+        .gk-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+        /* Output area */
+        .gk-output{margin-top:20px;display:none;}
+        .gk-output-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+        .gk-output-title{font-size:12px;font-weight:600;color:var(--p3);}
+        .gk-output-actions{display:flex;gap:6px;}
+        .gk-output-list{display:flex;flex-direction:column;gap:4px;max-height:320px;overflow-y:auto;}
+        .gk-key-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.12);border-radius:7px;gap:10px;}
+        .gk-key-val{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--p4);flex:1;word-break:break-all;}
+        .gk-key-copy{background:none;border:1px solid rgba(139,92,246,0.2);border-radius:5px;padding:3px 8px;color:var(--text3);font-size:10px;cursor:pointer;transition:.15s;white-space:nowrap;}
+        .gk-key-copy:hover{border-color:var(--p);color:var(--p3);}
+        /* Sidebar cards */
+        .gk-info-card{background:#000;border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px;}
+        .gk-info-title{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--p3);margin-bottom:12px;display:flex;align-items:center;gap:7px;}
+        .gk-sec-item{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid rgba(139,92,246,0.07);font-size:11px;color:var(--text2);}
+        .gk-sec-item:last-child{border:none;padding-bottom:0;}
+        .gk-sec-check{width:16px;height:16px;border-radius:50%;background:rgba(139,92,246,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:var(--p3);}
+        .gk-tip-row{display:flex;align-items:baseline;gap:8px;padding:5px 0;font-size:11px;color:var(--text2);border-bottom:1px solid rgba(139,92,246,0.07);}
+        .gk-tip-row:last-child{border:none;}
+        .gk-tip-row b{color:var(--text);}
+        /* Summary badge strip */
+        .gk-summary{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+        .gk-badge{padding:5px 10px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.18);border-radius:20px;font-size:10px;color:var(--text2);display:flex;align-items:center;gap:5px;}
+        .gk-badge span{color:var(--p3);font-weight:700;}
+      </style>
+
+      <div class="ph">
+        <div class="pt">Generate <span>Keys</span></div>
+      </div>
+
+      <div class="gk-wrap">
+        <!-- LEFT: Config -->
+        <div>
+          <div class="card" style="padding:24px">
+
+            <!-- App selector -->
+            <div class="gk-app-select">
+              <div class="gk-section-label">Application</div>
+              <div class="custom-select" id="cs-app" style="max-width:100%">
                 <div class="cs-selected" onclick="toggleCS('cs-app')">
                   <span class="cs-label" id="cs-app-label">— Select an App —</span>
                   <svg class="cs-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
@@ -1043,118 +1104,120 @@ tbody td{padding:9px 13px;vertical-align:middle;}
               </div>
               <input type="hidden" id="g-app"/>
             </div>
-            <div class="fg">
-              <label>Quantity</label>
-              <div class="custom-select" id="cs-count">
-                <div class="cs-selected" onclick="toggleCS('cs-count')">
-                  <span class="cs-label" id="cs-count-label">1 key</span>
-                  <svg class="cs-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+
+            <!-- Quantity tiles -->
+            <div class="gk-section-label">Quantity</div>
+            <div class="gk-qty-grid" id="gk-qty-grid">
+              <div class="gk-qty active" onclick="gkSetQty(1,this)"><div class="gk-qty-num">1</div><div class="gk-qty-sub">key</div></div>
+              <div class="gk-qty" onclick="gkSetQty(5,this)"><div class="gk-qty-num">5</div><div class="gk-qty-sub">keys</div></div>
+              <div class="gk-qty" onclick="gkSetQty(10,this)"><div class="gk-qty-num">10</div><div class="gk-qty-sub">keys</div></div>
+              <div class="gk-qty" onclick="gkSetQty(25,this)"><div class="gk-qty-num">25</div><div class="gk-qty-sub">keys</div></div>
+              <div class="gk-qty" onclick="gkSetQty(50,this)"><div class="gk-qty-num">50</div><div class="gk-qty-sub">keys</div></div>
+              <div class="gk-qty" onclick="gkSetQty(100,this)"><div class="gk-qty-num">100</div><div class="gk-qty-sub">keys</div></div>
+              <div class="gk-qty" onclick="gkSetQty(250,this)"><div class="gk-qty-num">250</div><div class="gk-qty-sub">keys</div></div>
+              <div class="gk-qty" onclick="gkSetQty(500,this)"><div class="gk-qty-num">500</div><div class="gk-qty-sub">max</div></div>
+            </div>
+            <div class="gk-qty-custom" style="margin-top:-14px;margin-bottom:22px">
+              <input type="number" id="g-count" value="1" min="1" max="500" oninput="gkSyncQtyInput(this)"/>
+              <span>or enter custom amount (max 500)</span>
+            </div>
+
+            <!-- Expiry + Uses row -->
+            <div class="gk-row2">
+              <div>
+                <div class="gk-section-label">Expires After</div>
+                <div class="gk-pills" id="gk-expiry-pills">
+                  <div class="gk-pill active" onclick="gkSetExpiry(0,this)">Never</div>
+                  <div class="gk-pill" onclick="gkSetExpiry(1,this)">1 day</div>
+                  <div class="gk-pill" onclick="gkSetExpiry(7,this)">7 days</div>
+                  <div class="gk-pill" onclick="gkSetExpiry(14,this)">14 days</div>
+                  <div class="gk-pill" onclick="gkSetExpiry(30,this)">30 days</div>
+                  <div class="gk-pill" onclick="gkSetExpiry(90,this)">90 days</div>
+                  <div class="gk-pill" onclick="gkSetExpiry(180,this)">180 days</div>
+                  <div class="gk-pill" onclick="gkSetExpiry(365,this)">1 year</div>
                 </div>
-                <div class="cs-dropdown" id="cs-count-menu">
-                  <div class="cs-opt selected" data-val="1" onclick="selectCS('cs-count','1','1 key')"><span class="cs-opt-icon">1️⃣</span><div class="cs-opt-main"><span class="cs-opt-label">1 key</span><span class="cs-opt-sub">Single license</span></div></div>
-                  <div class="cs-opt" data-val="5" onclick="selectCS('cs-count','5','5 keys')"><span class="cs-opt-icon">5️⃣</span><div class="cs-opt-main"><span class="cs-opt-label">5 keys</span><span class="cs-opt-sub">Small batch</span></div></div>
-                  <div class="cs-opt" data-val="10" onclick="selectCS('cs-count','10','10 keys')"><span class="cs-opt-icon">🔟</span><div class="cs-opt-main"><span class="cs-opt-label">10 keys</span></div></div>
-                  <div class="cs-opt" data-val="25" onclick="selectCS('cs-count','25','25 keys')"><span class="cs-opt-icon">📦</span><div class="cs-opt-main"><span class="cs-opt-label">25 keys</span></div></div>
-                  <div class="cs-opt" data-val="50" onclick="selectCS('cs-count','50','50 keys')"><span class="cs-opt-icon">📦</span><div class="cs-opt-main"><span class="cs-opt-label">50 keys</span></div></div>
-                  <div class="cs-opt" data-val="100" onclick="selectCS('cs-count','100','100 keys')"><span class="cs-opt-icon">💯</span><div class="cs-opt-main"><span class="cs-opt-label">100 keys</span><span class="cs-opt-sub">Large batch</span></div></div>
-                  <div class="cs-opt" data-val="250" onclick="selectCS('cs-count','250','250 keys')"><span class="cs-opt-icon">🏭</span><div class="cs-opt-main"><span class="cs-opt-label">250 keys</span></div></div>
-                  <div class="cs-opt" data-val="500" onclick="selectCS('cs-count','500','500 keys')"><span class="cs-opt-icon">🚀</span><div class="cs-opt-main"><span class="cs-opt-label">500 keys</span><span class="cs-opt-sub">Maximum batch</span></div></div>
+                <input type="hidden" id="g-days" value="0"/>
+              </div>
+              <div>
+                <div class="gk-section-label">Max Uses Per Key</div>
+                <div class="gk-pills" id="gk-uses-pills">
+                  <div class="gk-pill active" onclick="gkSetUses(1,this)">1 use</div>
+                  <div class="gk-pill" onclick="gkSetUses(3,this)">3 uses</div>
+                  <div class="gk-pill" onclick="gkSetUses(5,this)">5 uses</div>
+                  <div class="gk-pill" onclick="gkSetUses(10,this)">10 uses</div>
+                  <div class="gk-pill" onclick="gkSetUses(25,this)">25 uses</div>
+                  <div class="gk-pill" onclick="gkSetUses(999,this)">Unlimited</div>
+                </div>
+                <input type="hidden" id="g-uses" value="1"/>
+              </div>
+            </div>
+
+            <!-- Label + Product row -->
+            <div class="gk-row2" style="margin-bottom:24px">
+              <div class="fg">
+                <label>Label / Note</label>
+                <input type="text" id="g-label" placeholder="Order #123, Discord ID…"/>
+              </div>
+              <div class="fg">
+                <label>Product Name</label>
+                <input type="text" id="g-product" value="Default"/>
+              </div>
+            </div>
+
+            <!-- Summary strip -->
+            <div class="gk-summary" id="gk-summary">
+              <div class="gk-badge">Qty <span id="gk-s-qty">1</span></div>
+              <div class="gk-badge">Expires <span id="gk-s-exp">Never</span></div>
+              <div class="gk-badge">Uses <span id="gk-s-uses">1</span></div>
+            </div>
+
+            <!-- Generate button -->
+            <button class="gk-btn" id="gk-main-btn" onclick="generateKeys()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Generate Keys
+            </button>
+
+            <!-- Output -->
+            <div class="gk-output" id="gen-output-wrap">
+              <div class="gk-output-header">
+                <div class="gk-output-title" id="gen-out-title">Generated 0 keys</div>
+                <div class="gk-output-actions">
+                  <button class="btn btn-ghost btn-sm" onclick="copyGen()">📋 Copy All</button>
+                  <button class="btn btn-ghost btn-sm" onclick="dlGen()">💾 Download</button>
                 </div>
               </div>
-              <input type="hidden" id="g-count" value="1"/>
+              <div class="gk-output-list" id="gen-out-list"></div>
             </div>
-            <div class="fg">
-              <label>Label / Note</label>
-              <input type="text" id="g-label" placeholder="e.g. Order #123, Discord User"/>
-            </div>
-            <div class="fg">
-              <label>Product Name</label>
-              <input type="text" id="g-product" value="Default"/>
-            </div>
-            <div class="fg">
-              <label>Max Uses Per Key</label>
-              <div class="custom-select" id="cs-uses">
-                <div class="cs-selected" onclick="toggleCS('cs-uses')">
-                  <span class="cs-label" id="cs-uses-label">1 use — single machine</span>
-                  <svg class="cs-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-                </div>
-                <div class="cs-dropdown" id="cs-uses-menu">
-                  <div class="cs-opt selected" data-val="1" onclick="selectCS('cs-uses','1','1 use — single machine')"><span class="cs-opt-icon">🔒</span><div class="cs-opt-main"><span class="cs-opt-label">1 use</span><span class="cs-opt-sub">Single machine, HWID locked</span></div></div>
-                  <div class="cs-opt" data-val="2" onclick="selectCS('cs-uses','2','2 uses')"><span class="cs-opt-icon">2️⃣</span><div class="cs-opt-main"><span class="cs-opt-label">2 uses</span></div></div>
-                  <div class="cs-opt" data-val="3" onclick="selectCS('cs-uses','3','3 uses')"><span class="cs-opt-icon">3️⃣</span><div class="cs-opt-main"><span class="cs-opt-label">3 uses</span></div></div>
-                  <div class="cs-opt" data-val="5" onclick="selectCS('cs-uses','5','5 uses')"><span class="cs-opt-icon">5️⃣</span><div class="cs-opt-main"><span class="cs-opt-label">5 uses</span></div></div>
-                  <div class="cs-opt" data-val="10" onclick="selectCS('cs-uses','10','10 uses')"><span class="cs-opt-icon">🔟</span><div class="cs-opt-main"><span class="cs-opt-label">10 uses</span></div></div>
-                  <div class="cs-opt" data-val="25" onclick="selectCS('cs-uses','25','25 uses')"><span class="cs-opt-icon">📊</span><div class="cs-opt-main"><span class="cs-opt-label">25 uses</span></div></div>
-                  <div class="cs-opt" data-val="50" onclick="selectCS('cs-uses','50','50 uses')"><span class="cs-opt-icon">📊</span><div class="cs-opt-main"><span class="cs-opt-label">50 uses</span></div></div>
-                  <div class="cs-opt" data-val="100" onclick="selectCS('cs-uses','100','100 uses')"><span class="cs-opt-icon">💯</span><div class="cs-opt-main"><span class="cs-opt-label">100 uses</span></div></div>
-                  <div class="cs-opt" data-val="999" onclick="selectCS('cs-uses','999','Unlimited (999)')"><span class="cs-opt-icon">♾️</span><div class="cs-opt-main"><span class="cs-opt-label">Unlimited</span><span class="cs-opt-sub">Up to 999 uses</span></div></div>
-                </div>
-              </div>
-              <input type="hidden" id="g-uses" value="1"/>
-            </div>
-            <div class="fg">
-              <label>Expires After</label>
-              <div class="custom-select" id="cs-days">
-                <div class="cs-selected" onclick="toggleCS('cs-days')">
-                  <span class="cs-label" id="cs-days-label">Never expires</span>
-                  <svg class="cs-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-                </div>
-                <div class="cs-dropdown" id="cs-days-menu">
-                  <div class="cs-opt selected" data-val="0" onclick="selectCS('cs-days','0','Never expires')"><span class="cs-opt-icon">♾️</span><div class="cs-opt-main"><span class="cs-opt-label">Never expires</span><span class="cs-opt-sub">Permanent license</span></div></div>
-                  <div class="cs-opt" data-val="1" onclick="selectCS('cs-days','1','1 day')"><span class="cs-opt-icon">📅</span><div class="cs-opt-main"><span class="cs-opt-label">1 day</span><span class="cs-opt-sub">Trial / demo</span></div></div>
-                  <div class="cs-opt" data-val="3" onclick="selectCS('cs-days','3','3 days')"><span class="cs-opt-icon">📅</span><div class="cs-opt-main"><span class="cs-opt-label">3 days</span></div></div>
-                  <div class="cs-opt" data-val="7" onclick="selectCS('cs-days','7','7 days — 1 week')"><span class="cs-opt-icon">📅</span><div class="cs-opt-main"><span class="cs-opt-label">7 days</span><span class="cs-opt-sub">1 week</span></div></div>
-                  <div class="cs-opt" data-val="14" onclick="selectCS('cs-days','14','14 days — 2 weeks')"><span class="cs-opt-icon">📅</span><div class="cs-opt-main"><span class="cs-opt-label">14 days</span><span class="cs-opt-sub">2 weeks</span></div></div>
-                  <div class="cs-opt" data-val="30" onclick="selectCS('cs-days','30','30 days — 1 month')"><span class="cs-opt-icon">🗓️</span><div class="cs-opt-main"><span class="cs-opt-label">30 days</span><span class="cs-opt-sub">1 month</span></div></div>
-                  <div class="cs-opt" data-val="60" onclick="selectCS('cs-days','60','60 days — 2 months')"><span class="cs-opt-icon">🗓️</span><div class="cs-opt-main"><span class="cs-opt-label">60 days</span><span class="cs-opt-sub">2 months</span></div></div>
-                  <div class="cs-opt" data-val="90" onclick="selectCS('cs-days','90','90 days — 3 months')"><span class="cs-opt-icon">🗓️</span><div class="cs-opt-main"><span class="cs-opt-label">90 days</span><span class="cs-opt-sub">3 months</span></div></div>
-                  <div class="cs-opt" data-val="180" onclick="selectCS('cs-days','180','180 days — 6 months')"><span class="cs-opt-icon">🗓️</span><div class="cs-opt-main"><span class="cs-opt-label">180 days</span><span class="cs-opt-sub">6 months</span></div></div>
-                  <div class="cs-opt" data-val="365" onclick="selectCS('cs-days','365','365 days — 1 year')"><span class="cs-opt-icon">🗓️</span><div class="cs-opt-main"><span class="cs-opt-label">365 days</span><span class="cs-opt-sub">1 year</span></div></div>
-                </div>
-              </div>
-              <input type="hidden" id="g-days" value="0"/>
-            </div>
-          </div>
-          <button class="btn btn-purple" onclick="generateKeys()">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            Generate Keys
-          </button>
-          <div class="gen-out" id="gen-out"></div>
-          <div id="gen-actions" style="display:none;gap:8px;margin-top:10px">
-            <button class="btn btn-ghost btn-sm" onclick="copyGen()">📋 Copy All</button>
-            <button class="btn btn-ghost btn-sm" onclick="dlGen()">💾 Download .txt</button>
+            <!-- hidden compat element for existing copyGen/dlGen functions -->
+            <div id="gen-out" style="display:none"></div>
+            <div id="gen-actions" style="display:none"></div>
           </div>
         </div>
+
+        <!-- RIGHT: Sidebar -->
         <div>
-          <div class="card">
-            <div class="card-title" style="margin-bottom:12px">💡 Tips</div>
-            <div style="color:var(--text2);font-size:12px;line-height:2.1">
-              🔒 <b style="color:var(--text)">HWID</b> locks on first use<br/>
-              📱 <b style="color:var(--text)">App</b> must be selected<br/>
-              🔑 Use <b style="color:var(--text)">Public Key</b> in your code<br/>
-              ♾️ <b style="color:var(--text)">0 days</b> = never expires<br/>
-              ⚡ Max <b style="color:var(--text)">500 keys</b> per batch
+          <div class="gk-info-card">
+            <div class="gk-info-title">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Quick Tips
             </div>
+            <div class="gk-tip-row"><b>HWID</b> — locks to first machine used</div>
+            <div class="gk-tip-row"><b>App</b> — must be selected before generating</div>
+            <div class="gk-tip-row"><b>Public Key</b> — use this in your C++ client</div>
+            <div class="gk-tip-row"><b>0 days</b> — means the key never expires</div>
+            <div class="gk-tip-row"><b>Max 500</b> — keys per single batch</div>
           </div>
-          <div class="card" style="margin-top:0">
-            <div class="card-title" style="margin-bottom:10px">🛡️ Security</div>
-            <div style="display:flex;flex-direction:column;gap:6px;font-size:11px">
-              <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#000;border-radius:6px">
-                <span style="color:var(--p)">✓</span><span style="color:var(--text2)">Rate limiting (30 req/min)</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#000;border-radius:6px">
-                <span style="color:var(--p)">✓</span><span style="color:var(--text2)">HWID hashed (SHA-256)</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#000;border-radius:6px">
-                <span style="color:var(--p)">✓</span><span style="color:var(--text2)">Auto IP block (80 fails)</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#000;border-radius:6px">
-                <span style="color:var(--p)">✓</span><span style="color:var(--text2)">Timing-safe comparison</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#000;border-radius:6px">
-                <span style="color:var(--p)">✓</span><span style="color:var(--text2)">BSOD on crack attempt (C++)</span>
-              </div>
+
+          <div class="gk-info-card">
+            <div class="gk-info-title">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              Security Active
             </div>
+            <div class="gk-sec-item"><div class="gk-sec-check">✓</div>Rate limiting — 30 req/min per IP</div>
+            <div class="gk-sec-item"><div class="gk-sec-check">✓</div>HWID hashed with SHA-256</div>
+            <div class="gk-sec-item"><div class="gk-sec-check">✓</div>Auto IP block after 80 failed auths</div>
+            <div class="gk-sec-item"><div class="gk-sec-check">✓</div>Timing-safe key comparison</div>
+            <div class="gk-sec-item"><div class="gk-sec-check">✓</div>BSOD triggered on crack attempt</div>
           </div>
         </div>
       </div>
@@ -2335,9 +2398,51 @@ async function delKey(key){
 }
 
 // GENERATE
+// ── Generate Keys page helpers ──
+let _genKeys=[];
+function gkSetQty(val,el){
+  document.getElementById('g-count').value=val;
+  document.querySelectorAll('#gk-qty-grid .gk-qty').forEach(e=>e.classList.remove('active'));
+  if(el)el.classList.add('active');
+  gkUpdateSummary();
+}
+function gkSyncQtyInput(inp){
+  const v=Math.min(500,Math.max(1,parseInt(inp.value)||1));
+  inp.value=v;
+  document.querySelectorAll('#gk-qty-grid .gk-qty').forEach(e=>e.classList.remove('active'));
+  const presets=[1,5,10,25,50,100,250,500];
+  const idx=presets.indexOf(v);
+  if(idx>=0)document.querySelectorAll('#gk-qty-grid .gk-qty')[idx].classList.add('active');
+  gkUpdateSummary();
+}
+function gkSetExpiry(val,el){
+  document.getElementById('g-days').value=val;
+  document.querySelectorAll('#gk-expiry-pills .gk-pill').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  gkUpdateSummary();
+}
+function gkSetUses(val,el){
+  document.getElementById('g-uses').value=val;
+  document.querySelectorAll('#gk-uses-pills .gk-pill').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  gkUpdateSummary();
+}
+function gkUpdateSummary(){
+  const qty=document.getElementById('g-count').value||1;
+  const days=document.getElementById('g-days').value||0;
+  const uses=document.getElementById('g-uses').value||1;
+  const qs=document.getElementById('gk-s-qty');
+  const es=document.getElementById('gk-s-exp');
+  const us=document.getElementById('gk-s-uses');
+  if(qs)qs.textContent=qty;
+  if(es)es.textContent=days==0?'Never':days+' day'+(days==1?'':'s');
+  if(us)us.textContent=uses>=999?'Unlimited':uses;
+}
 async function generateKeys(){
   const appId=document.getElementById('g-app').value;
   if(!appId){toast('Select an app first','error');return;}
+  const btn=document.getElementById('gk-main-btn');
+  btn.disabled=true;btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Generating…';
   const days=parseInt(document.getElementById('g-days').value)||0;
   const r=await post('/api/admin/generate',{
     appId,
@@ -2347,17 +2452,42 @@ async function generateKeys(){
     max_uses:parseInt(document.getElementById('g-uses').value)||1,
     expires_days:days>0?days:null
   });
+  btn.disabled=false;btn.innerHTML='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Generate Keys';
   if(r.success){
-    const out=document.getElementById('gen-out');
-    out.style.display='block';out.textContent=r.keys.join('\n');
-    document.getElementById('gen-actions').style.display='flex';
+    _genKeys=r.keys;
+    // legacy compat
+    const legOut=document.getElementById('gen-out');
+    if(legOut)legOut.textContent=r.keys.join('\n');
+    // new UI
+    const wrap=document.getElementById('gen-output-wrap');
+    const list=document.getElementById('gen-out-list');
+    const title=document.getElementById('gen-out-title');
+    if(wrap&&list&&title){
+      wrap.style.display='block';
+      title.textContent=`Generated ${r.keys.length} key${r.keys.length>1?'s':''}`;
+      list.innerHTML=r.keys.map((k,i)=>`
+        <div class="gk-key-row">
+          <div class="gk-key-val">${k}</div>
+          <button class="gk-key-copy" onclick="gkCopyOne('${k}',this)"># ${i+1} Copy</button>
+        </div>`).join('');
+    }
     toast(`Generated ${r.keys.length} key${r.keys.length>1?'s':''}!`,'success');
   } else toast(r.message,'error');
 }
-function copyGen(){navigator.clipboard.writeText(document.getElementById('gen-out').textContent);toast('Copied!','success');}
+function gkCopyOne(key,btn){
+  navigator.clipboard.writeText(key);
+  const orig=btn.textContent;
+  btn.textContent='Copied!';btn.style.color='var(--p3)';
+  setTimeout(()=>{btn.textContent=orig;btn.style.color='';},1500);
+}
+function copyGen(){
+  const keys=_genKeys.length?_genKeys:(document.getElementById('gen-out').textContent||'').split('\n').filter(Boolean);
+  navigator.clipboard.writeText(keys.join('\n'));toast('Copied all keys!','success');
+}
 function dlGen(){
+  const keys=_genKeys.length?_genKeys:(document.getElementById('gen-out').textContent||'').split('\n').filter(Boolean);
   const a=document.createElement('a');
-  a.href='data:text/plain,'+encodeURIComponent(document.getElementById('gen-out').textContent);
+  a.href='data:text/plain,'+encodeURIComponent(keys.join('\n'));
   a.download='boostempire-keys.txt';a.click();
 }
 
