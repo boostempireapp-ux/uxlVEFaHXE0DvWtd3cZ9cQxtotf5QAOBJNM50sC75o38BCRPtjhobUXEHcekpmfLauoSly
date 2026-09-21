@@ -1,4 +1,5 @@
-const express  = require('express');
+const express      = require('express');
+const compression  = require('compression');
 const { MongoClient, ObjectId } = require('mongodb');
 const { randomUUID, createHash, createHmac, timingSafeEqual } = require('crypto');
 const path     = require('path');
@@ -141,7 +142,13 @@ let db;
 let keysCol, logsCol, adminCol, appsCol, blocksCol, resellersCol, detectionsCol, adminAuditCol;
 
 async function connectDB() {
-  const client = new MongoClient(MONGO_URI);
+  const client = new MongoClient(MONGO_URI, {
+    maxPoolSize: 10,
+    minPoolSize: 2,
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
+    compressors: ['zlib'],
+  });
   await client.connect();
   db             = client.db(DB_NAME);
   keysCol        = db.collection('keys');
@@ -154,7 +161,11 @@ async function connectDB() {
   adminAuditCol  = db.collection('adminAudit');
 
   await keysCol.createIndex({ key: 1 }, { unique: true });
+  await keysCol.createIndex({ appId: 1, status: 1 });
+  await keysCol.createIndex({ appId: 1, key: 1 });
   await logsCol.createIndex({ timestamp: -1 });
+  await logsCol.createIndex({ appId: 1, timestamp: -1 });
+  await logsCol.createIndex({ result: 1, timestamp: -1 });
   await appsCol.createIndex({ publicKey: 1 }, { unique: true });
   await blocksCol.createIndex({ ip: 1 }, { unique: true });
   await resellersCol.createIndex({ username: 1 }, { unique: true });
@@ -183,6 +194,7 @@ async function connectDB() {
     if (Object.keys(update).length) await adminCol.updateOne({ _id: 'admin' }, { $set: update });
   }
   console.log('[mongodb] Connected to MongoDB Atlas — data is persistent');
+  setTimeout(syncBlockCache, 500); // warm block cache after connect
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
@@ -421,11 +433,23 @@ const RATE_WINDOW    = 60 * 1000;
 const RATE_MAX       = 30;
 const BLOCK_AFTER    = 80;
 
+// In-memory block cache — avoids a DB round-trip on every request
+const blockCache     = new Set();
+const BLOCK_CACHE_TTL = 5 * 60 * 1000;
+async function syncBlockCache() {
+  try {
+    const docs = await blocksCol.find({}, { projection: { ip: 1 } }).toArray();
+    blockCache.clear();
+    docs.forEach(d => blockCache.add(d.ip));
+  } catch {}
+}
+setInterval(syncBlockCache, BLOCK_CACHE_TTL);
+// Sync after startup (called after connectDB)
+
 async function rateLimit(req, res, next) {
   const ip  = getIP(req);
   const now = Date.now();
-  const blocked = await blocksCol.findOne({ ip });
-  if (blocked) return res.status(429).json({ success:false, code:'IP_BLOCKED', message:'Your IP has been permanently blocked due to abuse' });
+  if (blockCache.has(ip)) return res.status(429).json({ success:false, code:'IP_BLOCKED', message:'Your IP has been permanently blocked due to abuse' });
   if (!rateLimitMap.has(ip)) rateLimitMap.set(ip, []);
   const hits = rateLimitMap.get(ip).filter(t => now - t < RATE_WINDOW);
   hits.push(now);
@@ -444,7 +468,7 @@ async function trackFail(ip) {
     const exists = await blocksCol.findOne({ ip });
     if (!exists) {
       const reason = 'Auto-blocked: too many failed auth attempts';
-      await blocksCol.insertOne({ ip, reason, blockedAt: new Date().toISOString() });
+      await blocksCol.insertOne({ ip, reason, blockedAt: new Date().toISOString() }); blockCache.add(ip);
       webhookIPBlocked(ip, reason);
     }
   }
@@ -481,9 +505,14 @@ function requireAdminOrReseller(req, res, next) {
 
 // ── EXPRESS SETUP ─────────────────────────────────────────────────────────────
 app.set('trust proxy', true);
+app.use(compression({ level: 6, threshold: 1024 }));
 app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.urlencoded({ extended: false, limit: '10kb' }));
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '1h',
+  etag: true,
+  lastModified: true,
+}));
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS,PATCH');
@@ -510,7 +539,7 @@ for (const hPath of HONEYPOT_PATHS) {
       const exists = await blocksCol.findOne({ ip });
       if (!exists) {
         const reason = `Honeypot triggered: ${hPath}`;
-        await blocksCol.insertOne({ ip, reason, blockedAt: new Date().toISOString() });
+        await blocksCol.insertOne({ ip, reason, blockedAt: new Date().toISOString() }); blockCache.add(ip);
         webhookIPBlocked(ip, reason);
         log(null, '—', null, 'HONEYPOT', 'PROBE', 'PERMABANNED', ip, reason);
       }
@@ -969,6 +998,7 @@ app.get('/api/admin/blocks', requireAdmin, async (req, res) => {
 app.delete('/api/admin/blocks/:ip', requireAdmin, async (req, res) => {
   await blocksCol.deleteOne({ ip:req.params.ip });
   failCounts.delete(req.params.ip);
+  blockCache.delete(req.params.ip);
   auditLog(req.adminIP, 'UNBLOCK_IP', { ip: req.params.ip });
   res.json({ success:true });
 });
@@ -1495,6 +1525,7 @@ app.get('/api/bot/blocks', requireBot, async (req, res) => {
 app.delete('/api/bot/blocks/:ip', requireBot, async (req, res) => {
   await blocksCol.deleteOne({ ip: req.params.ip });
   failCounts.delete(req.params.ip);
+  blockCache.delete(req.params.ip);
   res.json({ success: true });
 });
 
