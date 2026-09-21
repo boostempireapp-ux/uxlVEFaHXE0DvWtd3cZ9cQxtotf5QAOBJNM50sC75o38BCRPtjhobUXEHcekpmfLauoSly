@@ -378,7 +378,7 @@ tbody td{padding:9px 13px;vertical-align:middle;}
 .actions-cell{display:flex;gap:5px;align-items:center;}
 
 /* ACTIVITY FEED */
-.act-row{display:grid;grid-template-columns:60px 90px 1fr 90px;align-items:center;gap:10px;
+.act-row{display:grid;grid-template-columns:60px 1fr 1fr;align-items:center;gap:10px;
   padding:9px 18px;border-bottom:1px solid rgba(139,92,246,0.05);transition:background .1s;}
 .act-row:last-child{border-bottom:none;}
 .act-row:hover{background:rgba(139,92,246,0.03);}
@@ -889,7 +889,7 @@ tbody td{padding:9px 13px;vertical-align:middle;}
               <div class="sec-row">
                 <div class="sec-dot on"></div>
                 <span class="sec-label">Crack Tool Scan</span>
-                <span class="sec-val">380+ blacklisted</span>
+                <span class="sec-val">440+ blacklisted</span>
               </div>
             </div>
           </div>
@@ -2165,7 +2165,6 @@ async function loadDashboard(){
       <span class="act-time">${t}</span>
       <span class="act-app">${l.app_name||'—'}</span>
       ${badge}
-      <span class="act-ip">${l.ip||'—'}</span>
     </div>`;
   }).join('');
 }
@@ -2768,7 +2767,7 @@ async function loadResellerDashboard(){
   if(RDATA.permissions.viewLogs){
     const lr=await rget('/api/reseller/logs');
     if(lr.success&&lr.logs.length){
-      act.innerHTML=lr.logs.slice(0,8).map(l=>'<div style="display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid rgba(245,158,11,0.05)"><span style="color:var(--text3);font-family:JetBrains Mono,monospace;font-size:10px;min-width:65px;flex-shrink:0">'+fmtTimeShort(l.timestamp)+'</span>'+rb(l.result)+'<span style="color:var(--text3);font-size:10px;margin-left:auto;flex-shrink:0">'+(RDATA.permissions.viewIP?(l.ip||'&mdash;'):'&mdash;')+'</span></div>').join('');
+      act.innerHTML=lr.logs.slice(0,8).map(l=>'<div style="display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid rgba(245,158,11,0.05)"><span style="color:var(--text3);font-family:JetBrains Mono,monospace;font-size:10px;min-width:65px;flex-shrink:0">'+fmtTimeShort(l.timestamp)+'</span>'+rb(l.result)+'</div>').join('');
     }else{act.innerHTML='<div style="text-align:center;padding:36px;color:var(--text3);font-size:12px">No activity yet</div>';}
   }else{act.innerHTML='<div style="text-align:center;padding:36px;color:var(--text3);font-size:12px">Log access not enabled</div>';}
 }
