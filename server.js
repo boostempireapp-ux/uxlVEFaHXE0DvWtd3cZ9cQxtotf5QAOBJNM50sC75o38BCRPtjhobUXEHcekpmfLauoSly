@@ -779,6 +779,98 @@ app.post('/api/admin/apps/:id/set-hmac', requireAdmin, async (req, res) => {
   res.json({ success: true, hmacEnabled: !!val });
 });
 
+// ── DLL HOSTING (Catbox / any 3rd-party link) ─────────────────────────────────
+// Allowed hosts for DLL links (whitelist to prevent SSRF abuse)
+const ALLOWED_DLL_HOSTS = [
+  'files.catbox.moe',
+  'catbox.moe',
+  'litterbox.catbox.moe',
+  'cdn.discordapp.com',
+  'media.discordapp.net',
+  'github.com',
+  'raw.githubusercontent.com',
+  'objects.githubusercontent.com',
+  'cdn.jsdelivr.net',
+  'drive.google.com',
+  'dropbox.com',
+  'dl.dropboxusercontent.com',
+];
+
+function isAllowedDllHost(urlStr) {
+  try {
+    const { hostname } = new URL(urlStr);
+    return ALLOWED_DLL_HOSTS.some(h => hostname === h || hostname.endsWith('.' + h));
+  } catch { return false; }
+}
+
+// POST /api/admin/apps/:id/set-dll  { dllUrl: "https://files.catbox.moe/..." }
+app.post('/api/admin/apps/:id/set-dll', requireAdmin, async (req, res) => {
+  const { dllUrl } = req.body;
+  if (dllUrl && !isAllowedDllHost(dllUrl))
+    return res.json({ success: false, message: 'DLL host not in allowlist. Supported: Catbox, Discord CDN, GitHub, jsDelivr, Google Drive, Dropbox.' });
+  const val = dllUrl && String(dllUrl).trim() ? String(dllUrl).trim() : null;
+  await appsCol.updateOne({ _id: new ObjectId(req.params.id) }, { $set: { dllUrl: val } });
+  auditLog(req.adminIP, val ? 'SET_DLL_URL' : 'CLEAR_DLL_URL', { appId: req.params.id, dllUrl: val });
+  res.json({ success: true, dllUrl: val });
+});
+
+// GET /api/admin/apps/:id/dll-info  — returns the stored URL (admin only)
+app.get('/api/admin/apps/:id/dll-info', requireAdmin, async (req, res) => {
+  const doc = await appsCol.findOne({ _id: new ObjectId(req.params.id) }, { projection: { dllUrl: 1, name: 1 } });
+  if (!doc) return res.json({ success: false, message: 'App not found' });
+  res.json({ success: true, dllUrl: doc.dllUrl || null, appName: doc.name });
+});
+
+// GET /api/dll/:publicKey  — authenticated DLL download (requires valid session_token + key)
+// Called by the developer's loader AFTER a successful /api/auth:
+//   GET /api/dll/<publicKey>?key=BE-xxx&session_token=yyy
+app.get('/api/dll/:publicKey', rateLimit, async (req, res) => {
+  const { key, session_token } = req.query;
+  if (!key || !session_token)
+    return res.status(400).json({ success: false, code: 'MISSING_PARAMS' });
+
+  // Validate session
+  const session = activeSessions.get(key);
+  if (!session || session.token !== session_token)
+    return res.status(401).json({ success: false, code: 'INVALID_SESSION', message: 'Authenticate first via /api/auth' });
+
+  const appDoc = await appsCol.findOne({ publicKey: req.params.publicKey });
+  if (!appDoc) return res.status(404).json({ success: false, code: 'INVALID_PUBLIC_KEY' });
+
+  // Ensure the session belongs to this app
+  if (session.appId !== String(appDoc._id))
+    return res.status(403).json({ success: false, code: 'APP_MISMATCH' });
+
+  // Check key is still valid
+  const keyDoc = await keysCol.findOne({ key, appId: String(appDoc._id) });
+  if (!keyDoc) return res.status(401).json({ success: false, code: 'INVALID_KEY' });
+  if (keyDoc.status !== 'active') return res.status(403).json({ success: false, code: keyDoc.status.toUpperCase() });
+  if (keyDoc.expiresAt && new Date(keyDoc.expiresAt) < new Date())
+    return res.status(403).json({ success: false, code: 'EXPIRED' });
+
+  if (!appDoc.dllUrl)
+    return res.status(404).json({ success: false, code: 'NO_DLL', message: 'No DLL configured for this app' });
+
+  const ip = await resolveRealIP(req);
+  log(appDoc._id, key, keyDoc.hwidRaw || '—', appDoc.name, 'DLL_DOWNLOAD', 'SUCCESS', ip);
+
+  // Proxy the file so the raw 3rd-party URL is never exposed to the client
+  const mod = appDoc.dllUrl.startsWith('https') ? https : http;
+  mod.get(appDoc.dllUrl, { timeout: 15000 }, (upstream) => {
+    if (upstream.statusCode !== 200) {
+      upstream.resume();
+      return res.status(502).json({ success: false, code: 'UPSTREAM_ERROR', message: `Upstream returned ${upstream.statusCode}` });
+    }
+    const filename = appDoc.dllUrl.split('/').pop().split('?')[0] || 'payload.dll';
+    res.setHeader('Content-Type', upstream.headers['content-type'] || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    if (upstream.headers['content-length'])
+      res.setHeader('Content-Length', upstream.headers['content-length']);
+    upstream.pipe(res);
+  }).on('error', () => res.status(502).json({ success: false, code: 'UPSTREAM_ERROR', message: 'Failed to fetch DLL from upstream' }))
+    .on('timeout', function() { this.destroy(); res.status(504).json({ success: false, code: 'UPSTREAM_TIMEOUT' }); });
+});
+
 // ── ADMIN: KEYS ───────────────────────────────────────────────────────────────
 app.get('/api/admin/keys', requireAdmin, async (req, res) => {
   const filter = req.query.appId ? { appId:req.query.appId } : {};
