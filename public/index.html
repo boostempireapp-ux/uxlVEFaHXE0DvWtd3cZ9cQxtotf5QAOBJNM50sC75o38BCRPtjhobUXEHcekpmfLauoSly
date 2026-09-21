@@ -1027,12 +1027,12 @@ tbody td{padding:9px 13px;vertical-align:middle;}
     <div class="page" id="page-generate">
       <style>
         /* ── Generate Keys page styles ── */
-        .gk-wrap{display:grid;grid-template-columns:1fr 280px;gap:20px;max-width:1100px;}
+        .gk-wrap{display:grid;grid-template-columns:1fr 280px;gap:20px;width:100%;}
         .gk-section-label{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);margin-bottom:10px;}
         /* App selector */
         .gk-app-select{display:flex;flex-direction:column;gap:6px;margin-bottom:22px;}
         /* Quantity tiles */
-        .gk-qty-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-bottom:22px;}
+        .gk-qty-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;margin-bottom:22px;}
         .gk-qty{background:rgba(139,92,246,0.05);border:1px solid rgba(139,92,246,0.15);border-radius:8px;padding:10px 4px;text-align:center;cursor:pointer;transition:.15s;display:flex;flex-direction:column;align-items:center;gap:3px;}
         .gk-qty:hover{border-color:var(--p);background:rgba(139,92,246,0.1);}
         .gk-qty.active{border-color:var(--p);background:rgba(139,92,246,0.18);box-shadow:0 0 0 1px var(--p);}
@@ -1045,7 +1045,7 @@ tbody td{padding:9px 13px;vertical-align:middle;}
         .gk-qty-custom input:focus{outline:none;border-color:var(--p);background:rgba(139,92,246,0.1);}
         .gk-qty-custom span{font-size:11px;color:var(--text3);}
         /* Two-col row */
-        .gk-row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px;}
+        .gk-row2{display:grid;grid-template-columns:3fr 2fr;gap:24px;margin-bottom:22px;}
         /* Pill option group */
         .gk-pills{display:flex;flex-wrap:wrap;gap:6px;}
         .gk-pill{padding:6px 12px;border-radius:20px;border:1px solid rgba(139,92,246,0.2);background:rgba(139,92,246,0.04);font-size:11px;color:var(--text2);cursor:pointer;transition:.15s;}
@@ -1151,7 +1151,7 @@ tbody td{padding:9px 13px;vertical-align:middle;}
             </div>
 
             <!-- Label + Product row -->
-            <div class="gk-row2" style="margin-bottom:24px">
+            <div class="gk-row2" style="margin-bottom:24px;grid-template-columns:1fr 1fr">
               <div class="fg">
                 <label>Label / Note</label>
                 <input type="text" id="g-label" placeholder="Order #123, Discord ID…"/>
