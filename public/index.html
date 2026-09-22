@@ -3336,6 +3336,7 @@ async function renderAppGrid(containerId, selectedIds=[]){
         </div>
       </label>`;
     }).join('');
+    el.dataset.appsLoaded='1'; // mark so saveReseller knows grid actually loaded
   } catch(e) {
     el.innerHTML='<div style="font-size:12px;color:var(--danger)">Failed to load apps.</div>';
   }
@@ -3367,7 +3368,16 @@ async function openEditResellerModal(id){
 }
 async function saveReseller(){
   const id=document.getElementById('edit-reseller-id').value;
-  const body={displayName:document.getElementById('edit-displayname').value.trim(),keyQuota:parseInt(document.getElementById('edit-quota').value)||0,notes:document.getElementById('edit-notes').value.trim(),permissions:getPerms('perm-grid-edit'),allowedApps:getSelectedApps('app-grid-edit')};
+  const body={displayName:document.getElementById('edit-displayname').value.trim(),keyQuota:parseInt(document.getElementById('edit-quota').value)||0,notes:document.getElementById('edit-notes').value.trim(),permissions:getPerms('perm-grid-edit')};
+  // Only include allowedApps in the PATCH if the grid successfully loaded (prevents accidentally wiping when apps API failed)
+  const grid=document.getElementById('app-grid-edit');
+  if(grid && grid.dataset.appsLoaded==='1'){
+    body.allowedApps=getSelectedApps('app-grid-edit');
+  } else if(grid && grid.dataset.appsLoaded!=='1'){
+    // Grid failed to load — warn admin and abort to avoid clearing existing app access
+    toast('App grid failed to load — app assignments were NOT changed. Reload and try again.','error');
+    return;
+  }
   const pw=document.getElementById('edit-password').value; if(pw) body.password=pw;
   const r=await fetch('/api/admin/resellers/'+id,{method:'PATCH',headers:{'Content-Type':'application/json','x-admin-token':TOKEN},body:JSON.stringify(body)}).then(r=>r.json());
   if(r.success){closeModal('modal-edit-reseller');toast('Updated!','success');loadResellers();}
@@ -4010,16 +4020,9 @@ async function loadResellerMyApps() {
     </div>`;
   }).join('');
 
-  // Wire DLL buttons via event delegation (avoids inline onclick with special chars)
+  // Wire DLL open buttons
   wrap.querySelectorAll('.r-dll-open-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      openRDllModal(
-        btn.dataset.appId,
-        btn.dataset.appName,
-        btn.dataset.dllUrl,
-        btn.dataset.pubKey
-      );
-    });
+    btn.onclick = () => openRDllModal(btn.dataset.appId, btn.dataset.appName, btn.dataset.dllUrl, btn.dataset.pubKey);
   });
 }
 
