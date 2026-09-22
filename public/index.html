@@ -1699,9 +1699,14 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
       <div class="ph" style="margin-bottom:18px">
         <div>
           <div class="pt">Admin <span style="color:#f59e0b">Audit Log</span></div>
-          <div style="font-size:11px;color:var(--text3);margin-top:3px">Every admin action — who did what and when</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">Every admin &amp; reseller action — who did what and when</div>
         </div>
         <div class="pa">
+          <select id="audit-filter-reseller" class="inp" style="width:auto;padding:7px 10px;font-size:12px" onchange="loadAudit()">
+            <option value="">All Sources</option>
+            <option value="__resellers__">Resellers Only</option>
+            <option value="__admin__">Admin Only</option>
+          </select>
           <button class="btn btn-ghost btn-sm" onclick="loadAudit()">↻ Refresh</button>
           <button class="btn btn-sm" style="background:#7f1d1d;color:#fca5a5;border:1px solid #991b1b" onclick="clearAudit()">🗑 Clear Log</button>
         </div>
@@ -2062,9 +2067,36 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
     <div class="page" id="page-r-apps">
       <div class="ph">
         <div class="pt">My <span>Apps</span></div>
-        <div class="pa"><button class="btn btn-ghost btn-sm" onclick="loadResellerMyApps()">↻ Refresh</button></div>
+        <div class="pa">
+          <button class="btn btn-ghost btn-sm" onclick="loadResellerMyApps()">↻ Refresh</button>
+          <button class="btn btn-purple btn-sm" id="r-create-app-btn" style="display:none" onclick="openResellerCreateAppModal()">+ Create App</button>
+        </div>
       </div>
       <div id="r-apps-content"><div class="empty"><div class="empty-icon">⏳</div><div class="empty-text">Loading apps…</div></div></div>
+    </div>
+
+    <!-- MODAL: RESELLER CREATE APP -->
+    <div class="modal-bg" id="modal-r-create-app">
+      <div class="modal">
+        <div class="modal-title">📱 Create New App</div>
+        <div class="fg" style="margin-bottom:12px">
+          <label>App Name</label>
+          <input class="inp" id="r-modal-app-name" placeholder="e.g. MyCheat, Tool v2"/>
+        </div>
+        <div class="fg">
+          <label>Description (optional)</label>
+          <input class="inp" id="r-modal-app-desc" placeholder="What is this app?"/>
+        </div>
+        <div id="r-create-app-result" style="display:none;margin-top:12px;padding:12px;background:#0a1a0a;border:1px solid #22c55e44;border-radius:var(--r);font-size:12px">
+          <div style="color:#4ade80;font-weight:600;margin-bottom:8px">✅ App created! Save these keys — the secret key won't be shown again.</div>
+          <div style="margin-bottom:6px"><span style="color:var(--text3)">Public Key:</span> <span id="r-new-app-pk" style="color:var(--p3);font-family:'JetBrains Mono',monospace;font-size:11px"></span> <button class="apikey-copy" onclick="navigator.clipboard.writeText(document.getElementById('r-new-app-pk').textContent);toast('Copied','success')">Copy</button></div>
+          <div><span style="color:var(--text3)">Secret Key:</span> <span id="r-new-app-sk" style="color:#f87171;font-family:'JetBrains Mono',monospace;font-size:11px"></span> <button class="apikey-copy" onclick="navigator.clipboard.writeText(document.getElementById('r-new-app-sk').textContent);toast('Copied','success')">Copy</button></div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" id="r-create-app-cancel-btn" onclick="closeResellerCreateAppModal()">Cancel</button>
+          <button class="btn btn-purple" id="r-create-app-submit-btn" onclick="resellerCreateApp()">Create App</button>
+        </div>
+      </div>
     </div>
 
     <!-- DETECTION EVENTS PAGE -->
@@ -2906,6 +2938,7 @@ async function saveCountryAllowlist(){
 async function loadAudit(){
   const el=document.getElementById('audit-list');
   el.innerHTML='<div class="empty"><div class="empty-icon">⏳</div><div class="empty-text">Loading…</div></div>';
+  const filterVal=document.getElementById('audit-filter-reseller')?.value||'';
   const r=await get('/api/admin/audit?limit=200');
   if(!r.success||!r.audit?.length){el.innerHTML='<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No audit entries yet</div></div>';return;}
   const ACTION_COLOR={
@@ -2919,13 +2952,31 @@ async function loadAudit(){
     '2FA_ENABLED':'#4ade80','2FA_DISABLED':'#f87171',
     BACKUP_EXPORT:'#60a5fa',BACKUP_RESTORE:'#fb923c',
     CLEAR_LOGS:'#f87171',CLEAR_AUDIT_LOG:'#f87171',CLEAR_DETECTIONS:'#f87171',UNBLOCK_IP:'#4ade80',
+    RESELLER_GENERATE_KEYS:'#a78bfa',RESELLER_BAN_KEY:'#f87171',RESELLER_UNBAN_KEY:'#4ade80',
+    RESELLER_FREEZE_KEY:'#fb923c',RESELLER_UNFREEZE_KEY:'#4ade80',
+    RESELLER_RESET_HWID:'#60a5fa',RESELLER_DELETE_KEY:'#f87171',
+    RESELLER_CREATE_APP:'#4ade80',
   };
-  el.innerHTML=r.audit.map(e=>{
+  // Populate reseller filter dropdown dynamically
+  const filterEl=document.getElementById('audit-filter-reseller');
+  if(filterEl){
+    const resellers=[...new Set(r.audit.filter(e=>e.reseller).map(e=>e.reseller))];
+    const cur=filterEl.value;
+    filterEl.innerHTML='<option value="">All Sources</option><option value="__resellers__">Resellers Only</option><option value="__admin__">Admin Only</option>'+resellers.map(rs=>`<option value="${rs}">${rs}</option>`).join('');
+    filterEl.value=cur;
+  }
+  let entries=r.audit;
+  if(filterVal==='__resellers__') entries=entries.filter(e=>e.action.startsWith('RESELLER_'));
+  else if(filterVal==='__admin__') entries=entries.filter(e=>!e.action.startsWith('RESELLER_'));
+  else if(filterVal) entries=entries.filter(e=>e.reseller===filterVal);
+  if(!entries.length){el.innerHTML='<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No entries match filter</div></div>';return;}
+  el.innerHTML=entries.map(e=>{
     const c=ACTION_COLOR[e.action]||'#a1a1aa';
+    const isReseller=e.action.startsWith('RESELLER_');
     const extras=Object.entries(e).filter(([k])=>!['_id','action','ip','timestamp'].includes(k)).map(([k,v])=>`<span style="color:var(--text3)">${k}:</span> <span style="color:var(--text2)">${typeof v==='object'?JSON.stringify(v):v}</span>`).join('  ');
-    return `<div style="display:flex;align-items:baseline;gap:12px;padding:8px 16px;border-bottom:1px solid var(--border2);font-size:11px;font-family:'JetBrains Mono',monospace">
+    return `<div style="display:flex;align-items:baseline;gap:12px;padding:8px 16px;border-bottom:1px solid var(--border2);font-size:11px;font-family:'JetBrains Mono',monospace;${isReseller?'background:rgba(139,92,246,0.04)':''}">
       <span style="color:var(--text3);white-space:nowrap;flex-shrink:0">${new Date(e.timestamp).toLocaleString()}</span>
-      <span style="color:#60a5fa;white-space:nowrap;flex-shrink:0">${e.ip||'—'}</span>
+      <span style="color:${isReseller?'#a78bfa':'#60a5fa'};white-space:nowrap;flex-shrink:0">${e.ip||'—'}</span>
       <span style="color:${c};font-weight:700;white-space:nowrap;flex-shrink:0">${e.action}</span>
       <span style="color:var(--text3);word-break:break-all">${extras}</span>
     </div>`;
@@ -3251,6 +3302,7 @@ function buildResellerNav(){
   document.getElementById('r-nav-logs').style.display=p.viewLogs?'':'none';
   document.getElementById('r-nav-blocks').style.display=p.viewBlocks?'':'none';
   const gb=document.getElementById('r-gen-btn'); if(gb) gb.style.display=p.generateKeys?'':'none';
+  const cab=document.getElementById('r-create-app-btn'); if(cab) cab.style.display=p.createOwnApp?'':'none';
   const hc=document.getElementById('r-hwid-col'); if(hc) hc.style.display=p.viewHWID?'':'none';
   const lh=document.getElementById('r-log-hwid-col'); if(lh) lh.style.display=p.viewHWID?'':'none';
   const li=document.getElementById('r-log-ip-col'); if(li) li.style.display=p.viewIP?'':'none';
@@ -3270,6 +3322,7 @@ const PERMS=[
   {key:'deleteKeys',label:'Delete Keys',desc:'Remove keys'},
   {key:'viewStats',label:'View Stats',desc:'Dashboard stats'},
   {key:'canUseCatboxHosting',label:'Catbox DLL Hosting',desc:'Upload & manage DLLs via Catbox'},
+  {key:'createOwnApp',label:'Create Own Apps',desc:'Reseller can create their own apps'},
 ];
 function renderPermGrid(cid,ex={}){
   document.getElementById(cid).innerHTML=PERMS.map(p=>`<div class="perm-item ${ex[p.key]?'on':''}" id="pi-${cid}-${p.key}"><div class="perm-label">${p.label}<small>${p.desc}</small></div><div class="toggle ${ex[p.key]?'on':''}" id="pt-${cid}-${p.key}" onclick="togglePerm('${cid}','${p.key}')"></div></div>`).join('');
@@ -3505,6 +3558,31 @@ function dlRGen(){
 }
 
 // ═══════════════ RESELLER LOGS ═══════════════
+function openResellerCreateAppModal(){
+  document.getElementById('r-modal-app-name').value='';
+  document.getElementById('r-modal-app-desc').value='';
+  document.getElementById('r-create-app-result').style.display='none';
+  document.getElementById('r-create-app-submit-btn').style.display='';
+  document.getElementById('r-create-app-cancel-btn').textContent='Cancel';
+  document.getElementById('modal-r-create-app').classList.add('open');
+}
+function closeResellerCreateAppModal(){
+  document.getElementById('modal-r-create-app').classList.remove('open');
+  loadResellerMyApps();
+}
+async function resellerCreateApp(){
+  const name=document.getElementById('r-modal-app-name').value.trim();
+  const description=document.getElementById('r-modal-app-desc').value.trim();
+  if(!name){toast('Enter an app name','error');return;}
+  const r=await rpost('/api/reseller/apps',{name,description});
+  if(!r.success){toast(r.message||'Failed to create app','error');return;}
+  document.getElementById('r-new-app-pk').textContent=r.app.publicKey;
+  document.getElementById('r-new-app-sk').textContent=r.secretKey;
+  document.getElementById('r-create-app-result').style.display='';
+  document.getElementById('r-create-app-submit-btn').style.display='none';
+  document.getElementById('r-create-app-cancel-btn').textContent='Done';
+  toast(`"${name}" created!`,'success');
+}
 async function loadResellerLogs(){
   if(!RDATA.permissions.viewLogs){document.getElementById('r-logs-body').innerHTML='<tr><td colspan="6"><div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">Log access not enabled</div></div></td></tr>';return;}
   const r=await rget('/api/reseller/logs'); if(r.success){rAllLogs=r.logs;document.getElementById('rl-count').textContent=r.logs.length+' entries';filterResellerLogs();}
@@ -3930,6 +4008,8 @@ async function loadResellerMyApps() {
     if (me && me.success && RDATA) {
       RDATA.permissions   = me.permissions;
       RDATA.allowedApps   = me.allowedApps;
+      const cab=document.getElementById('r-create-app-btn');
+      if(cab) cab.style.display=me.permissions.createOwnApp?'':'none';
     }
   } catch(e) {}
 
