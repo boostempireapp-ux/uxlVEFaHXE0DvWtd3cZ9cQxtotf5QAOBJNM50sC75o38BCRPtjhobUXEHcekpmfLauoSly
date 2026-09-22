@@ -3367,15 +3367,20 @@ async function loadResellerGeneratePage(){
   const qn=document.getElementById('r-quota-notice');
   const sg=document.getElementById('r-sidebar-generated');
   const sq=document.getElementById('r-sidebar-quota');
+  const qi=document.getElementById('r-gen-quota-info');
   if(sr.success){const s=sr.stats;
     if(sg)sg.textContent=s.keysGenerated||0;
     if(s.keyQuota>0){
       if(sq)sq.textContent=s.keyQuota;
       if(qn){qn.style.display=s.slotsLeft<=0?'':'none';qn.textContent='Quota exhausted. Contact admin.';}
+      if(qi)qi.innerHTML=`<div>Keys generated: <b>${s.keysGenerated||0}</b> / <b>${s.keyQuota}</b></div><div>Slots remaining: <b>${s.slotsLeft??'—'}</b></div>`;
     } else {
       if(sq)sq.textContent='Unlimited';
       if(qn)qn.style.display='none';
+      if(qi)qi.innerHTML=`<div>Keys generated: <b>${s.keysGenerated||0}</b></div><div>Quota: <b>Unlimited</b></div>`;
     }
+  } else {
+    if(qi)qi.textContent='Failed to load quota — try refreshing.';
   }
 }
 function selRCSApp(id,name){document.getElementById('rg-app').value=id;document.getElementById('rcs-app-label').textContent=name;document.querySelectorAll('#rcs-app-menu .cs-opt').forEach(o=>o.classList.toggle('selected',o.dataset.val===id));closeAllCS();}
@@ -3727,6 +3732,19 @@ async function loadResellerDLL() {
   if (!wrap) return;
 
   wrap.innerHTML = '<div class="empty"><div class="empty-icon">⏳</div><div class="empty-text">Loading apps…</div></div>';
+
+  // Always refresh RDATA permissions from server so changes made by admin
+  // (like granting canUseCatboxHosting or assigning apps) are reflected immediately
+  // without requiring the reseller to re-login.
+  try {
+    const me = await rget('/api/reseller/me');
+    if (me && me.success && RDATA) {
+      RDATA.permissions  = me.permissions;
+      RDATA.allowedApps  = me.allowedApps;
+      RDATA.keyQuota     = me.keyQuota;
+      RDATA.keysGenerated = me.keysGenerated;
+    }
+  } catch(e) { /* non-fatal — use existing RDATA */ }
 
   // Check permission — show a banner but still attempt to load apps so admin can see state
   const hasCatboxPerm = RDATA && RDATA.permissions && RDATA.permissions.canUseCatboxHosting;
