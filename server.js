@@ -1428,6 +1428,24 @@ app.get('/api/reseller/dll-info', requireReseller, async (req, res) => {
   res.json({ success: true, apps: docs });
 });
 
+// GET /api/reseller/my-apps — full app info for assigned apps (public + secret keys for integration)
+app.get('/api/reseller/my-apps', requireReseller, async (req, res) => {
+  const allowed = req.reseller.allowedApps || [];
+  let docs;
+  if (allowed.length === 0) {
+    docs = await appsCol.find({}, { projection: { name: 1, publicKey: 1, secretKey: 1, dllUrl: 1, active: 1, createdAt: 1 } }).sort({ name: 1 }).toArray();
+  } else {
+    const ids = allowed.map(id => { try { return new ObjectId(String(id)); } catch { return null; } }).filter(Boolean);
+    if (ids.length > 0) {
+      docs = await appsCol.find({ _id: { $in: ids } }, { projection: { name: 1, publicKey: 1, secretKey: 1, dllUrl: 1, active: 1, createdAt: 1 } }).sort({ name: 1 }).toArray();
+    } else {
+      // ID conversion failed (legacy IDs) — return all apps
+      docs = await appsCol.find({}, { projection: { name: 1, publicKey: 1, secretKey: 1, dllUrl: 1, active: 1, createdAt: 1 } }).sort({ name: 1 }).toArray();
+    }
+  }
+  res.json({ success: true, apps: docs });
+});
+
 // POST /api/reseller/apps/:id/set-dll  { dllUrl: "https://files.catbox.moe/..." }
 // Reseller can only set DLL on apps they are assigned to AND if canUseCatboxHosting is granted
 app.post('/api/reseller/apps/:id/set-dll', requireReseller, async (req, res) => {
@@ -1442,13 +1460,19 @@ app.post('/api/reseller/apps/:id/set-dll', requireReseller, async (req, res) => 
   if (allowed.length > 0 && !allowed.includes(req.params.id))
     return res.status(403).json({ success: false, message: 'You do not have access to this app.' });
 
-  if (!dllUrl || !String(dllUrl).trim())
-    return res.json({ success: false, message: 'DLL URL is required.' });
+  // Allow empty string to clear the DLL URL
+  const val = String(dllUrl || '').trim();
+  if (!val) {
+    const appDoc = await appsCol.findOne({ _id: new ObjectId(req.params.id) }, { projection: { name: 1 } });
+    if (!appDoc) return res.json({ success: false, message: 'App not found.' });
+    await appsCol.updateOne({ _id: new ObjectId(req.params.id) }, { $unset: { dllUrl: '' } });
+    await dllLogsCol.insertOne({ appId: req.params.id, appName: appDoc.name || '—', dllUrl: '(removed)', setBy: req.reseller.username, setByType: 'reseller', timestamp: new Date().toISOString() });
+    return res.json({ success: true, dllUrl: '' });
+  }
 
-  if (!isAllowedDllHost(dllUrl))
+  if (!isAllowedDllHost(val))
     return res.json({ success: false, message: 'Only Catbox, Discord CDN, GitHub, jsDelivr, Google Drive, and Dropbox URLs are allowed.' });
 
-  const val    = String(dllUrl).trim();
   const appDoc = await appsCol.findOne({ _id: new ObjectId(req.params.id) }, { projection: { name: 1 } });
   if (!appDoc) return res.json({ success: false, message: 'App not found.' });
 
