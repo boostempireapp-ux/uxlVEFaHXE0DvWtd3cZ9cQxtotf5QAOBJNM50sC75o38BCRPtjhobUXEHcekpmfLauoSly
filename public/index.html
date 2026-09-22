@@ -2707,7 +2707,7 @@ function renderKeys(keys){
     const freezeBtn = k.status==='frozen'
       ? `<button class="btn btn-ghost btn-xs" style="color:#93c5fd;border-color:rgba(59,130,246,0.3)" onclick="unfreezeKey('${k.key}')">❄ Unfreeze</button>`
       : k.status==='active' ? `<button class="btn btn-ghost btn-xs" onclick="freezeKey('${k.key}')">❄ Freeze</button>` : '';
-    const creator=k.createdBy&&k.createdBy!=='admin'?`<span class="badge b-gold" style="font-size:9px">${k.createdBy}</span>`:`<span style="font-size:10px;color:var(--text3)">admin</span>`;
+    const creator=k.createdBy&&k.createdBy!=='admin'?`<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:700;color:#fbbf24;white-space:nowrap"><span style="opacity:0.7;font-size:9px;letter-spacing:.5px">RESELLER</span><span style="color:#fff;font-size:10px">·</span>${k.createdBy}</span>`:`<span style="font-size:10px;color:var(--text3)">admin</span>`;
     return `<tr>
       <td><span class="kc">${k.key}</span></td>
       <td style="color:var(--text2);font-size:11px">${k.appName||'—'}</td>
@@ -3302,7 +3302,7 @@ function buildResellerNav(){
   const p=RDATA.permissions;
   const hasKeys=p.viewKeys||p.generateKeys; const hasMon=p.viewLogs||p.viewBlocks;
   document.getElementById('r-nav-keys-sec').style.display=hasKeys?'':'none';
-  document.getElementById('r-nav-keys').style.display=p.viewKeys?'':'none';
+  document.getElementById('r-nav-keys').style.display=(p.viewKeys||p.generateKeys)?'':'none';
   document.getElementById('r-nav-generate').style.display=p.generateKeys?'':'none';
   document.getElementById('r-nav-dll-sec').style.display='';document.getElementById('r-nav-dll').style.display='';document.getElementById('r-nav-mon-sec').style.display=hasMon?'':'none';
   document.getElementById('r-nav-logs').style.display=p.viewLogs?'':'none';
@@ -3462,7 +3462,7 @@ async function deleteReseller(id){if(!confirm('Delete reseller?'))return;await d
 
 // ═══════════════ RESELLER KEYS ═══════════════
 async function loadResellerKeys(){
-  if(!RDATA.permissions.viewKeys){document.getElementById('r-keys-body').innerHTML='<tr><td colspan="8"><div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">You don\'t have permission to view keys</div></div></td></tr>';return;}
+  if(!RDATA.permissions.viewKeys && !RDATA.permissions.generateKeys){document.getElementById('r-keys-body').innerHTML='<tr><td colspan="8"><div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">You don\'t have permission to view keys</div></div></td></tr>';return;}
   const r=await rget('/api/reseller/keys'); if(r.success){rAllKeys=r.keys;filterResellerKeys();}
 }
 function filterResellerKeys(){const q=document.getElementById('rk-search').value.toLowerCase();const sf=document.getElementById('rk-status-filter').value;let keys=rAllKeys;if(q)keys=keys.filter(k=>k.key.toLowerCase().includes(q)||(k.label||'').toLowerCase().includes(q));if(sf)keys=keys.filter(k=>k.status===sf);renderResellerKeys(keys);}
