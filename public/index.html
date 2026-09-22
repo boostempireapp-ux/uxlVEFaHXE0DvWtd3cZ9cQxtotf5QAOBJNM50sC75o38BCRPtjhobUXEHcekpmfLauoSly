@@ -2341,7 +2341,8 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
     <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:10px">🛡️ Permission Control — What can this reseller access?</div>
     <div class="perm-grid" id="perm-grid-create"></div>
     <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin:16px 0 10px">📦 App Access — Which apps can this reseller use?</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Leave all unchecked to allow access to ALL apps.</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Check specific apps to restrict access, or check <strong style="color:#f87171">None</strong> to block all app access.</div>
+    <div id="app-none-create" style="margin-bottom:8px"></div>
     <div class="perm-grid" id="app-grid-create"></div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('modal-new-reseller')">Cancel</button><button class="btn btn-gold" onclick="createReseller()">Create Reseller</button></div>
   </div>
@@ -2361,7 +2362,8 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
     <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:10px">🛡️ Permission Control</div>
     <div class="perm-grid" id="perm-grid-edit"></div>
     <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin:16px 0 10px">📦 App Access — Which apps can this reseller use?</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Leave all unchecked to allow access to ALL apps.</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Check specific apps to restrict access, or check <strong style="color:#f87171">None</strong> to block all app access.</div>
+    <div id="app-none-edit" style="margin-bottom:8px"></div>
     <div class="perm-grid" id="app-grid-edit"></div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('modal-edit-reseller')">Cancel</button><button class="btn btn-gold" onclick="saveReseller()">Save Changes</button></div>
   </div>
@@ -3376,16 +3378,37 @@ async function loadResellers(){
 async function renderAppGrid(containerId, selectedIds=[]){
   const el=document.getElementById(containerId);
   if(!el)return;
+  // Derive the "none" container id from the grid id (app-grid-create -> app-none-create)
+  const noneId = containerId.replace('app-grid-','app-none-');
+  const noneEl = document.getElementById(noneId);
+  const isNone = selectedIds.includes('__NONE__');
+  // Render the None checkbox
+  if(noneEl){
+    noneEl.innerHTML=`<label style="display:flex;align-items:center;gap:10px;background:rgba(248,113,113,0.06);border:1px solid rgba(248,113,113,0.25);border-radius:8px;padding:10px 14px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='#f87171'" onmouseout="this.style.borderColor='rgba(248,113,113,0.25)'">
+      <input type="checkbox" id="${noneId}-chk" ${isNone?'checked':''} style="accent-color:#f87171;width:15px;height:15px;cursor:pointer"/>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#f87171">🚫 None — No app access</div>
+        <div style="font-size:11px;color:var(--muted)">Reseller cannot see or use any apps</div>
+      </div>
+    </label>`;
+    const noneChk = document.getElementById(noneId+'-chk');
+    noneChk.addEventListener('change', function(){
+      // When None is checked, uncheck + disable all app checkboxes
+      const appChks = el.querySelectorAll('input[data-app-id]');
+      appChks.forEach(c=>{ c.checked=false; c.disabled=this.checked; c.closest('label').style.opacity=this.checked?'0.4':'1'; });
+    });
+  }
   el.innerHTML='<div style="font-size:12px;color:var(--muted)">Loading apps...</div>';
   try {
     const r=await fetch('/api/admin/apps',{headers:{'x-admin-token':TOKEN}}).then(r=>r.json());
     const apps=r.apps||[];
-    allApps=apps; // keep cache in sync
+    allApps=apps;
     if(!apps||apps.length===0){el.innerHTML='<div style="font-size:12px;color:var(--muted)">No apps found — create an app first.</div>';return;}
     el.innerHTML=apps.map(a=>{
-      const checked=selectedIds.map(String).includes(String(a._id));
-      return `<label style="display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">
-        <input type="checkbox" data-app-id="${a._id}" ${checked?'checked':''} style="accent-color:var(--gold);width:15px;height:15px;cursor:pointer"/>
+      const checked=!isNone && selectedIds.map(String).includes(String(a._id));
+      const disabled=isNone;
+      return `<label style="display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;cursor:pointer;transition:border-color .2s;opacity:${disabled?'0.4':'1'}" onmouseover="if(!this.querySelector('input').disabled)this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">
+        <input type="checkbox" data-app-id="${a._id}" ${checked?'checked':''} ${disabled?'disabled':''} style="accent-color:var(--gold);width:15px;height:15px;cursor:pointer"/>
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--text)">${a.name}</div>
           <div style="font-size:11px;color:var(--muted)">${a.active?'🟢 Active':'🔴 Disabled'}</div>
@@ -3397,6 +3420,9 @@ async function renderAppGrid(containerId, selectedIds=[]){
   }
 }
 function getSelectedApps(containerId){
+  const noneId = containerId.replace('app-grid-','app-none-');
+  const noneChk = document.getElementById(noneId+'-chk');
+  if(noneChk && noneChk.checked) return ['__NONE__'];
   const el=document.getElementById(containerId); if(!el)return[];
   return Array.from(el.querySelectorAll('input[data-app-id]:checked')).map(i=>i.getAttribute('data-app-id'));
 }
