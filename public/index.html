@@ -726,6 +726,10 @@ tbody td{padding:9px 13px;vertical-align:middle;}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
         My Apps
       </div>
+      <div class="nav-item r-item" data-page="r-sdk" onclick="go('r-sdk')" id="r-nav-sdk">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        SDK &amp; Integration
+      </div>
       <div class="nav-sec" id="r-nav-keys-sec" style="display:none">Keys</div>
       <div class="nav-item r-item" data-page="r-keys" onclick="go('r-keys')" id="r-nav-keys" style="display:none">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
@@ -2096,6 +2100,210 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
       </div>
     </div>
 
+    <!-- RESELLER SDK & INTEGRATION PAGE -->
+    <div class="page" id="page-r-sdk">
+      <div class="ph"><div class="pt">SDK &amp; <span>Integration</span></div></div>
+      <div class="card" style="margin-bottom:16px;border-color:rgba(139,92,246,0.25)">
+        <div class="card-title" style="margin-bottom:12px">🛡️ Protection Layers</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px">
+          <div style="background:#000;border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center">
+            <div style="font-size:22px;margin-bottom:6px">🔍</div><div style="font-size:10px;font-weight:700;color:var(--p3)">ANTI-DEBUG</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:3px">PEB flags, timing, HW breakpoints</div>
+          </div>
+          <div style="background:#000;border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center">
+            <div style="font-size:22px;margin-bottom:6px">💻</div><div style="font-size:10px;font-weight:700;color:var(--p3)">ANTI-VM</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:3px">CPUID hypervisor, VMware, VBox</div>
+          </div>
+          <div style="background:#000;border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center">
+            <div style="font-size:22px;margin-bottom:6px">⚰️</div><div style="font-size:10px;font-weight:700;color:var(--p3)">BSOD TRIGGER</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:3px">NtRaiseHardError on detection</div>
+          </div>
+          <div style="background:#000;border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center">
+            <div style="font-size:22px;margin-bottom:6px">🔫</div><div style="font-size:10px;font-weight:700;color:var(--p3)">PROCESS KILL</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:3px">x64dbg, CheatEngine, IDA, dnSpy…</div>
+          </div>
+          <div style="background:#000;border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center">
+            <div style="font-size:22px;margin-bottom:6px">⏱️</div><div style="font-size:10px;font-weight:700;color:var(--p3)">RATE LIMIT</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:3px">30 req/min, auto IP block</div>
+          </div>
+          <div style="background:#000;border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center">
+            <div style="font-size:22px;margin-bottom:6px">🔐</div><div style="font-size:10px;font-weight:700;color:var(--p3)">HWID HASHED</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:3px">SHA-256 salted, never stored raw</div>
+          </div>
+        </div>
+      </div>
+      <div class="tabs">
+        <div class="tab active" onclick="rSdkTab(this,'cpp')">⚙️ C++ (Anti-Crack)</div>
+        <div class="tab" onclick="rSdkTab(this,'python')">🐍 Python</div>
+        <div class="tab" onclick="rSdkTab(this,'node')">🟩 Node.js</div>
+        <div class="tab" onclick="rSdkTab(this,'api')">📡 API Ref</div>
+      </div>
+      <div class="tab-content active" id="r-sdk-cpp">
+        <div class="card">
+          <div class="card-hdr">
+            <div class="card-title">C++ — boostempire_auth.h (Full Anti-Crack)</div>
+            <button class="btn btn-ghost btn-sm" onclick="copyCode('r-sdk-cpp')">📋 Copy</button>
+          </div>
+          <p style="color:var(--text2);font-size:12px;margin-bottom:10px">
+            Download <span class="kc">boostempire_auth.h</span> — Link: <span class="kc">winhttp.lib</span> + <span class="kc">wbemuuid.lib</span><br/>
+            Sets <span style="color:#ff7b72">BSOD</span> on debugger/cracker. Edit <span class="kc">BE_PUBLIC_KEY</span> at top of header.
+          </p>
+          <div class="code"><span class="cm">// 1. Download boostempire_auth.h (see Download button below)
+// 2. Set your public key in the header
+// 3. Add to your project and link winhttp.lib + wbemuuid.lib</span>
+
+<span class="ck">#include</span> <span class="cs">"boostempire_auth.h"</span>
+
+<span class="ck">int</span> <span class="cf">main</span>() {
+    <span class="cm">// Runs ALL checks: anti-debug, anti-VM, process scan, then auth</span>
+    BoostAuth::<span class="cf">validate</span>(<span class="cs">"BE-YOURLICENSEKEYHERE"</span>, <span class="cs">"MyApp"</span>);
+
+    <span class="cm">// If we reach here — user is authenticated, not debugging, not cracking</span>
+    <span class="cn">MessageBoxA</span>(NULL, <span class="cs">"Welcome!"</span>, <span class="cs">"MyApp"</span>, MB_OK);
+    <span class="ck">return</span> 0;
+}
+
+<span class="cm">// What happens on crack attempt:
+//   Debugger detected  → BSOD (NtRaiseHardError)
+//   x64dbg / IDA open  → BSOD
+//   VM detected        → Exit with message
+//   Wrong HWID         → BSOD
+//   Banned key         → BSOD
+//   No server          → Error + exit</span></div>
+          <a href="boostempire_auth.h" download class="btn btn-purple btn-sm" style="text-decoration:none;margin-top:8px">⬇ Download boostempire_auth.h</a>
+        </div>
+      </div>
+      <div class="tab-content" id="r-sdk-python">
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">Python SDK</div><button class="btn btn-ghost btn-sm" onclick="copyCode('r-sdk-python')">📋 Copy</button></div>
+          <div class="code"><span class="cm"># boostempire_auth.py  |  pip install requests</span>
+<span class="ck">import</span> requests, uuid, hashlib, platform, subprocess, sys
+
+PUBLIC_KEY = <span class="cs">"pk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"</span>  <span class="cm"># from My Apps</span>
+BASE_URL   = <span class="cs">"http://boostempire.auth"</span>
+
+<span class="ck">class</span> <span class="cf">BoostEmpireAuth</span>:
+    <span class="ck">def</span> <span class="cf">__init__</span>(self, app_name=<span class="cs">"MyApp"</span>):
+        self.app_name = app_name
+        self.hwid = self._hwid()
+
+    <span class="ck">def</span> <span class="cf">_hwid</span>(self):
+        <span class="ck">try</span>:
+            p = platform.system()
+            <span class="ck">if</span> p == <span class="cs">"Windows"</span>:
+                raw = subprocess.check_output(<span class="cs">"wmic csproduct get uuid"</span>,shell=<span class="cn">True</span>).decode().split(<span class="cs">"\n"</span>)[1].strip()
+            <span class="ck">elif</span> p == <span class="cs">"Linux"</span>:
+                raw = open(<span class="cs">"/etc/machine-id"</span>).read().strip()
+            <span class="ck">else</span>:
+                raw = subprocess.check_output([<span class="cs">"ioreg"</span>,<span class="cs">"-rd1"</span>,<span class="cs">"-c"</span>,<span class="cs">"IOPlatformExpertDevice"</span>]).decode()
+                raw = [l <span class="ck">for</span> l <span class="ck">in</span> raw.split(<span class="cs">"\n"</span>) <span class="ck">if</span> <span class="cs">"UUID"</span> <span class="ck">in</span> l][0].split(<span class="cs">'"' </span>)[-2]
+        <span class="ck">except</span>: raw = str(uuid.getnode())
+        <span class="ck">return</span> <span class="cs">"BE-HW-"</span> + hashlib.sha256(raw.encode()).hexdigest()[:24].upper()
+
+    <span class="ck">def</span> <span class="cf">login</span>(self, key, exit_on_fail=<span class="cn">True</span>):
+        <span class="ck">try</span>:
+            r = requests.post(f<span class="cs">"{BASE_URL}/api/auth"</span>,
+                headers={<span class="cs">"x-public-key"</span>: PUBLIC_KEY},
+                json={<span class="cs">"key"</span>:key,<span class="cs">"hwid"</span>:self.hwid,<span class="cs">"app_name"</span>:self.app_name},
+                timeout=5).json()
+        <span class="ck">except</span>:
+            print(<span class="cs">"[BoostEmpire] Cannot reach auth server"</span>); sys.exit(1)
+        <span class="ck">if</span> r[<span class="cs">"success"</span>]:
+            d=r[<span class="cs">"data"</span>]; print(f<span class="cs">"[✅] {d['app']} | {d['product']} | Uses {d['uses']}/{d['max_uses']}"</span>)
+            <span class="ck">return True</span>
+        print(f<span class="cs">"[❌] {r['message']} ({r['code']})"</span>)
+        <span class="ck">if</span> exit_on_fail: sys.exit(1)
+        <span class="ck">return False</span>
+
+auth = <span class="cf">BoostEmpireAuth</span>(<span class="cs">"MyApp"</span>)
+auth.login(<span class="cs">"BE-YOURLICENSEKEYHERE"</span>)</div>
+        </div>
+      </div>
+      <div class="tab-content" id="r-sdk-node">
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">Node.js SDK</div><button class="btn btn-ghost btn-sm" onclick="copyCode('r-sdk-node')">📋 Copy</button></div>
+          <div class="code"><span class="cm">// boostempire-auth.js — zero dependencies</span>
+<span class="ck">const</span> http=require(<span class="cs">'http'</span>),{execSync}=require(<span class="cs">'child_process'</span>),
+      crypto=require(<span class="cs">'crypto'</span>),os=require(<span class="cs">'os'</span>);
+
+<span class="ck">const</span> PUBLIC_KEY=<span class="cs">'pk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'</span>; <span class="cm">// from My Apps</span>
+<span class="ck">const</span> BASE={host:<span class="cs">'boostempire.auth:8080'</span>,port:80};
+
+<span class="ck">function</span> <span class="cn">getHWID</span>(){
+  <span class="ck">try</span>{
+    <span class="ck">let</span> raw;
+    <span class="ck">if</span>(process.platform===<span class="cs">'win32'</span>)
+      raw=execSync(<span class="cs">'wmic csproduct get uuid'</span>,{timeout:3000}).toString().split(<span class="cs">'\n'</span>)[1].trim();
+    <span class="ck">else if</span>(process.platform===<span class="cs">'linux'</span>)
+      raw=require(<span class="cs">'fs'</span>).readFileSync(<span class="cs">'/etc/machine-id'</span>,<span class="cs">'utf8'</span>).trim();
+    <span class="ck">else</span>
+      raw=execSync(<span class="cs">'ioreg -rd1 -c IOPlatformExpertDevice'</span>).toString()
+            .match(/\"IOPlatformUUID\"\s*=\s*\"([^\"]+)\"/)[1];
+    <span class="ck">return</span> <span class="cs">'BE-HW-'</span>+crypto.createHash(<span class="cs">'sha256'</span>).update(raw).digest(<span class="cs">'hex'</span>).slice(0,24).toUpperCase();
+  }<span class="ck">catch</span>{
+    <span class="ck">const</span> mac=Object.values(os.networkInterfaces()).flat()
+      .find(i=>!i.internal&&i.mac!==<span class="cs">'00:00:00:00:00:00'</span>)?.mac||<span class="cs">'unknown'</span>;
+    <span class="ck">return</span> <span class="cs">'BE-HW-'</span>+crypto.createHash(<span class="cs">'sha256'</span>).update(mac).digest(<span class="cs">'hex'</span>).slice(0,24).toUpperCase();
+  }
+}
+<span class="ck">function</span> <span class="cn">boostAuth</span>(key,appName=<span class="cs">'MyApp'</span>){
+  <span class="ck">return new</span> Promise((res,rej)=>{
+    <span class="ck">const</span> body=JSON.stringify({key,hwid:getHWID(),app_name:appName});
+    <span class="ck">const</span> req=http.request({...BASE,path:<span class="cs">'/api/auth'</span>,method:<span class="cs">'POST'</span>,
+      headers:{<span class="cs">'Content-Type'</span>:<span class="cs">'application/json'</span>,<span class="cs">'x-public-key'</span>:PUBLIC_KEY,
+               <span class="cs">'Content-Length'</span>:Buffer.byteLength(body)}},
+      r=>{<span class="ck">let</span> d=<span class="cs">''</span>;r.on(<span class="cs">'data'</span>,c=>d+=c);r.on(<span class="cs">'end'</span>,()=>{
+        <span class="ck">const</span> j=JSON.parse(d);
+        <span class="ck">if</span>(j.success){console.log(<span class="cs">`[✅] ${j.data.app} | ${j.data.product}`</span>);res(j.data);}
+        <span class="ck">else</span>{console.error(<span class="cs">`[❌] ${j.message}`</span>);process.exit(1);}
+      });});
+    req.on(<span class="cs">'error'</span>,()=>{console.error(<span class="cs">'[BE] Unreachable'</span>);process.exit(1);});
+    req.write(body);req.end();
+  });
+}
+module.exports={boostAuth,getHWID};
+<span class="cm">// await boostAuth('BE-YOURKEYHERE','MyApp');</span></div>
+        </div>
+      </div>
+      <div class="tab-content" id="r-sdk-api">
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">API Reference</div></div>
+          <div class="code"><span class="cm">// POST /api/auth</span>
+Header: x-public-key: <span class="cs">pk_xxxxxxxx</span>
+Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span class="cs">"hwid"</span>:<span class="cs">"BE-HW-xxxx"</span>, <span class="cs">"app_name"</span>:<span class="cs">"MyApp"</span> }
+
+<span class="cm">// ✅ Success</span>
+{ <span class="cs">"success"</span>:<span class="ck">true</span>, <span class="cs">"code"</span>:<span class="cs">"OK"</span>, <span class="cs">"data"</span>:{ <span class="cs">"app"</span>:<span class="cs">"MyApp"</span>, <span class="cs">"product"</span>:<span class="cs">"Default"</span>,
+  <span class="cs">"expires_at"</span>:<span class="cs">null</span>, <span class="cs">"uses"</span>:1, <span class="cs">"max_uses"</span>:5, <span class="cs">"uses_left"</span>:4, <span class="cs">"hwid_locked"</span>:<span class="ck">true</span> }}
+
+<span class="cm">// ❌ Codes</span>
+<span class="cv">NO_PUBLIC_KEY</span>     — missing x-public-key header
+<span class="cv">INVALID_PUBLIC_KEY</span>— key doesn't match any app
+<span class="cv">NO_KEY / NO_HWID</span>  — missing fields
+<span class="cv">INVALID_HWID</span>      — suspicious HWID rejected
+<span class="cv">INVALID_KEY</span>       — key not found in app
+<span class="cv">BANNED</span>            — key banned
+<span class="cv">EXPIRED</span>           — past expiry
+<span class="cv">MAX_USES</span>          — used too many times
+<span class="cv">HWID_MISMATCH</span>     — wrong machine
+<span class="cv">RATE_LIMITED</span>      — too many requests
+<span class="cv">IP_BLOCKED</span>        — IP permanently blocked
+
+<span class="cm">// Request body fields</span>
+<span class="cv">key</span>       — license key (required)
+<span class="cv">hwid</span>      — hardware ID from GenerateHWID() (required)
+<span class="cv">app_name</span>  — your app name (required)
+<span class="cv">real_ip</span>   — client public IP from GetRealPublicIP() (optional)
+<span class="cv">cpu</span>       — CPU brand for multi-machine detection (optional)
+
+<span class="cm">// C++ Protections in boostempire_auth.h</span>
+<span class="cv">① Code Integrity</span>   — hashes exe, checks every 60s, patch = BSOD
+<span class="cv">② Import Obfuscation</span>— dynamic API resolution, hidden from static analysis
+<span class="cv">③ Anti-Dump</span>        — PE header erased from memory at startup</div>
+        </div>
+      </div>
+    </div>
+
     <!-- DETECTION EVENTS PAGE -->
     <div class="page" id="page-detections">
       <div class="ph" style="margin-bottom:20px">
@@ -2424,7 +2632,7 @@ function go(page){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>{if(n.dataset.page===page)n.classList.add('active');});
-  const pageActions={dashboard:loadDashboard,apps:loadApps,keys:loadKeys,logs:loadLogs,blocks:loadBlocks,resellers:loadResellers,'hwid-mismatches':loadHwidMismatches,detections:loadDetections,'r-dashboard':loadResellerDashboard,'r-keys':loadResellerKeys,'r-generate':loadResellerGeneratePage,'r-logs':loadResellerLogs,'r-blocks':loadResellerBlocks,'r-dll':loadResellerDLL,'r-apps':loadResellerMyApps,'dll-logs':loadDLLLogs,audit:loadAudit,settings:()=>{load2FAStatus();loadCountryAllowlist();},generate:loadApps};
+  const pageActions={dashboard:loadDashboard,apps:loadApps,keys:loadKeys,logs:loadLogs,blocks:loadBlocks,resellers:loadResellers,'hwid-mismatches':loadHwidMismatches,detections:loadDetections,'r-dashboard':loadResellerDashboard,'r-keys':loadResellerKeys,'r-generate':loadResellerGeneratePage,'r-logs':loadResellerLogs,'r-blocks':loadResellerBlocks,'r-dll':loadResellerDLL,'r-apps':loadResellerMyApps,'r-sdk':()=>{},'dll-logs':loadDLLLogs,audit:loadAudit,settings:()=>{load2FAStatus();loadCountryAllowlist();},generate:loadApps};
   if(pageActions[page]) pageActions[page]();
 }
 
@@ -3159,6 +3367,12 @@ function startPoll(){
 }
 
 // SDK TABS
+function rSdkTab(el,id){
+  const pg=document.getElementById('page-r-sdk');
+  pg.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  pg.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');document.getElementById('r-sdk-'+id).classList.add('active');
+}
 function sdkTab(el,id){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
@@ -4085,7 +4299,7 @@ async function loadResellerMyApps() {
     const nk=window._pendingNewAppKeys;
     window._pendingNewAppKeys=null;
     newKeysBanner=`<div style="margin-bottom:16px;padding:14px;background:#0a1a0a;border:1px solid #22c55e66;border-radius:var(--r2);font-size:12px">
-      <div style="color:#4ade80;font-weight:700;margin-bottom:10px;font-size:13px">✅ App "<span style='color:#fff'>${nk.name}</span>" created! Save these keys — the secret key won't be shown again.</div>
+      <div style="color:var(--text);font-weight:700;margin-bottom:10px;font-size:13px">✅ App "<span style='color:#fff'>${nk.name}</span>" created! Save these keys — the secret key won't be shown again.</div>
       <div style="margin-bottom:8px"><span style="color:var(--text3)">Public Key:</span>&nbsp;<span id="new-app-banner-pk" style="color:var(--p3);font-family:'JetBrains Mono',monospace">${nk.publicKey}</span>&nbsp;<button class="apikey-copy" onclick="navigator.clipboard.writeText('${nk.publicKey}');toast('Copied','success')">Copy</button></div>
       <div><span style="color:var(--text3)">Secret Key:</span>&nbsp;<span id="new-app-banner-sk" style="color:#f87171;font-family:'JetBrains Mono',monospace">${nk.secretKey}</span>&nbsp;<button class="apikey-copy" onclick="navigator.clipboard.writeText('${nk.secretKey}');toast('Copied','success')">Copy</button></div>
     </div>`;
