@@ -1394,9 +1394,15 @@ app.get('/api/reseller/blocks', requireReseller, async (req, res) => {
 });
 app.get('/api/reseller/apps', requireReseller, async (req, res) => {
   const allowed = req.reseller.allowedApps || [];
-  const filter  = { active:true };
-  if (allowed.length > 0) filter._id = { $in: allowed.map(id => { try { return new ObjectId(id); } catch { return null; } }).filter(Boolean) };
-  const docs = await appsCol.find(filter).sort({ createdAt:-1 }).toArray();
+  let docs;
+  if (allowed.length === 0) {
+    // No restriction — return all active apps
+    docs = await appsCol.find({ active:true }).sort({ createdAt:-1 }).toArray();
+  } else {
+    // Return only assigned apps regardless of active status
+    const ids = allowed.map(id => { try { return new ObjectId(id); } catch { return null; } }).filter(Boolean);
+    docs = await appsCol.find({ _id: { $in: ids } }).sort({ createdAt:-1 }).toArray();
+  }
   const safe = docs.map(({ secretKey, ...a }) => a);
   res.json({ success:true, apps:safe });
 });
