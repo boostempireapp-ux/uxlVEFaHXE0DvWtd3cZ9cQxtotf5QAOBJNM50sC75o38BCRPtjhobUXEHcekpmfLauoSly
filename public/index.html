@@ -3108,9 +3108,13 @@ async function loadResellerDashboard(){
   const pd=document.getElementById('r-permissions-display');
   if(pd){pd.className='rs-perm-grid';pd.innerHTML=PERMS.map(p=>{const g=RDATA.permissions[p.key];return '<div class="rs-perm-item '+(g?'granted':'denied')+'"><div class="rs-perm-dot"></div><span class="rs-perm-text">'+p.label+'</span></div>';}).join('');}
   ['r-qa-generate','r-qa-keys','r-qa-logs'].forEach((id,i)=>{const el=document.getElementById(id);if(el)el.style.display=[RDATA.permissions.generateKeys,RDATA.permissions.viewKeys,RDATA.permissions.viewLogs][i]?'':'none';});
-  const r=await rget('/api/reseller/stats');
-  if(r.success){
-    const s=r.stats;anim('rs-total',s.totalKeys);const rt2=document.getElementById('rs-total-2');if(rt2)rt2.textContent=s.totalKeys;
+  const timeout=ms=>new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms));
+  const fetches=[Promise.race([rget('/api/reseller/stats'),timeout(6000)])];
+  if(RDATA.permissions.viewLogs)fetches.push(Promise.race([rget('/api/reseller/logs'),timeout(6000)]));
+  const results=await Promise.allSettled(fetches);
+  const statsRes=results[0];const logsRes=results[1];
+  if(statsRes.status==='fulfilled'&&statsRes.value?.success){
+    const s=statsRes.value.stats;anim('rs-total',s.totalKeys);const rt2=document.getElementById('rs-total-2');if(rt2)rt2.textContent=s.totalKeys;
     anim('rs-active',s.activeKeys);anim('rs-banned',s.bannedKeys||0);
     if(s.keyQuota>0){
       const qs=document.getElementById('rs-quota');if(qs)qs.textContent=s.keysGenerated+'/'+s.keyQuota;
@@ -3132,9 +3136,8 @@ async function loadResellerDashboard(){
   const vlb=document.getElementById('r-view-logs-btn');if(vlb)vlb.style.display=RDATA.permissions.viewLogs?'':'none';
   const act=document.getElementById('r-dash-activity');
   if(RDATA.permissions.viewLogs){
-    const lr=await rget('/api/reseller/logs');
-    if(lr.success&&lr.logs.length){
-      act.innerHTML=lr.logs.slice(0,8).map(l=>'<div style="display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid rgba(245,158,11,0.05)"><span style="color:var(--text3);font-family:JetBrains Mono,monospace;font-size:10px;min-width:65px;flex-shrink:0">'+fmtTimeShort(l.timestamp)+'</span>'+rb(l.result)+'</div>').join('');
+    if(logsRes?.status==='fulfilled'&&logsRes.value?.success&&logsRes.value.logs.length){
+      act.innerHTML=logsRes.value.logs.slice(0,8).map(l=>'<div style="display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid rgba(245,158,11,0.05)"><span style="color:var(--text3);font-family:JetBrains Mono,monospace;font-size:10px;min-width:65px;flex-shrink:0">'+fmtTimeShort(l.timestamp)+'</span>'+rb(l.result)+'</div>').join('');
     }else{act.innerHTML='<div style="text-align:center;padding:36px;color:var(--text3);font-size:12px">No activity yet</div>';}
   }else{act.innerHTML='<div style="text-align:center;padding:36px;color:var(--text3);font-size:12px">Log access not enabled</div>';}
 }
@@ -3458,14 +3461,28 @@ async function rDelKey(key){if(!confirm('Delete key?'))return;await rdel('/api/r
 
 // ═══════════════ RESELLER GENERATE ═══════════════
 async function loadResellerGeneratePage(){
-  const ar=await rget('/api/reseller/apps');
-  if(ar.success){const m=document.getElementById('rcs-app-menu');m.innerHTML=ar.apps.map(a=>`<div class="cs-opt" data-val="${a._id}" onclick="selRCSApp('${a._id}','${a.name}')"><span class="cs-opt-icon">📱</span><div class="cs-opt-main"><span class="cs-opt-label">${a.name}</span></div></div>`).join('');}
-  const sr=await rget('/api/reseller/stats');
+  const timeout = ms => new Promise((_,rej) => setTimeout(() => rej(new Error('timeout')), ms));
+  const [ar, sr] = await Promise.allSettled([
+    Promise.race([rget('/api/reseller/apps'), timeout(6000)]),
+    Promise.race([rget('/api/reseller/stats'), timeout(6000)]),
+  ]);
+  // Populate app selector
+  const m=document.getElementById('rcs-app-menu');
+  if(m){
+    if(ar.status==='fulfilled'&&ar.value?.success&&ar.value.apps.length){
+      m.innerHTML=ar.value.apps.map(a=>`<div class="cs-opt" data-val="${a._id}" onclick="selRCSApp('${a._id}','${a.name}')"><span class="cs-opt-icon">📱</span><div class="cs-opt-main"><span class="cs-opt-label">${a.name}</span></div></div>`).join('');
+    } else if(ar.status==='fulfilled'&&ar.value?.success){
+      m.innerHTML='<div style="padding:12px;font-size:12px;color:var(--text3)">No apps assigned — contact your admin</div>';
+    } else {
+      m.innerHTML='<div style="padding:12px;font-size:12px;color:#f87171">Failed to load apps — try refreshing</div>';
+    }
+  }
+  // Populate quota info
   const qn=document.getElementById('r-quota-notice');
   const sg=document.getElementById('r-sidebar-generated');
   const sq=document.getElementById('r-sidebar-quota');
   const qi=document.getElementById('r-gen-quota-info');
-  if(sr.success){const s=sr.stats;
+  if(sr.status==='fulfilled'&&sr.value?.success){const s=sr.value.stats;
     if(sg)sg.textContent=s.keysGenerated||0;
     if(s.keyQuota>0){
       if(sq)sq.textContent=s.keyQuota;
@@ -3593,8 +3610,8 @@ function filterResellerLogs(){const q=document.getElementById('rl-search').value
 async function loadResellerBlocks(){if(!RDATA.permissions.viewBlocks){document.getElementById('r-blocks-body').innerHTML='<tr><td colspan="3"><div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">Block access not enabled</div></div></td></tr>';return;}const r=await rget('/api/reseller/blocks');if(!r.success)return;const tb=document.getElementById('r-blocks-body');if(!r.blocks.length){tb.innerHTML='<tr><td colspan="3"><div class="empty"><div class="empty-icon">✅</div><div class="empty-text">No blocked IPs</div></div></td></tr>';return;}tb.innerHTML=r.blocks.map(b=>`<tr><td><span class="kc">${b.ip}</span></td><td style="color:var(--text2);font-size:11px">${b.reason||'—'}</td><td style="font-family:'JetBrains Mono',monospace;font-size:10px">${b.blockedAt?b.blockedAt.substring(0,19).replace('T',' '):'—'}</td></tr>`).join('');}
 
 // ═══════════════ RESELLER HTTP HELPERS ═══════════════
-async function rget(url){const r=await fetch(url,{headers:{'x-reseller-token':RTOKEN}});return r.json();}
-async function rpost(url,body={}){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','x-reseller-token':RTOKEN},body:JSON.stringify(body)});return r.json();}
+async function rget(url){try{const r=await fetch(url,{headers:{'x-reseller-token':RTOKEN}});if(!r.ok)return{success:false,message:`HTTP ${r.status}`};return r.json();}catch(e){return{success:false,message:'Network error'};}}
+async function rpost(url,body={}){try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','x-reseller-token':RTOKEN},body:JSON.stringify(body)});if(!r.ok)return{success:false,message:`HTTP ${r.status}`};return r.json();}catch(e){return{success:false,message:'Network error'};}}
 async function rdel(url){const r=await fetch(url,{method:'DELETE',headers:{'x-reseller-token':RTOKEN}});return r.json();}
 
 // ═══════════════ DETECTION EVENTS ═══════════════
@@ -3998,27 +4015,34 @@ async function resellerSetDLL(appId) {
 let _rDllAppId = null;
 
 async function loadResellerMyApps() {
+async function loadResellerMyApps() {
   const wrap = document.getElementById('r-apps-content');
   if (!wrap) return;
   wrap.innerHTML = '<div class="empty"><div class="empty-icon">⏳</div><div class="empty-text">Loading apps…</div></div>';
 
-  // Refresh permissions + allowedApps from server
-  try {
-    const me = await rget('/api/reseller/me');
-    if (me && me.success && RDATA) {
-      RDATA.permissions   = me.permissions;
-      RDATA.allowedApps   = me.allowedApps;
-      const cab=document.getElementById('r-create-app-btn');
-      if(cab) cab.style.display=me.permissions.createOwnApp?'':'none';
-    }
-  } catch(e) {}
+  // Run /me and /my-apps in parallel — don't let /me block app rendering
+  const timeout = ms => new Promise((_,rej) => setTimeout(() => rej(new Error('timeout')), ms));
+  const [meRes, appsRes] = await Promise.allSettled([
+    Promise.race([rget('/api/reseller/me'), timeout(5000)]),
+    Promise.race([rget('/api/reseller/my-apps'), timeout(8000)]),
+  ]);
 
-  let r;
-  try { r = await rget('/api/reseller/my-apps'); }
-  catch(e) {
+  // Apply /me result if it worked
+  if (meRes.status === 'fulfilled' && meRes.value?.success && RDATA) {
+    RDATA.permissions    = meRes.value.permissions;
+    RDATA.allowedApps    = meRes.value.allowedApps;
+    RDATA.keyQuota       = meRes.value.keyQuota;
+    RDATA.keysGenerated  = meRes.value.keysGenerated;
+    const cab = document.getElementById('r-create-app-btn');
+    if (cab) cab.style.display = meRes.value.permissions.createOwnApp ? '' : 'none';
+  }
+
+  // Handle /my-apps result
+  if (appsRes.status === 'rejected') {
     wrap.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Network error — could not reach server</div></div>';
     return;
   }
+  const r = appsRes.value;
   if (!r || !r.success) {
     wrap.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Failed to load apps — please try refreshing</div></div>';
     return;
