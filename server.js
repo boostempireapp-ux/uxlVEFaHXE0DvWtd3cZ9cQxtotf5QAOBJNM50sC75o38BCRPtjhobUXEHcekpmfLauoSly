@@ -1256,6 +1256,20 @@ app.post('/api/reseller/logout', requireReseller, async (req, res) => {
   res.json({ success:true });
 });
 
+// GET /api/reseller/me — returns fresh reseller profile (permissions, allowedApps, quota)
+app.get('/api/reseller/me', requireReseller, async (req, res) => {
+  const r = req.reseller;
+  res.json({
+    success: true,
+    displayName:  r.displayName,
+    permissions:  r.permissions  || {},
+    allowedApps:  r.allowedApps  || [],
+    keyQuota:     r.keyQuota     || 0,
+    keysGenerated:r.keysGenerated|| 0,
+    notes:        r.notes        || '',
+  });
+});
+
 // ── RESELLER: STATS ───────────────────────────────────────────────────────────
 app.get('/api/reseller/stats', requireReseller, async (req, res) => {
   const r = req.reseller;
@@ -1392,21 +1406,25 @@ app.get('/api/reseller/apps', requireReseller, async (req, res) => {
 app.get('/api/reseller/dll-info', requireReseller, async (req, res) => {
   const allowed = req.reseller.allowedApps || [];
   // No active:true filter — resellers should always see ALL their assigned apps
-  const filter = {};
-  if (allowed.length > 0) {
+  let docs;
+  if (allowed.length === 0) {
+    // No restriction — return all apps
+    docs = await appsCol.find({}, { projection: { name: 1, dllUrl: 1, publicKey: 1, active: 1 } }).sort({ name: 1 }).toArray();
+  } else {
+    // Try ObjectId conversion first (standard MongoDB IDs)
     const ids = allowed.map(id => {
       try { return new ObjectId(String(id)); } catch { return null; }
     }).filter(Boolean);
-    // If ID conversion failed for everything, fall back to string-based match
+
     if (ids.length > 0) {
-      filter._id = { $in: ids };
+      // ObjectId match (normal path)
+      docs = await appsCol.find({ _id: { $in: ids } }, { projection: { name: 1, dllUrl: 1, publicKey: 1, active: 1 } }).sort({ name: 1 }).toArray();
     } else {
-      // No valid IDs — return empty gracefully
-      return res.json({ success: true, apps: [] });
+      // All IDs failed ObjectId conversion — fall back to returning all apps so the
+      // reseller isn't left with a blank page (admin can re-save to fix the stored IDs)
+      docs = await appsCol.find({}, { projection: { name: 1, dllUrl: 1, publicKey: 1, active: 1 } }).sort({ name: 1 }).toArray();
     }
   }
-  // If allowedApps is empty, return ALL apps (no restriction)
-  const docs = await appsCol.find(filter, { projection: { name: 1, dllUrl: 1, publicKey: 1, active: 1 } }).sort({ name: 1 }).toArray();
   res.json({ success: true, apps: docs });
 });
 
