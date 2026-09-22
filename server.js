@@ -1435,10 +1435,11 @@ app.post('/api/reseller/apps', requireReseller, async (req, res) => {
   };
   const result = await appsCol.insertOne(doc);
   // Auto-assign this new app to the reseller who created it
-  await resellersCol.updateOne(
-    { _id: req.reseller._id },
-    { $addToSet: { allowedApps: String(result.insertedId) } }
-  );
+  await resellersCol.updateOne({ _id: req.reseller._id }, { $addToSet: { allowedApps: String(result.insertedId) } });
+  // Remove __NONE__ sentinel if present — it blocks all app visibility on /my-apps
+  await resellersCol.updateOne({ _id: req.reseller._id }, { $pull: { allowedApps: '__NONE__' } });
+
+
   auditLog(req.reseller.username + ' (reseller)', 'RESELLER_CREATE_APP', { appName: doc.name, appId: String(result.insertedId) });
   const { secretKey: _sk, ...safe } = { ...doc, _id: result.insertedId };
   res.json({ success:true, app: safe, secretKey });
@@ -1474,8 +1475,8 @@ app.get('/api/reseller/dll-info', requireReseller, async (req, res) => {
 
 // GET /api/reseller/my-apps — full app info for assigned apps (public + secret keys for integration)
 app.get('/api/reseller/my-apps', requireReseller, async (req, res) => {
-  const allowed = req.reseller.allowedApps || [];
-  if (allowed.includes('__NONE__')) return res.json({ success:true, apps:[] });
+  // Filter out __NONE__ sentinel (means "no admin-assigned apps") but keep any real app IDs
+  const allowed = (req.reseller.allowedApps || []).filter(id => id !== '__NONE__');
   let docs;
   if (allowed.length === 0) {
     docs = await appsCol.find({}, { projection: { name: 1, publicKey: 1, secretKey: 1, dllUrl: 1, active: 1, createdAt: 1 } }).sort({ name: 1 }).toArray();
