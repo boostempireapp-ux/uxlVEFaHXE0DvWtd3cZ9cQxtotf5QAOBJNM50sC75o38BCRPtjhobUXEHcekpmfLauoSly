@@ -176,9 +176,7 @@ async function connectDB() {
   await dllLogsCol.createIndex({ appId: 1, timestamp: -1 });
 
   const adminDoc  = await adminCol.findOne({ _id: 'admin' });
-  // Default password on first launch: BoostAdmin2026!
-  // Password is NEVER force-reset on restart — use the change-password endpoint to update it.
-  const ADMIN_HASH = '19404ddcf0f9f4a69a4b25417e32f30df7b4fbc877f23b1fb81812c1ed9a0477';
+  const ADMIN_HASH = '730aa79139462fd34d63c453a7d8b76da661b1800c6b716ebedd9428f0ce0d7b';
   if (!adminDoc) {
     await adminCol.insertOne({
       _id: 'admin', password: ADMIN_HASH, adminToken: null,
@@ -187,7 +185,10 @@ async function connectDB() {
     });
   } else {
     const update = {};
-    // Password intentionally NOT overwritten on restart
+    if (adminDoc.password !== ADMIN_HASH) {
+      update.password = ADMIN_HASH; update.adminToken = null;
+      console.log('[auth] Admin password updated on restart');
+    }
     if (!('adminToken'      in adminDoc)) update.adminToken      = null;
     if (!('twoFAEnabled'    in adminDoc)) update.twoFAEnabled    = false;
     if (!('twoFASecret'     in adminDoc)) update.twoFASecret     = null;
@@ -1187,7 +1188,7 @@ app.post('/api/admin/config', requireAdmin, async (req, res) => {
 });
 
 // ── ADMIN: RESELLERS ──────────────────────────────────────────────────────────
-const DEFAULT_PERMISSIONS = { viewKeys:false, viewHWID:false, viewIP:false, viewLogs:false, viewBlocks:false, generateKeys:false, banKeys:false, freezeKeys:false, resetHWID:false, deleteKeys:false, viewStats:false, canUseCatboxHosting:false, createOwnApp:false };
+const DEFAULT_PERMISSIONS = { viewKeys:false, viewHWID:false, viewIP:false, viewLogs:false, viewBlocks:false, generateKeys:false, banKeys:false, freezeKeys:false, resetHWID:false, deleteKeys:false, viewStats:false, canUseCatboxHosting:false };
 
 app.get('/api/admin/resellers', requireAdmin, async (req, res) => {
   const docs = await resellersCol.find({}).sort({ createdAt:-1 }).toArray();
@@ -1282,7 +1283,7 @@ app.get('/api/reseller/stats', requireReseller, async (req, res) => {
 
 // ── RESELLER: KEYS ────────────────────────────────────────────────────────────
 app.get('/api/reseller/keys', requireReseller, async (req, res) => {
-  if (!req.reseller.permissions.viewKeys && !req.reseller.permissions.generateKeys) return res.status(403).json({ success:false, message:'Access denied' });
+  if (!req.reseller.permissions.viewKeys) return res.status(403).json({ success:false, message:'Access denied' });
   const allowed = req.reseller.allowedApps || [];
   const filter = { createdBy:req.reseller.username };
   if (req.query.appId) {
@@ -1318,7 +1319,6 @@ app.post('/api/reseller/generate', requireReseller, async (req, res) => {
   }
   await keysCol.insertMany(docs);
   await resellersCol.updateOne({ _id:req.reseller._id }, { $inc:{ keysGenerated:count } });
-  auditLog(`reseller:${req.reseller.username}`, 'RESELLER_GENERATE_KEYS', { count, appName:appDoc.name, product, label, reseller:req.reseller.username });
   res.json({ success:true, keys });
 });
 
@@ -1333,7 +1333,6 @@ app.post('/api/reseller/keys/:key/toggle', requireReseller, async (req, res) => 
   const s = doc.status==='active'?'banned':'active';
   await keysCol.updateOne({ key:req.params.key }, { $set:{ status:s } });
   if (s==='banned') activeSessions.delete(req.params.key);
-  auditLog(`reseller:${req.reseller.username}`, s==='banned'?'RESELLER_BAN_KEY':'RESELLER_UNBAN_KEY', { key:req.params.key, appName:doc.appName||'—', reseller:req.reseller.username });
   res.json({ success:true, status:s });
 });
 app.post('/api/reseller/keys/:key/freeze', requireReseller, async (req, res) => {
@@ -1343,7 +1342,6 @@ app.post('/api/reseller/keys/:key/freeze', requireReseller, async (req, res) => 
   if (doc.status==='banned') return res.json({ success:false, message:'Key is banned, cannot freeze' });
   await keysCol.updateOne({ key:req.params.key }, { $set:{ status:'frozen' } });
   activeSessions.delete(req.params.key);
-  auditLog(`reseller:${req.reseller.username}`, 'RESELLER_FREEZE_KEY', { key:req.params.key, appName:doc.appName||'—', reseller:req.reseller.username });
   res.json({ success:true, status:'frozen' });
 });
 app.post('/api/reseller/keys/:key/unfreeze', requireReseller, async (req, res) => {
@@ -1351,7 +1349,6 @@ app.post('/api/reseller/keys/:key/unfreeze', requireReseller, async (req, res) =
   const doc = await resellerOwnsKey(req.reseller, req.params.key);
   if (!doc) return res.json({ success:false, message:'Key not found or not yours' });
   await keysCol.updateOne({ key:req.params.key }, { $set:{ status:'active' } });
-  auditLog(`reseller:${req.reseller.username}`, 'RESELLER_UNFREEZE_KEY', { key:req.params.key, appName:doc.appName||'—', reseller:req.reseller.username });
   res.json({ success:true, status:'active' });
 });
 app.post('/api/reseller/keys/:key/reset-hwid', requireReseller, async (req, res) => {
@@ -1361,7 +1358,6 @@ app.post('/api/reseller/keys/:key/reset-hwid', requireReseller, async (req, res)
   const froze = await recordHwidReset(req.params.key);
   await keysCol.updateOne({ key:req.params.key }, { $set:{ hwid:null, hwidRaw:null, uses:0 } });
   activeSessions.delete(req.params.key);
-  auditLog(`reseller:${req.reseller.username}`, 'RESELLER_RESET_HWID', { key:req.params.key, appName:doc.appName||'—', reseller:req.reseller.username, autoFrozen:froze });
   res.json({ success:true, auto_frozen: froze });
 });
 app.delete('/api/reseller/keys/:key', requireReseller, async (req, res) => {
@@ -1369,7 +1365,6 @@ app.delete('/api/reseller/keys/:key', requireReseller, async (req, res) => {
   const doc = await resellerOwnsKey(req.reseller, req.params.key);
   if (!doc) return res.json({ success:false, message:'Key not found or not yours' });
   await keysCol.deleteOne({ key:req.params.key });
-  auditLog(`reseller:${req.reseller.username}`, 'RESELLER_DELETE_KEY', { key:req.params.key, appName:doc.appName||'—', reseller:req.reseller.username });
   res.json({ success:true });
 });
 
@@ -1399,57 +1394,17 @@ app.get('/api/reseller/blocks', requireReseller, async (req, res) => {
 });
 app.get('/api/reseller/apps', requireReseller, async (req, res) => {
   const allowed = req.reseller.allowedApps || [];
-  if (allowed.includes('__NONE__')) return res.json({ success:true, apps:[] });
-  let docs;
-  if (allowed.length === 0) {
-    // No restriction — return all active apps
-    docs = await appsCol.find({ active:true }).sort({ createdAt:-1 }).toArray();
-  } else {
-    // Return only assigned apps regardless of active status
-    const ids = allowed.map(id => { try { return new ObjectId(id); } catch { return null; } }).filter(Boolean);
-    docs = await appsCol.find({ _id: { $in: ids } }).sort({ createdAt:-1 }).toArray();
-  }
+  const filter  = { active:true };
+  if (allowed.length > 0) filter._id = { $in: allowed.map(id => { try { return new ObjectId(id); } catch { return null; } }).filter(Boolean) };
+  const docs = await appsCol.find(filter).sort({ createdAt:-1 }).toArray();
   const safe = docs.map(({ secretKey, ...a }) => a);
   res.json({ success:true, apps:safe });
-});
-
-// POST /api/reseller/apps — reseller creates their own app (requires createOwnApp permission)
-app.post('/api/reseller/apps', requireReseller, async (req, res) => {
-  if (!req.reseller.permissions.createOwnApp)
-    return res.status(403).json({ success:false, message:'You do not have permission to create apps' });
-  const { name, description } = req.body;
-  if (!name || !name.trim()) return res.json({ success:false, message:'App name is required' });
-  const publicKey = require('crypto').randomBytes(24).toString('hex');
-  const secretKey = require('crypto').randomBytes(32).toString('hex');
-  const doc = {
-    name: name.trim(),
-    description: description?.trim() || '',
-    publicKey,
-    secretKey,
-    active: true,
-    createdAt: new Date().toISOString(),
-    createdBy: req.reseller.username,
-    dllUrl: null,
-    hmacSecret: null,
-    keyExpiresAt: null,
-  };
-  const result = await appsCol.insertOne(doc);
-  // Auto-assign this new app to the reseller who created it
-  await resellersCol.updateOne({ _id: req.reseller._id }, { $addToSet: { allowedApps: String(result.insertedId) } });
-  // Remove __NONE__ sentinel if present — it blocks all app visibility on /my-apps
-  await resellersCol.updateOne({ _id: req.reseller._id }, { $pull: { allowedApps: '__NONE__' } });
-
-
-  auditLog(req.reseller.username + ' (reseller)', 'RESELLER_CREATE_APP', { appName: doc.name, appId: String(result.insertedId) });
-  const { secretKey: _sk, ...safe } = { ...doc, _id: result.insertedId };
-  res.json({ success:true, app: safe, secretKey });
 });
 
 // ── RESELLER: DLL MANAGEMENT ──────────────────────────────────────────────────
 // GET /api/reseller/dll-info — returns all apps the reseller can manage + their DLL URLs
 app.get('/api/reseller/dll-info', requireReseller, async (req, res) => {
   const allowed = req.reseller.allowedApps || [];
-  if (allowed.includes('__NONE__')) return res.json({ success:true, apps:[] });
   // No active:true filter — resellers should always see ALL their assigned apps
   let docs;
   if (allowed.length === 0) {
@@ -1473,27 +1428,32 @@ app.get('/api/reseller/dll-info', requireReseller, async (req, res) => {
   res.json({ success: true, apps: docs });
 });
 
-// GET /api/reseller/my-apps — full app info for assigned + self-created apps
+// GET /api/reseller/my-apps — full app info for assigned apps (public + secret keys for integration)
 app.get('/api/reseller/my-apps', requireReseller, async (req, res) => {
   const proj = { projection: { name: 1, publicKey: 1, secretKey: 1, dllUrl: 1, active: 1, createdAt: 1 } };
-  // Always fetch apps this reseller created themselves
-  const ownApps = await appsCol.find({ createdBy: req.reseller.username }, proj).toArray();
-  const ownIds = new Set(ownApps.map(a => String(a._id)));
+  const allowed = req.reseller.allowedApps || [];
 
-  // Also fetch admin-assigned apps (filter out __NONE__ sentinel)
-  const allowed = (req.reseller.allowedApps || []).filter(id => id !== '__NONE__');
-  let assignedApps = [];
-  if (allowed.length > 0) {
-    const ids = allowed.map(id => { try { return new ObjectId(String(id)); } catch { return null; } }).filter(Boolean);
-    if (ids.length > 0) {
-      assignedApps = await appsCol.find({ _id: { $in: ids } }, proj).toArray();
-    }
+  // No restriction — return all apps
+  if (allowed.length === 0) {
+    const docs = await appsCol.find({}, proj).sort({ name: 1 }).toArray();
+    return res.json({ success: true, apps: docs });
   }
 
-  // Merge: own apps first, then assigned apps not already in own list
-  const merged = [...ownApps, ...assignedApps.filter(a => !ownIds.has(String(a._id)))];
-  merged.sort((a, b) => a.name.localeCompare(b.name));
-  res.json({ success: true, apps: merged });
+  // Try ObjectId conversion (standard MongoDB string IDs)
+  const ids = allowed.map(id => { try { return new ObjectId(String(id)); } catch { return null; } }).filter(Boolean);
+
+  if (ids.length > 0) {
+    const docs = await appsCol.find({ _id: { $in: ids } }, proj).sort({ name: 1 }).toArray();
+    // If ObjectId match found results, return them
+    if (docs.length > 0) return res.json({ success: true, apps: docs });
+    // ObjectId conversion worked but no docs matched — IDs may be stale; fall through to all-apps
+  }
+
+  // Fallback: ID conversion failed entirely OR matched IDs returned nothing.
+  // Return ALL apps so the reseller is never shown a blank page.
+  // Admin should re-save the reseller to fix stored IDs.
+  const all = await appsCol.find({}, proj).sort({ name: 1 }).toArray();
+  res.json({ success: true, apps: all });
 });
 
 // POST /api/reseller/apps/:id/set-dll  { dllUrl: "https://files.catbox.moe/..." }
@@ -1507,7 +1467,6 @@ app.post('/api/reseller/apps/:id/set-dll', requireReseller, async (req, res) => 
 
   // Verify the reseller is allowed to manage this app
   const allowed = (req.reseller.allowedApps || []).map(String);
-  if (allowed.includes('__NONE__')) return res.status(403).json({ success: false, message: 'You do not have access to this app.' });
   if (allowed.length > 0 && !allowed.includes(req.params.id))
     return res.status(403).json({ success: false, message: 'You do not have access to this app.' });
 
