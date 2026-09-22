@@ -1188,7 +1188,7 @@ app.post('/api/admin/config', requireAdmin, async (req, res) => {
 });
 
 // ── ADMIN: RESELLERS ──────────────────────────────────────────────────────────
-const DEFAULT_PERMISSIONS = { viewKeys:false, viewHWID:false, viewIP:false, viewLogs:false, viewBlocks:false, generateKeys:false, banKeys:false, freezeKeys:false, resetHWID:false, deleteKeys:false, viewStats:false, canUseCatboxHosting:false };
+const DEFAULT_PERMISSIONS = { viewKeys:false, viewHWID:false, viewIP:false, viewLogs:false, viewBlocks:false, generateKeys:false, banKeys:false, freezeKeys:false, resetHWID:false, deleteKeys:false, viewStats:false, canUseCatboxHosting:false, createOwnApp:false };
 
 app.get('/api/admin/resellers', requireAdmin, async (req, res) => {
   const docs = await resellersCol.find({}).sort({ createdAt:-1 }).toArray();
@@ -1319,6 +1319,7 @@ app.post('/api/reseller/generate', requireReseller, async (req, res) => {
   }
   await keysCol.insertMany(docs);
   await resellersCol.updateOne({ _id:req.reseller._id }, { $inc:{ keysGenerated:count } });
+  auditLog(`reseller:${req.reseller.username}`, 'RESELLER_GENERATE_KEYS', { count, appName:appDoc.name, product, label, reseller:req.reseller.username });
   res.json({ success:true, keys });
 });
 
@@ -1333,6 +1334,7 @@ app.post('/api/reseller/keys/:key/toggle', requireReseller, async (req, res) => 
   const s = doc.status==='active'?'banned':'active';
   await keysCol.updateOne({ key:req.params.key }, { $set:{ status:s } });
   if (s==='banned') activeSessions.delete(req.params.key);
+  auditLog(`reseller:${req.reseller.username}`, s==='banned'?'RESELLER_BAN_KEY':'RESELLER_UNBAN_KEY', { key:req.params.key, appName:doc.appName||'—', reseller:req.reseller.username });
   res.json({ success:true, status:s });
 });
 app.post('/api/reseller/keys/:key/freeze', requireReseller, async (req, res) => {
@@ -1342,6 +1344,7 @@ app.post('/api/reseller/keys/:key/freeze', requireReseller, async (req, res) => 
   if (doc.status==='banned') return res.json({ success:false, message:'Key is banned, cannot freeze' });
   await keysCol.updateOne({ key:req.params.key }, { $set:{ status:'frozen' } });
   activeSessions.delete(req.params.key);
+  auditLog(`reseller:${req.reseller.username}`, 'RESELLER_FREEZE_KEY', { key:req.params.key, appName:doc.appName||'—', reseller:req.reseller.username });
   res.json({ success:true, status:'frozen' });
 });
 app.post('/api/reseller/keys/:key/unfreeze', requireReseller, async (req, res) => {
@@ -1349,6 +1352,7 @@ app.post('/api/reseller/keys/:key/unfreeze', requireReseller, async (req, res) =
   const doc = await resellerOwnsKey(req.reseller, req.params.key);
   if (!doc) return res.json({ success:false, message:'Key not found or not yours' });
   await keysCol.updateOne({ key:req.params.key }, { $set:{ status:'active' } });
+  auditLog(`reseller:${req.reseller.username}`, 'RESELLER_UNFREEZE_KEY', { key:req.params.key, appName:doc.appName||'—', reseller:req.reseller.username });
   res.json({ success:true, status:'active' });
 });
 app.post('/api/reseller/keys/:key/reset-hwid', requireReseller, async (req, res) => {
@@ -1358,6 +1362,7 @@ app.post('/api/reseller/keys/:key/reset-hwid', requireReseller, async (req, res)
   const froze = await recordHwidReset(req.params.key);
   await keysCol.updateOne({ key:req.params.key }, { $set:{ hwid:null, hwidRaw:null, uses:0 } });
   activeSessions.delete(req.params.key);
+  auditLog(`reseller:${req.reseller.username}`, 'RESELLER_RESET_HWID', { key:req.params.key, appName:doc.appName||'—', reseller:req.reseller.username, autoFrozen:froze });
   res.json({ success:true, auto_frozen: froze });
 });
 app.delete('/api/reseller/keys/:key', requireReseller, async (req, res) => {
@@ -1365,6 +1370,7 @@ app.delete('/api/reseller/keys/:key', requireReseller, async (req, res) => {
   const doc = await resellerOwnsKey(req.reseller, req.params.key);
   if (!doc) return res.json({ success:false, message:'Key not found or not yours' });
   await keysCol.deleteOne({ key:req.params.key });
+  auditLog(`reseller:${req.reseller.username}`, 'RESELLER_DELETE_KEY', { key:req.params.key, appName:doc.appName||'—', reseller:req.reseller.username });
   res.json({ success:true });
 });
 
@@ -1405,6 +1411,37 @@ app.get('/api/reseller/apps', requireReseller, async (req, res) => {
   }
   const safe = docs.map(({ secretKey, ...a }) => a);
   res.json({ success:true, apps:safe });
+});
+
+// POST /api/reseller/apps — reseller creates their own app (requires createOwnApp permission)
+app.post('/api/reseller/apps', requireReseller, async (req, res) => {
+  if (!req.reseller.permissions.createOwnApp)
+    return res.status(403).json({ success:false, message:'You do not have permission to create apps' });
+  const { name, description } = req.body;
+  if (!name || !name.trim()) return res.json({ success:false, message:'App name is required' });
+  const publicKey = require('crypto').randomBytes(24).toString('hex');
+  const secretKey = require('crypto').randomBytes(32).toString('hex');
+  const doc = {
+    name: name.trim(),
+    description: description?.trim() || '',
+    publicKey,
+    secretKey,
+    active: true,
+    createdAt: new Date().toISOString(),
+    createdBy: req.reseller.username,
+    dllUrl: null,
+    hmacSecret: null,
+    keyExpiresAt: null,
+  };
+  const result = await appsCol.insertOne(doc);
+  // Auto-assign this new app to the reseller who created it
+  await resellersCol.updateOne(
+    { _id: req.reseller._id },
+    { $addToSet: { allowedApps: String(result.insertedId) } }
+  );
+  auditLog(req.reseller.username + ' (reseller)', 'RESELLER_CREATE_APP', { appName: doc.name, appId: String(result.insertedId) });
+  const { secretKey: _sk, ...safe } = { ...doc, _id: result.insertedId };
+  res.json({ success:true, app: safe, secretKey });
 });
 
 // ── RESELLER: DLL MANAGEMENT ──────────────────────────────────────────────────
