@@ -721,6 +721,10 @@ tbody td{padding:9px 13px;vertical-align:middle;}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         Overview
       </div>
+      <div class="nav-item r-item" data-page="r-apps" onclick="go('r-apps')" id="r-nav-apps">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        My Apps
+      </div>
       <div class="nav-sec" id="r-nav-keys-sec" style="display:none">Keys</div>
       <div class="nav-item r-item" data-page="r-keys" onclick="go('r-keys')" id="r-nav-keys" style="display:none">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
@@ -2054,6 +2058,15 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
       <div id="r-dll-content"><div class="empty"><div class="empty-icon">⏳</div><div class="empty-text">Loading apps...</div></div></div>
     </div>
 
+    <!-- RESELLER: MY APPS PAGE -->
+    <div class="page" id="page-r-apps">
+      <div class="ph">
+        <div class="pt">My <span>Apps</span></div>
+        <div class="pa"><button class="btn btn-ghost btn-sm" onclick="loadResellerMyApps()">↻ Refresh</button></div>
+      </div>
+      <div id="r-apps-content"><div class="empty"><div class="empty-icon">⏳</div><div class="empty-text">Loading apps…</div></div></div>
+    </div>
+
     <!-- DETECTION EVENTS PAGE -->
     <div class="page" id="page-detections">
       <div class="ph" style="margin-bottom:20px">
@@ -2224,6 +2237,37 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
   </div>
 </div>
 
+<!-- MODAL: RESELLER DLL HOSTING -->
+<div class="modal-bg" id="modal-r-dll">
+  <div class="modal">
+    <div class="modal-title">🟣 DLL Hosting — <span id="r-dll-modal-appname"></span></div>
+    <div style="background:#1a0a2e;border:1px solid #7c3aed44;border-radius:var(--r);padding:12px 14px;font-size:12px;color:#c084fc;margin-bottom:16px">
+      Upload your DLL to <strong>catbox.moe</strong> (or another supported host), paste the direct link below.
+      Clients download via <strong>your server</strong> — the raw URL is never exposed to end users.
+    </div>
+    <div class="fg" style="margin-bottom:8px">
+      <label>Current DLL</label>
+      <div id="r-dll-current-display" style="padding:8px 12px;background:#0d0518;border:1px solid #7c3aed33;border-radius:var(--r);font-size:11px;font-family:'JetBrains Mono',monospace;color:#a855f7;word-break:break-all;min-height:34px"></div>
+    </div>
+    <div class="fg">
+      <label>New DLL URL</label>
+      <input class="inp" id="r-dll-url-input" placeholder="https://files.catbox.moe/xxxxxx.dll"/>
+      <div style="font-size:10px;color:var(--text3);margin-top:5px">✅ Supported: catbox.moe · Discord CDN · GitHub Raw · jsDelivr · Google Drive · Dropbox</div>
+    </div>
+    <div style="background:#000;border-radius:var(--r);padding:10px 13px;margin-top:12px;font-size:11px;color:var(--text3)">
+      <div style="color:#c084fc;font-weight:600;margin-bottom:6px">🔗 Developer Integration (after /api/auth succeeds):</div>
+      <div id="r-dll-code-snippet" style="font-family:'JetBrains Mono',monospace;color:#e9d5ff;word-break:break-all"></div>
+      <div style="margin-top:5px;color:var(--text3)">Server proxies the file — no raw URL leaks to the client.</div>
+    </div>
+    <div id="r-dll-modal-result" style="margin-top:10px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-danger btn-sm" onclick="rClearDll()">Remove DLL</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-r-dll')">Cancel</button>
+      <button class="btn btn-purple" onclick="rSaveDll()">💾 Save DLL URL</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: SET API KEY EXPIRY -->
 <div class="modal-bg" id="modal-expiry">
   <div class="modal">
@@ -2349,7 +2393,7 @@ function go(page){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>{if(n.dataset.page===page)n.classList.add('active');});
-  const pageActions={dashboard:loadDashboard,apps:loadApps,keys:loadKeys,logs:loadLogs,blocks:loadBlocks,resellers:loadResellers,'hwid-mismatches':loadHwidMismatches,detections:loadDetections,'r-dashboard':loadResellerDashboard,'r-keys':loadResellerKeys,'r-generate':loadResellerGeneratePage,'r-logs':loadResellerLogs,'r-blocks':loadResellerBlocks,'r-dll':loadResellerDLL,'dll-logs':loadDLLLogs,audit:loadAudit,settings:()=>{load2FAStatus();loadCountryAllowlist();},generate:loadApps};
+  const pageActions={dashboard:loadDashboard,apps:loadApps,keys:loadKeys,logs:loadLogs,blocks:loadBlocks,resellers:loadResellers,'hwid-mismatches':loadHwidMismatches,detections:loadDetections,'r-dashboard':loadResellerDashboard,'r-keys':loadResellerKeys,'r-generate':loadResellerGeneratePage,'r-logs':loadResellerLogs,'r-blocks':loadResellerBlocks,'r-dll':loadResellerDLL,'r-apps':loadResellerMyApps,'dll-logs':loadDLLLogs,audit:loadAudit,settings:()=>{load2FAStatus();loadCountryAllowlist();},generate:loadApps};
   if(pageActions[page]) pageActions[page]();
 }
 
@@ -3869,6 +3913,126 @@ async function resellerSetDLL(appId) {
     setTimeout(() => loadResellerDLL(), 1200);
   } else {
     res.innerHTML = '<span style="color:#f87171">❌ ' + (r.message || 'Failed to save.') + '</span>';
+  }
+}
+
+// ═══════════════ RESELLER: MY APPS ═══════════════
+let _rDllAppId = null;
+
+async function loadResellerMyApps() {
+  const wrap = document.getElementById('r-apps-content');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="empty"><div class="empty-icon">⏳</div><div class="empty-text">Loading apps…</div></div>';
+
+  // Refresh permissions + allowedApps from server
+  try {
+    const me = await rget('/api/reseller/me');
+    if (me && me.success && RDATA) {
+      RDATA.permissions   = me.permissions;
+      RDATA.allowedApps   = me.allowedApps;
+    }
+  } catch(e) {}
+
+  let r;
+  try { r = await rget('/api/reseller/my-apps'); }
+  catch(e) {
+    wrap.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Network error — could not reach server</div></div>';
+    return;
+  }
+  if (!r || !r.success) {
+    wrap.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Failed to load apps — please try refreshing</div></div>';
+    return;
+  }
+  if (!r.apps || !r.apps.length) {
+    wrap.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No apps assigned to your account yet — contact your admin</div></div>';
+    return;
+  }
+
+  const hasDllPerm = RDATA && RDATA.permissions && RDATA.permissions.canUseCatboxHosting;
+
+  wrap.innerHTML = r.apps.map(app => `
+    <div class="app-card">
+      <div class="app-card-hdr">
+        <div>
+          <div class="app-name">${app.name} <span class="badge ${app.active ? 'b-active' : 'b-expired'}" style="vertical-align:middle">${app.active ? 'Active' : 'Disabled'}</span></div>
+          <div class="app-desc">Created ${app.createdAt ? app.createdAt.substring(0,10) : '—'}</div>
+        </div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap">
+          ${hasDllPerm
+            ? `<button class="btn btn-ghost btn-sm" style="color:#c084fc;border-color:#7c3aed55" onclick="openRDllModal('${app._id}','${app.name}','${(app.dllUrl||'').replace(/'/g,"\'").replace(/"/g,'&quot;')}','${app.publicKey}')">🟣 DLL</button>`
+            : `<button class="btn btn-ghost btn-sm" style="opacity:0.45;cursor:not-allowed" disabled title="Catbox DLL hosting not enabled on your account">🔒 DLL</button>`}
+        </div>
+      </div>
+
+      <!-- Public Key -->
+      <div class="apikey-box">
+        <span class="apikey-label">Public Key</span>
+        <span class="apikey-val" id="r-pk-${app._id}">${app.publicKey}</span>
+        <button class="apikey-copy" data-copy="${app.publicKey}" onclick="copyFromAttr(this)">Copy</button>
+      </div>
+
+      <!-- Secret Key (masked) -->
+      <div class="apikey-box">
+        <span class="apikey-label">Secret Key</span>
+        <span class="apikey-val secret-mask" id="r-sk-${app._id}" title="Hover to reveal">${app.secretKey}</span>
+        <button class="apikey-copy" data-copy="${app.secretKey}" onclick="copyFromAttr(this)">Copy</button>
+      </div>
+
+      <!-- In your code hint -->
+      <div style="margin-top:10px;padding:8px 13px;background:#000;border-radius:var(--r);font-size:11px;color:var(--text3)">
+        In your code: &nbsp;<span style="color:var(--p3);font-family:'JetBrains Mono',monospace;font-size:11px">x-public-key: ${app.publicKey}</span>
+      </div>
+
+      <!-- DLL status row -->
+      <div style="margin-top:8px;padding:8px 13px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);font-size:11px;display:flex;align-items:center;gap:8px">
+        <span style="color:#c084fc;flex-shrink:0">🟣 DLL:</span>
+        ${app.dllUrl
+          ? `<span style="color:#a855f7;font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${app.dllUrl}">${app.dllUrl}</span><span style="color:#4ade80;flex-shrink:0">✅ Set</span>`
+          : `<span style="color:var(--text3);font-size:11px">Not configured${hasDllPerm ? ' — click 🟣 DLL to add a Catbox link' : ''}</span>`}
+      </div>
+    </div>
+  `).join('');
+}
+
+function openRDllModal(appId, appName, currentUrl, publicKey) {
+  _rDllAppId = appId;
+  document.getElementById('r-dll-modal-appname').textContent = appName;
+  document.getElementById('r-dll-url-input').value = '';
+  document.getElementById('r-dll-modal-result').innerHTML = '';
+  const display = document.getElementById('r-dll-current-display');
+  display.textContent = currentUrl || 'None set';
+  display.style.color = currentUrl ? '#a855f7' : 'var(--text3)';
+  document.getElementById('r-dll-code-snippet').textContent =
+    'GET /api/dll/' + publicKey + '?key=<license_key>&session_token=<token>';
+  document.getElementById('modal-r-dll').classList.add('open');
+}
+
+async function rSaveDll() {
+  const url = document.getElementById('r-dll-url-input').value.trim();
+  const res = document.getElementById('r-dll-modal-result');
+  if (!url) { res.innerHTML = '<div style="color:#f87171;font-size:12px">Please enter a URL.</div>'; return; }
+  res.innerHTML = '<div style="color:var(--text3);font-size:12px">Saving…</div>';
+  const d = await rpost('/api/reseller/apps/' + _rDllAppId + '/set-dll', { dllUrl: url });
+  if (d.success) {
+    res.innerHTML = '<div style="color:#4ade80;font-size:12px">✅ DLL URL saved! Clients download through your server.</div>';
+    toast('DLL URL saved!', 'success');
+    setTimeout(() => { closeModal('modal-r-dll'); loadResellerMyApps(); }, 1400);
+  } else {
+    res.innerHTML = '<div style="color:#f87171;font-size:12px">❌ ' + (d && d.message ? d.message : 'Error saving DLL URL') + '</div>';
+  }
+}
+
+async function rClearDll() {
+  if (!confirm('Remove the DLL URL from this app?')) return;
+  const res = document.getElementById('r-dll-modal-result');
+  res.innerHTML = '<div style="color:var(--text3);font-size:12px">Removing…</div>';
+  const d = await rpost('/api/reseller/apps/' + _rDllAppId + '/set-dll', { dllUrl: '' });
+  if (d.success) {
+    toast('DLL removed', 'info');
+    closeModal('modal-r-dll');
+    loadResellerMyApps();
+  } else {
+    res.innerHTML = '<div style="color:#f87171;font-size:12px">❌ ' + (d.message || 'Failed to remove') + '</div>';
   }
 }
 
