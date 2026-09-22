@@ -1473,23 +1473,27 @@ app.get('/api/reseller/dll-info', requireReseller, async (req, res) => {
   res.json({ success: true, apps: docs });
 });
 
-// GET /api/reseller/my-apps — full app info for assigned apps (public + secret keys for integration)
+// GET /api/reseller/my-apps — full app info for assigned + self-created apps
 app.get('/api/reseller/my-apps', requireReseller, async (req, res) => {
-  // Filter out __NONE__ sentinel (means "no admin-assigned apps") but keep any real app IDs
+  const proj = { projection: { name: 1, publicKey: 1, secretKey: 1, dllUrl: 1, active: 1, createdAt: 1 } };
+  // Always fetch apps this reseller created themselves
+  const ownApps = await appsCol.find({ createdBy: req.reseller.username }, proj).toArray();
+  const ownIds = new Set(ownApps.map(a => String(a._id)));
+
+  // Also fetch admin-assigned apps (filter out __NONE__ sentinel)
   const allowed = (req.reseller.allowedApps || []).filter(id => id !== '__NONE__');
-  let docs;
-  if (allowed.length === 0) {
-    docs = await appsCol.find({}, { projection: { name: 1, publicKey: 1, secretKey: 1, dllUrl: 1, active: 1, createdAt: 1 } }).sort({ name: 1 }).toArray();
-  } else {
+  let assignedApps = [];
+  if (allowed.length > 0) {
     const ids = allowed.map(id => { try { return new ObjectId(String(id)); } catch { return null; } }).filter(Boolean);
     if (ids.length > 0) {
-      docs = await appsCol.find({ _id: { $in: ids } }, { projection: { name: 1, publicKey: 1, secretKey: 1, dllUrl: 1, active: 1, createdAt: 1 } }).sort({ name: 1 }).toArray();
-    } else {
-      // ID conversion failed (legacy IDs) — return all apps
-      docs = await appsCol.find({}, { projection: { name: 1, publicKey: 1, secretKey: 1, dllUrl: 1, active: 1, createdAt: 1 } }).sort({ name: 1 }).toArray();
+      assignedApps = await appsCol.find({ _id: { $in: ids } }, proj).toArray();
     }
   }
-  res.json({ success: true, apps: docs });
+
+  // Merge: own apps first, then assigned apps not already in own list
+  const merged = [...ownApps, ...assignedApps.filter(a => !ownIds.has(String(a._id)))];
+  merged.sort((a, b) => a.name.localeCompare(b.name));
+  res.json({ success: true, apps: merged });
 });
 
 // POST /api/reseller/apps/:id/set-dll  { dllUrl: "https://files.catbox.moe/..." }
