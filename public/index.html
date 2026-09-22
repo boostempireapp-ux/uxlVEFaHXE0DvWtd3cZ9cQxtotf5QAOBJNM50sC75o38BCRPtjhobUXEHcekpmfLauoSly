@@ -3794,28 +3794,52 @@ async function loadResellerDLL() {
 
   wrap.innerHTML = permBanner + howToBanner + r.apps.map(app => {
     const inputDisabled = hasCatboxPerm ? '' : 'disabled style="opacity:0.4;cursor:not-allowed"';
-    const btnDisabled   = hasCatboxPerm ? '' : 'disabled style="opacity:0.4;cursor:not-allowed"';
     return `
     <div class="card" style="padding:22px;margin-bottom:14px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+
+      <!-- Header: app name + DLL status badge -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
         <div style="display:flex;align-items:center;gap:12px">
           <div style="width:38px;height:38px;border-radius:10px;background:rgba(139,92,246,0.12);display:flex;align-items:center;justify-content:center;font-size:18px">📱</div>
           <div>
             <div style="font-weight:700;font-size:15px;color:var(--text)">${app.name}</div>
-            <div style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:2px">ID: ${String(app._id).slice(-10)}</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px">DLL delivery endpoint for this app</div>
           </div>
         </div>
         ${app.dllUrl
           ? `<a href="${app.dllUrl}" target="_blank" rel="noopener" style="font-size:11px;color:#a78bfa;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.25);padding:5px 12px;border-radius:6px;text-decoration:none">🔗 View Current DLL</a>`
           : '<span style="font-size:11px;color:#f87171;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);padding:5px 12px;border-radius:6px">⚠️ No DLL set</span>'}
       </div>
+
+      <!-- Public Key row (same style as admin app card, no secret key) -->
+      <div class="apikey-box" style="margin-bottom:8px">
+        <span class="apikey-label">Public Key</span>
+        <span class="apikey-val">${app.publicKey}</span>
+        <button class="apikey-copy" data-copy="${app.publicKey}" onclick="copyFromAttr(this)">Copy</button>
+      </div>
+
+      <!-- "In your code" hint -->
+      <div style="margin-bottom:14px;padding:8px 13px;background:#000;border-radius:var(--r);font-size:11px;color:var(--text3)">
+        In your code: &nbsp;<span style="color:var(--p3);font-family:'JetBrains Mono',monospace;font-size:11px">x-public-key: ${app.publicKey}</span>
+      </div>
+
+      <!-- Current DLL URL display -->
       ${app.dllUrl
-        ? `<div style="background:rgba(0,0,0,0.35);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#a78bfa;word-break:break-all;margin-bottom:14px">${app.dllUrl}</div>`
-        : ''}
+        ? `<div style="margin-bottom:14px;padding:8px 14px;background:rgba(0,0,0,0.35);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;gap:8px">
+            <span style="color:#c084fc;flex-shrink:0">🟣 DLL:</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#a855f7;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${app.dllUrl}">${app.dllUrl}</span>
+            <span style="color:#4ade80;flex-shrink:0">✅ Set</span>
+           </div>`
+        : `<div style="margin-bottom:14px;padding:8px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;gap:8px">
+            <span style="color:#c084fc;flex-shrink:0">🟣 DLL:</span>
+            <span style="color:var(--text3);font-size:11px">Not configured — paste a Catbox link below to activate</span>
+           </div>`}
+
+      <!-- Upload / input row -->
       <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
         <div class="fg" style="flex:1;min-width:260px;margin:0">
           <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;display:block;margin-bottom:6px">
-            ${hasCatboxPerm ? '📤 Upload your Catbox DLL — paste direct link here' : '🔒 DLL URL (read-only — Catbox hosting not enabled)'}
+            ${hasCatboxPerm ? '📤 Paste your Catbox DLL link here' : '🔒 DLL URL (Catbox hosting not enabled on your account)'}
           </label>
           <input type="text" id="dll-url-${app._id}" value="${app.dllUrl||''}" placeholder="https://files.catbox.moe/xxxxxx.dll" ${inputDisabled}
             style="width:100%;background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none"
