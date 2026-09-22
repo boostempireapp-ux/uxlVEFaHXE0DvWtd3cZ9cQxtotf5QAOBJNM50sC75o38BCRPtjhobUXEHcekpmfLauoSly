@@ -1196,11 +1196,11 @@ app.get('/api/admin/resellers', requireAdmin, async (req, res) => {
   res.json({ success:true, resellers:safe });
 });
 app.post('/api/admin/resellers', requireAdmin, async (req, res) => {
-  const { username, password, displayName, keyQuota, permissions, notes, allowedApps } = req.body;
+  const { username, password, displayName, keyQuota, permissions, notes, allowedApps, appApiAccess } = req.body;
   if (!username||!password) return res.json({ success:false, message:'Username and password required' });
   if (password.length<6) return res.json({ success:false, message:'Password must be at least 6 characters' });
   const perms = Object.assign({}, DEFAULT_PERMISSIONS, permissions||{});
-  const doc = { username:username.toLowerCase().trim(), password:hashString(password), displayName:displayName||username, active:true, keyQuota:parseInt(keyQuota)||0, keysGenerated:0, permissions:perms, allowedApps:Array.isArray(allowedApps)?allowedApps:[], notes:notes||'', sessionToken:null, createdAt:new Date().toISOString(), lastLogin:null };
+  const doc = { username:username.toLowerCase().trim(), password:hashString(password), displayName:displayName||username, active:true, keyQuota:parseInt(keyQuota)||0, keysGenerated:0, permissions:perms, allowedApps:Array.isArray(allowedApps)?allowedApps:[], appApiAccess:(typeof appApiAccess==='object'&&appApiAccess!==null)?appApiAccess:{}, notes:notes||'', sessionToken:null, createdAt:new Date().toISOString(), lastLogin:null };
   try {
     const result = await resellersCol.insertOne(doc);
     const { password:p, ...safe } = { ...doc, _id:result.insertedId };
@@ -1211,14 +1211,15 @@ app.post('/api/admin/resellers', requireAdmin, async (req, res) => {
   }
 });
 app.patch('/api/admin/resellers/:id', requireAdmin, async (req, res) => {
-  const { displayName, password, keyQuota, permissions, notes, active, allowedApps } = req.body;
+  const { displayName, password, keyQuota, permissions, notes, active, allowedApps, appApiAccess } = req.body;
   const update = {};
-  if (displayName  !== undefined) update.displayName  = displayName;
-  if (notes        !== undefined) update.notes        = notes;
-  if (keyQuota     !== undefined) update.keyQuota     = parseInt(keyQuota)||0;
-  if (active       !== undefined) update.active       = !!active;
-  if (permissions  !== undefined) update.permissions  = Object.assign({}, DEFAULT_PERMISSIONS, permissions);
-  if (allowedApps  !== undefined) update.allowedApps  = Array.isArray(allowedApps) ? allowedApps : [];
+  if (displayName    !== undefined) update.displayName    = displayName;
+  if (notes          !== undefined) update.notes          = notes;
+  if (keyQuota       !== undefined) update.keyQuota       = parseInt(keyQuota)||0;
+  if (active         !== undefined) update.active         = !!active;
+  if (permissions    !== undefined) update.permissions    = Object.assign({}, DEFAULT_PERMISSIONS, permissions);
+  if (allowedApps    !== undefined) update.allowedApps    = Array.isArray(allowedApps) ? allowedApps : [];
+  if (appApiAccess   !== undefined) update.appApiAccess   = (typeof appApiAccess === 'object' && appApiAccess !== null) ? appApiAccess : {};
   if (password && password.length>=6) update.password = hashString(password);
   const result = await resellersCol.updateOne({ _id:new ObjectId(req.params.id) }, { $set:update });
   if (!result.matchedCount) return res.json({ success:false, message:'Reseller not found' });
@@ -1261,12 +1262,13 @@ app.get('/api/reseller/me', requireReseller, async (req, res) => {
   const r = req.reseller;
   res.json({
     success: true,
-    displayName:  r.displayName,
-    permissions:  r.permissions  || {},
-    allowedApps:  r.allowedApps  || [],
-    keyQuota:     r.keyQuota     || 0,
-    keysGenerated:r.keysGenerated|| 0,
-    notes:        r.notes        || '',
+    displayName:   r.displayName,
+    permissions:   r.permissions   || {},
+    allowedApps:   r.allowedApps   || [],
+    appApiAccess:  r.appApiAccess  || {},
+    keyQuota:      r.keyQuota      || 0,
+    keysGenerated: r.keysGenerated || 0,
+    notes:         r.notes         || '',
   });
 });
 
@@ -1432,11 +1434,26 @@ app.get('/api/reseller/dll-info', requireReseller, async (req, res) => {
 app.get('/api/reseller/my-apps', requireReseller, async (req, res) => {
   const proj = { projection: { name: 1, publicKey: 1, secretKey: 1, dllUrl: 1, active: 1, createdAt: 1 } };
   const allowed = req.reseller.allowedApps || [];
+  const apiAccessMap = req.reseller.appApiAccess || {};
+
+  const stripKeys = (docs) => docs.map(doc => {
+    const appId = String(doc._id);
+    // If allowedApps is unrestricted (empty = all), check apiAccessMap; default true if not set
+    // If allowedApps is restricted, the app is in the list — check apiAccessMap for API access
+    const hasApiAccess = allowed.length === 0
+      ? (apiAccessMap[appId] !== false) // default allow for unrestricted
+      : (apiAccessMap[appId] === true);  // must be explicitly granted when restricted
+    if (!hasApiAccess) {
+      const { publicKey, secretKey, ...rest } = doc;
+      return { ...rest, publicKey: null, secretKey: null, apiAccessGranted: false };
+    }
+    return { ...doc, apiAccessGranted: true };
+  });
 
   // No restriction — return all apps
   if (allowed.length === 0) {
     const docs = await appsCol.find({}, proj).sort({ name: 1 }).toArray();
-    return res.json({ success: true, apps: docs });
+    return res.json({ success: true, apps: stripKeys(docs) });
   }
 
   // Try ObjectId conversion (standard MongoDB string IDs)
@@ -1444,16 +1461,12 @@ app.get('/api/reseller/my-apps', requireReseller, async (req, res) => {
 
   if (ids.length > 0) {
     const docs = await appsCol.find({ _id: { $in: ids } }, proj).sort({ name: 1 }).toArray();
-    // If ObjectId match found results, return them
-    if (docs.length > 0) return res.json({ success: true, apps: docs });
-    // ObjectId conversion worked but no docs matched — IDs may be stale; fall through to all-apps
+    if (docs.length > 0) return res.json({ success: true, apps: stripKeys(docs) });
   }
 
-  // Fallback: ID conversion failed entirely OR matched IDs returned nothing.
-  // Return ALL apps so the reseller is never shown a blank page.
-  // Admin should re-save the reseller to fix stored IDs.
+  // Fallback: return all apps
   const all = await appsCol.find({}, proj).sort({ name: 1 }).toArray();
-  res.json({ success: true, apps: all });
+  res.json({ success: true, apps: stripKeys(all) });
 });
 
 // POST /api/reseller/apps/:id/set-dll  { dllUrl: "https://files.catbox.moe/..." }
