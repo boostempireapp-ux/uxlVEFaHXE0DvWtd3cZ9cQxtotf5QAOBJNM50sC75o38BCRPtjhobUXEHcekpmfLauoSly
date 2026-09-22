@@ -2088,11 +2088,7 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
           <label>Description (optional)</label>
           <input class="inp" id="r-modal-app-desc" placeholder="What is this app?"/>
         </div>
-        <div id="r-create-app-result" style="display:none;margin-top:12px;padding:12px;background:#0a1a0a;border:1px solid #22c55e44;border-radius:var(--r);font-size:12px">
-          <div style="color:#4ade80;font-weight:600;margin-bottom:8px">✅ App created! Save these keys — the secret key won't be shown again.</div>
-          <div style="margin-bottom:6px"><span style="color:var(--text3)">Public Key:</span> <span id="r-new-app-pk" style="color:var(--p3);font-family:'JetBrains Mono',monospace;font-size:11px"></span> <button class="apikey-copy" onclick="navigator.clipboard.writeText(document.getElementById('r-new-app-pk').textContent);toast('Copied','success')">Copy</button></div>
-          <div><span style="color:var(--text3)">Secret Key:</span> <span id="r-new-app-sk" style="color:#f87171;font-family:'JetBrains Mono',monospace;font-size:11px"></span> <button class="apikey-copy" onclick="navigator.clipboard.writeText(document.getElementById('r-new-app-sk').textContent);toast('Copied','success')">Copy</button></div>
-        </div>
+
         <div class="modal-actions">
           <button class="btn btn-ghost" id="r-create-app-cancel-btn" onclick="closeResellerCreateAppModal()">Cancel</button>
           <button class="btn btn-purple" id="r-create-app-submit-btn" onclick="resellerCreateApp()">Create App</button>
@@ -3605,7 +3601,6 @@ function dlRGen(){
 function openResellerCreateAppModal(){
   document.getElementById('r-modal-app-name').value='';
   document.getElementById('r-modal-app-desc').value='';
-  document.getElementById('r-create-app-result').style.display='none';
   document.getElementById('r-create-app-submit-btn').style.display='';
   document.getElementById('r-create-app-cancel-btn').textContent='Cancel';
   document.getElementById('modal-r-create-app').classList.add('open');
@@ -3620,12 +3615,13 @@ async function resellerCreateApp(){
   if(!name){toast('Enter an app name','error');return;}
   const r=await rpost('/api/reseller/apps',{name,description});
   if(!r.success){toast(r.message||'Failed to create app','error');return;}
-  document.getElementById('r-new-app-pk').textContent=r.app.publicKey;
-  document.getElementById('r-new-app-sk').textContent=r.secretKey;
-  document.getElementById('r-create-app-result').style.display='';
-  document.getElementById('r-create-app-submit-btn').style.display='none';
-  document.getElementById('r-create-app-cancel-btn').textContent='Done';
+  // Store newly created keys so My Apps page can display them once
+  window._pendingNewAppKeys={publicKey:r.app.publicKey,secretKey:r.secretKey,name};
+  document.getElementById('modal-r-create-app').classList.remove('open');
+  document.getElementById('r-modal-app-name').value='';
+  document.getElementById('r-modal-app-desc').value='';
   toast(`"${name}" created!`,'success');
+  loadResellerMyApps();
 }
 async function loadResellerLogs(){
   if(!RDATA.permissions.viewLogs){document.getElementById('r-logs-body').innerHTML='<tr><td colspan="6"><div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">Log access not enabled</div></div></td></tr>';return;}
@@ -4083,7 +4079,19 @@ async function loadResellerMyApps() {
 
   const hasDllPerm = RDATA && RDATA.permissions && RDATA.permissions.canUseCatboxHosting;
 
-  wrap.innerHTML = r.apps.map(app => `
+  // If a new app was just created, show its keys once at the top
+  let newKeysBanner='';
+  if(window._pendingNewAppKeys){
+    const nk=window._pendingNewAppKeys;
+    window._pendingNewAppKeys=null;
+    newKeysBanner=`<div style="margin-bottom:16px;padding:14px;background:#0a1a0a;border:1px solid #22c55e66;border-radius:var(--r2);font-size:12px">
+      <div style="color:#4ade80;font-weight:700;margin-bottom:10px;font-size:13px">✅ App "<span style='color:#fff'>${nk.name}</span>" created! Save these keys — the secret key won't be shown again.</div>
+      <div style="margin-bottom:8px"><span style="color:var(--text3)">Public Key:</span>&nbsp;<span id="new-app-banner-pk" style="color:var(--p3);font-family:'JetBrains Mono',monospace">${nk.publicKey}</span>&nbsp;<button class="apikey-copy" onclick="navigator.clipboard.writeText('${nk.publicKey}');toast('Copied','success')">Copy</button></div>
+      <div><span style="color:var(--text3)">Secret Key:</span>&nbsp;<span id="new-app-banner-sk" style="color:#f87171;font-family:'JetBrains Mono',monospace">${nk.secretKey}</span>&nbsp;<button class="apikey-copy" onclick="navigator.clipboard.writeText('${nk.secretKey}');toast('Copied','success')">Copy</button></div>
+    </div>`;
+  }
+
+  wrap.innerHTML = newKeysBanner + r.apps.map(app => `
     <div class="app-card">
       <div class="app-card-hdr">
         <div>
