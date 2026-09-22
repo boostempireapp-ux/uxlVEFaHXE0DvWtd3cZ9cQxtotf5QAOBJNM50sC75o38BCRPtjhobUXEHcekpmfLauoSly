@@ -176,7 +176,9 @@ async function connectDB() {
   await dllLogsCol.createIndex({ appId: 1, timestamp: -1 });
 
   const adminDoc  = await adminCol.findOne({ _id: 'admin' });
-  const ADMIN_HASH = '730aa79139462fd34d63c453a7d8b76da661b1800c6b716ebedd9428f0ce0d7b';
+  // Default password on first launch: BoostAdmin2026!
+  // Password is NEVER force-reset on restart — use the change-password endpoint to update it.
+  const ADMIN_HASH = '19404ddcf0f9f4a69a4b25417e32f30df7b4fbc877f23b1fb81812c1ed9a0477';
   if (!adminDoc) {
     await adminCol.insertOne({
       _id: 'admin', password: ADMIN_HASH, adminToken: null,
@@ -185,10 +187,7 @@ async function connectDB() {
     });
   } else {
     const update = {};
-    if (adminDoc.password !== ADMIN_HASH) {
-      update.password = ADMIN_HASH; update.adminToken = null;
-      console.log('[auth] Admin password updated on restart');
-    }
+    // Password intentionally NOT overwritten on restart
     if (!('adminToken'      in adminDoc)) update.adminToken      = null;
     if (!('twoFAEnabled'    in adminDoc)) update.twoFAEnabled    = false;
     if (!('twoFASecret'     in adminDoc)) update.twoFASecret     = null;
