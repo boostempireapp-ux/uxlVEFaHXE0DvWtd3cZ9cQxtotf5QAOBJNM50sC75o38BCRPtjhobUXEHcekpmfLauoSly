@@ -440,9 +440,10 @@ tbody td{padding:9px 13px;vertical-align:middle;}
 
 .btn-gold{background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;}
 .btn-gold:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(245,158,11,0.35);}
-.login-tabs{display:flex;border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;margin-bottom:20px;}
-.login-tab{flex:1;padding:9px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text3);transition:all .15s;text-align:center;}
-.login-tab.active{background:var(--pdim);color:var(--p3);}
+/* reseller modal inner tabs — scoped to avoid overriding login screen tabs */
+.modal .r-tabs{display:flex;border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;margin-bottom:20px;}
+.modal .r-tab{flex:1;padding:9px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text3);transition:all .15s;text-align:center;}
+.modal .r-tab.active{background:var(--pdim);color:var(--p3);}
 .modal-wide{width:700px;}
 .perm-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
 .perm-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;transition:border-color .15s;}
