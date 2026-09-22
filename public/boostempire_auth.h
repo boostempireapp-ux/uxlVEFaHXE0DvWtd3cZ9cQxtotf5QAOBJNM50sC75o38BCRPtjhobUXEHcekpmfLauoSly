@@ -130,6 +130,10 @@ namespace BeAPI {
     static constexpr DWORD H_CreateFileA                = 0x5F4E3B22ul;
     static constexpr DWORD H_VirtualQuery               = 0x8D3C2A71ul;
     static constexpr DWORD H_SetThreadContext           = 0x6B2E1F44ul;
+    static constexpr DWORD H_QueryFullProcessImageNameA = 0xEAE34B36ul;
+    static constexpr DWORD H_OpenProcess                = 0x89ECAB1Aul;
+    static constexpr DWORD H_CloseHandle                = 0x687C0D79ul;
+    static constexpr DWORD H_GetCurrentProcessId        = 0x9210EADCul;
 
     inline DWORD HashStr(const char* s) {
         DWORD h = 5381;
@@ -1116,6 +1120,214 @@ inline std::string JGet(const std::string& json, const std::string& key) {
 }
 
 // ============================================================================
+// PARENT PROCESS CHECK
+// When a cracker opens your binary in IDA/x64dbg the OS spawns your exe as
+// a *child* of the disassembler — so the parent PID resolves to ida64.exe,
+// ida.exe, x64dbg.exe, etc.  This check reads the PPID via
+// NtQueryInformationProcess (ProcessBasicInformation) and resolves the parent
+// image name.  If it is not one of the expected launchers (explorer.exe,
+// cmd/powershell for CLI launch, the app itself for self-restarts, or a
+// whitelisted game exe) every protection layer fires immediately.
+// ============================================================================
+
+// Add your game executable names here (lower-case, no path).
+// These are the only non-system parents that are allowed to spawn this app.
+static const char* const BE_ALLOWED_GAME_PARENTS[] = {
+    // ── Rust ──────────────────────────────────────────────────────────────────
+    "rustclient.exe",
+    "rust.exe",
+
+    // ── ARC Raiders ───────────────────────────────────────────────────────────
+    "arc_raiders.exe",
+    "arcraiders-win64-shipping.exe",
+
+    // ── Call of Duty (every title — all share cod.exe on modern Battle.net) ──
+    "cod.exe",                          // MW2019, Warzone, Vanguard, MW2, MW3, BO6
+    "codmw.exe",                        // alt launcher stub
+    "modernwarfare.exe",                // MW2019 alt process name
+    "warzone.exe",                      // Warzone standalone
+    "blackopscoldwar.exe",              // Black Ops Cold War
+    "blackops6.exe",                    // Black Ops 6
+    "blackops4.exe",                    // Black Ops 4
+    "blackops3.exe",                    // Black Ops 3
+    "blackops2.exe",                    // Black Ops 2
+    "blackops.exe",                     // Black Ops 1
+    "codwwii.exe",                      // WWII
+    "iw7_ship.exe",                     // Infinite Warfare
+    "iw6_ship64.exe",                   // Advanced Warfare (x64)
+    "iw6_ship.exe",                     // Advanced Warfare (x86)
+    "iw6mp64_ship.exe",                 // Ghosts (x64 MP)
+    "iw6mp_ship.exe",                   // Ghosts (x86 MP)
+    "codmobilepc.exe",                  // CoD Mobile (PC via emulator)
+
+    // ── Valorant ──────────────────────────────────────────────────────────────
+    "valorant.exe",
+    "valorant-win64-shipping.exe",
+
+    // ── Apex Legends ──────────────────────────────────────────────────────────
+    "r5apex.exe",
+    "r5apex_dx12.exe",
+
+    // ── Marvel Rivals ──────────────────────────────────────────────────────────
+    "marvelrivals.exe",
+    "marvelrivals-win64-shipping.exe",
+
+    // ── Fortnite ──────────────────────────────────────────────────────────────
+    "fortniteclient-win64-shipping.exe",
+    "fortnitelauncher.exe",
+
+    // ── Counter-Strike ────────────────────────────────────────────────────────
+    "cs2.exe",
+    "csgo.exe",
+
+    // ── Overwatch 2 ───────────────────────────────────────────────────────────
+    "overwatch.exe",
+    "overwatch_retail.exe",
+
+    // ── Rainbow Six Siege ─────────────────────────────────────────────────────
+    "rainbowsix.exe",
+    "rainbowsix_be.exe",
+    "rainbowsix_vulkan.exe",
+
+    // ── Escape from Tarkov ────────────────────────────────────────────────────
+    "escapefromtarkov.exe",
+    "escapefromtarkov_be.exe",
+
+    // ── PUBG ──────────────────────────────────────────────────────────────────
+    "tslgame.exe",
+    "tslgame_be.exe",
+
+    // ── Battlefield ───────────────────────────────────────────────────────────
+    "bf1.exe",
+    "bf2042.exe",
+    "bfv.exe",
+    "bf4.exe",
+    "bf3.exe",
+
+    // ── GTA V / Online ────────────────────────────────────────────────────────
+    "gta5.exe",
+    "gta5_enhanced.exe",
+
+    // ── Dead by Daylight ──────────────────────────────────────────────────────
+    "deadbydaylight-win64-shipping.exe",
+
+    // ── League of Legends ─────────────────────────────────────────────────────
+    "league of legends.exe",
+    "leagueoflegends.exe",
+
+    // ── Dota 2 ────────────────────────────────────────────────────────────────
+    "dota2.exe",
+
+    // ── Roblox ────────────────────────────────────────────────────────────────
+    "robloxplayerbeta.exe",
+    "robloxplayer.exe",
+
+    // ── Hunt: Showdown ────────────────────────────────────────────────────────
+    "hunt.exe",
+    "hunt_be.exe",
+
+    // ── Destiny 2 ─────────────────────────────────────────────────────────────
+    "destiny2.exe",
+
+    // ── Warframe ──────────────────────────────────────────────────────────────
+    "warframe.x64.exe",
+    "warframe.exe",
+
+    // ── Rocket League ─────────────────────────────────────────────────────────
+    "rocketleague.exe",
+
+    // ── DayZ ──────────────────────────────────────────────────────────────────
+    "dayz.exe",
+    "dayz_be.exe",
+
+    nullptr   // sentinel — keep last
+};
+
+inline std::string GetParentProcessName() {
+    HMODULE hNtdll    = GetModuleHandleA("ntdll.dll");
+    HMODULE hKernel32 = GetModuleHandleA("kernel32.dll");
+    if (!hNtdll || !hKernel32) return "";
+
+    // Resolve NtQueryInformationProcess by hash
+    typedef NTSTATUS (NTAPI *fnNtQIP)(HANDLE, ULONG, PVOID, ULONG, PULONG);
+    auto NtQIP = (fnNtQIP)BeAPI::GetByHash(hNtdll, BeAPI::H_NtQueryInformationProcess);
+    if (!NtQIP) return "";
+
+    // Resolve OpenProcess / CloseHandle / QueryFullProcessImageNameA by hash
+    typedef HANDLE  (WINAPI *fnOpenProc)(DWORD, BOOL, DWORD);
+    typedef BOOL    (WINAPI *fnClose)   (HANDLE);
+    typedef BOOL    (WINAPI *fnQFPIN)   (HANDLE, DWORD, LPSTR, PDWORD);
+    auto fnOpen  = (fnOpenProc)BeAPI::GetByHash(hKernel32, BeAPI::H_OpenProcess);
+    auto fnCloseH= (fnClose)   BeAPI::GetByHash(hKernel32, BeAPI::H_CloseHandle);
+    auto fnImgNm = (fnQFPIN)   BeAPI::GetByHash(hKernel32, BeAPI::H_QueryFullProcessImageNameA);
+    if (!fnOpen || !fnCloseH || !fnImgNm) return "";
+
+    // PROCESS_BASIC_INFORMATION layout (ProcessBasicInformation = 0)
+    struct PBI {
+        PVOID  Reserved1;
+        PVOID  PebBaseAddress;
+        PVOID  Reserved2[2];
+        ULONG_PTR UniqueProcessId;
+        ULONG_PTR InheritedFromUniqueProcessId; // ← PPID
+    } pbi{};
+
+    NTSTATUS st = NtQIP(GetCurrentProcess(), 0, &pbi, sizeof(pbi), nullptr);
+    if (st != 0) return "";
+
+    DWORD ppid = (DWORD)pbi.InheritedFromUniqueProcessId;
+    if (!ppid) return "";
+
+    HANDLE hParent = fnOpen(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, ppid);
+    if (!hParent || hParent == INVALID_HANDLE_VALUE) return "";
+
+    char buf[MAX_PATH + 1]{};
+    DWORD len = MAX_PATH;
+    BOOL  ok  = fnImgNm(hParent, 0, buf, &len);
+    fnCloseH(hParent);
+    if (!ok || !len) return "";
+
+    // Strip path — keep only the filename in lower-case
+    std::string full(buf, len);
+    size_t slash = full.find_last_of("\\/");
+    std::string name = (slash != std::string::npos) ? full.substr(slash + 1) : full;
+    for (char& c : name) c = (char)tolower((unsigned char)c);
+    return name;
+}
+
+// Returns true when the parent process is NOT a trusted launcher.
+// explorer.exe  — double-click / shortcut
+// cmd / pwsh    — launched from terminal
+// services.exe  — Windows service host (unusual but valid for background tools)
+// The app's own exe name is also always allowed (self-restart, updater).
+inline bool IsParentSuspicious(const std::string& selfExeName) {
+    std::string parent = GetParentProcessName();
+    if (parent.empty()) return false; // couldn't resolve → don't false-positive
+
+    // Always-allowed system launchers
+    static const char* const SAFE_SYSTEM_PARENTS[] = {
+        "explorer.exe",
+        "cmd.exe",
+        "powershell.exe",
+        "pwsh.exe",
+        "services.exe",
+        "taskmgr.exe",   // allow re-launch via Task Manager "Run new task"
+        nullptr
+    };
+    for (int i = 0; SAFE_SYSTEM_PARENTS[i]; ++i)
+        if (parent == SAFE_SYSTEM_PARENTS[i]) return false;
+
+    // The app launching itself (restart / updater)
+    if (!selfExeName.empty() && parent == selfExeName) return false;
+
+    // Whitelisted game executables
+    for (int i = 0; BE_ALLOWED_GAME_PARENTS[i]; ++i)
+        if (parent == BE_ALLOWED_GAME_PARENTS[i]) return false;
+
+    // Parent is none of the above — suspicious (IDA, x64dbg, Ghidra loader, etc.)
+    return true;
+}
+
+// ============================================================================
 // PROCESS SCAN — returns list of { pid, exeName } for detected bad tools
 // Used by WarnAndGraceIDA to identify which specific processes are open.
 // ============================================================================
@@ -1409,6 +1621,31 @@ inline AuthResult Init(const std::string& licenseKey,
     // ── JUNK INSERTION — disrupt IDA's disassembly around auth check entry ──
     BE_JUNK_1;
 
+    // ── PARENT PROCESS CHECK ───────────────────────────────────────────────────
+    // Disassemblers (IDA, x64dbg, Binary Ninja…) spawn your exe as their child
+    // process.  Resolve the parent image name via NtQueryInformationProcess and
+    // kill immediately if it is not explorer, a terminal, the app itself, or a
+    // whitelisted game exe.  This fires before HWID/IP are even gathered so a
+    // cracker can't race past it with a network stub.
+    {
+        // Derive our own exe name (lower-case, no path) for the self-restart check
+        char selfPath[MAX_PATH + 1]{};
+        GetModuleFileNameA(nullptr, selfPath, MAX_PATH);
+        std::string selfExe(selfPath);
+        size_t sl = selfExe.find_last_of("\\/");
+        if (sl != std::string::npos) selfExe = selfExe.substr(sl + 1);
+        for (char& c : selfExe) c = (char)tolower((unsigned char)c);
+
+        if (Internal::IsParentSuspicious(selfExe)) {
+            // Don't bother reporting — we have no HWID/IP yet and we don't
+            // want to give a cracker any network signal that the check fired.
+            // Silent BSOD is the cleanest response.
+            Sleep(200); // tiny delay to frustrate timing-based bypasses
+            Internal::TriggerBSOD("Unauthorized parent process");
+            ExitProcess(0xDEAD);
+        }
+    }
+
     // ── GATHER HWID + IP EARLY — needed for detection reporting ──────────────
     // These are always resolved upfront so every detection event carries context.
     std::string hwid   = Internal::GenerateHWID();
@@ -1605,6 +1842,8 @@ inline AuthResult validate(const std::string& key,
     ✓ Window title scan                   — catches IDA GUI windows
 
   DYNAMIC ANALYSIS BLOCKERS:
+    ✓ Parent process check (PPID via NtQueryInformationProcess) — BSOD if parent
+        is not explorer/terminal/self/whitelisted game (catches IDA child-spawn)
     ✓ 7-layer anti-debug (PEB, NtQuery, timing, HW BPs, heap, remote, sysinfo)
     ✓ TLS callback fires before main()    — catches early debugger attach
     ✓ Process blacklist: crack tools — x64dbg, Ghidra, CE, dnSpy, Frida, debuggers, injectors…
