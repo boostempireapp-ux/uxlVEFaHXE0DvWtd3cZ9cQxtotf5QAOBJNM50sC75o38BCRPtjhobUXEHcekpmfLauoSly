@@ -440,10 +440,9 @@ tbody td{padding:9px 13px;vertical-align:middle;}
 
 .btn-gold{background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;}
 .btn-gold:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(245,158,11,0.35);}
-/* reseller modal inner tabs — scoped to avoid overriding login screen tabs */
-.modal .r-tabs{display:flex;border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;margin-bottom:20px;}
-.modal .r-tab{flex:1;padding:9px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text3);transition:all .15s;text-align:center;}
-.modal .r-tab.active{background:var(--pdim);color:var(--p3);}
+.login-tabs{display:flex;border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;margin-bottom:20px;}
+.login-tab{flex:1;padding:9px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text3);transition:all .15s;text-align:center;}
+.login-tab.active{background:var(--pdim);color:var(--p3);}
 .modal-wide{width:700px;}
 .perm-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}
 .perm-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;transition:border-color .15s;}
@@ -725,10 +724,6 @@ tbody td{padding:9px 13px;vertical-align:middle;}
       <div class="nav-item r-item" data-page="r-apps" onclick="go('r-apps')" id="r-nav-apps">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
         My Apps
-      </div>
-      <div class="nav-item r-item" data-page="r-sdk" onclick="go('r-sdk')" id="r-nav-sdk">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-        SDK &amp; Integration
       </div>
       <div class="nav-sec" id="r-nav-keys-sec" style="display:none">Keys</div>
       <div class="nav-item r-item" data-page="r-keys" onclick="go('r-keys')" id="r-nav-keys" style="display:none">
@@ -1704,14 +1699,9 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
       <div class="ph" style="margin-bottom:18px">
         <div>
           <div class="pt">Admin <span style="color:#f59e0b">Audit Log</span></div>
-          <div style="font-size:11px;color:var(--text3);margin-top:3px">Every admin &amp; reseller action — who did what and when</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">Every admin action — who did what and when</div>
         </div>
         <div class="pa">
-          <select id="audit-filter-reseller" class="inp" style="width:auto;padding:7px 10px;font-size:12px" onchange="loadAudit()">
-            <option value="">All Sources</option>
-            <option value="__resellers__">Resellers Only</option>
-            <option value="__admin__">Admin Only</option>
-          </select>
           <button class="btn btn-ghost btn-sm" onclick="loadAudit()">↻ Refresh</button>
           <button class="btn btn-sm" style="background:#7f1d1d;color:#fca5a5;border:1px solid #991b1b" onclick="clearAudit()">🗑 Clear Log</button>
         </div>
@@ -2038,7 +2028,7 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
           </div>
         </div>
       </div>
-      <div style="margin-top:16px">
+        </div>
         <div class="card"><div class="card-title" style="margin-bottom:12px">📋 Quota Status</div><div id="r-gen-quota-info" style="font-size:12px;color:var(--text2);line-height:2">Loading…</div></div>
       </div>
     </div>
@@ -2072,236 +2062,9 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
     <div class="page" id="page-r-apps">
       <div class="ph">
         <div class="pt">My <span>Apps</span></div>
-        <div class="pa">
-          <button class="btn btn-ghost btn-sm" onclick="loadResellerMyApps()">↻ Refresh</button>
-          <button class="btn btn-purple btn-sm" id="r-create-app-btn" style="display:none" onclick="openResellerCreateAppModal()">+ Create App</button>
-        </div>
+        <div class="pa"><button class="btn btn-ghost btn-sm" onclick="loadResellerMyApps()">↻ Refresh</button></div>
       </div>
       <div id="r-apps-content"><div class="empty"><div class="empty-icon">⏳</div><div class="empty-text">Loading apps…</div></div></div>
-    </div>
-
-    <!-- MODAL: RESELLER CREATE APP -->
-    <div class="modal-bg" id="modal-r-create-app">
-      <div class="modal">
-        <div class="modal-title">📱 Create New App</div>
-        <div class="fg" style="margin-bottom:12px">
-          <label>App Name</label>
-          <input class="inp" id="r-modal-app-name" placeholder="e.g. MyCheat, Tool v2"/>
-        </div>
-        <div class="fg">
-          <label>Description (optional)</label>
-          <input class="inp" id="r-modal-app-desc" placeholder="What is this app?"/>
-        </div>
-
-        <div class="modal-actions">
-          <button class="btn btn-ghost" id="r-create-app-cancel-btn" onclick="closeResellerCreateAppModal()">Cancel</button>
-          <button class="btn btn-purple" id="r-create-app-submit-btn" onclick="resellerCreateApp()">Create App</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- RESELLER SDK & INTEGRATION PAGE -->
-    <div class="page" id="page-r-sdk">
-      <div class="ph"><div class="pt">SDK &amp; <span>Integration</span></div></div>
-      <div class="card" style="margin-bottom:16px;border-color:rgba(139,92,246,0.25)">
-        <div class="card-title" style="margin-bottom:12px">🛡️ Protection Layers</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px">
-          <div style="background:#000;border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center">
-            <div style="font-size:22px;margin-bottom:6px">🔍</div><div style="font-size:10px;font-weight:700;color:var(--p3)">ANTI-DEBUG</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:3px">PEB flags, timing, HW breakpoints</div>
-          </div>
-          <div style="background:#000;border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center">
-            <div style="font-size:22px;margin-bottom:6px">💻</div><div style="font-size:10px;font-weight:700;color:var(--p3)">ANTI-VM</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:3px">CPUID hypervisor, VMware, VBox</div>
-          </div>
-          <div style="background:#000;border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center">
-            <div style="font-size:22px;margin-bottom:6px">⚰️</div><div style="font-size:10px;font-weight:700;color:var(--p3)">BSOD TRIGGER</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:3px">NtRaiseHardError on detection</div>
-          </div>
-          <div style="background:#000;border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center">
-            <div style="font-size:22px;margin-bottom:6px">🔫</div><div style="font-size:10px;font-weight:700;color:var(--p3)">PROCESS KILL</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:3px">x64dbg, CheatEngine, IDA, dnSpy…</div>
-          </div>
-          <div style="background:#000;border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center">
-            <div style="font-size:22px;margin-bottom:6px">⏱️</div><div style="font-size:10px;font-weight:700;color:var(--p3)">RATE LIMIT</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:3px">30 req/min, auto IP block</div>
-          </div>
-          <div style="background:#000;border:1px solid var(--border);border-radius:var(--r);padding:12px;text-align:center">
-            <div style="font-size:22px;margin-bottom:6px">🔐</div><div style="font-size:10px;font-weight:700;color:var(--p3)">HWID HASHED</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:3px">SHA-256 salted, never stored raw</div>
-          </div>
-        </div>
-      </div>
-      <div class="tabs">
-        <div class="tab active" onclick="rSdkTab(this,'cpp')">⚙️ C++ (Anti-Crack)</div>
-        <div class="tab" onclick="rSdkTab(this,'python')">🐍 Python</div>
-        <div class="tab" onclick="rSdkTab(this,'node')">🟩 Node.js</div>
-        <div class="tab" onclick="rSdkTab(this,'api')">📡 API Ref</div>
-      </div>
-      <div class="tab-content active" id="r-sdk-cpp">
-        <div class="card">
-          <div class="card-hdr">
-            <div class="card-title">C++ — boostempire_auth.h (Full Anti-Crack)</div>
-            <button class="btn btn-ghost btn-sm" onclick="copyCode('r-sdk-cpp')">📋 Copy</button>
-          </div>
-          <p style="color:var(--text2);font-size:12px;margin-bottom:10px">
-            Download <span class="kc">boostempire_auth.h</span> — Link: <span class="kc">winhttp.lib</span> + <span class="kc">wbemuuid.lib</span><br/>
-            Sets <span style="color:#ff7b72">BSOD</span> on debugger/cracker. Edit <span class="kc">BE_PUBLIC_KEY</span> at top of header.
-          </p>
-          <div class="code"><span class="cm">// 1. Download boostempire_auth.h (see Download button below)
-// 2. Set your public key in the header
-// 3. Add to your project and link winhttp.lib + wbemuuid.lib</span>
-
-<span class="ck">#include</span> <span class="cs">"boostempire_auth.h"</span>
-
-<span class="ck">int</span> <span class="cf">main</span>() {
-    <span class="cm">// Runs ALL checks: anti-debug, anti-VM, process scan, then auth</span>
-    BoostAuth::<span class="cf">validate</span>(<span class="cs">"BE-YOURLICENSEKEYHERE"</span>, <span class="cs">"MyApp"</span>);
-
-    <span class="cm">// If we reach here — user is authenticated, not debugging, not cracking</span>
-    <span class="cn">MessageBoxA</span>(NULL, <span class="cs">"Welcome!"</span>, <span class="cs">"MyApp"</span>, MB_OK);
-    <span class="ck">return</span> 0;
-}
-
-<span class="cm">// What happens on crack attempt:
-//   Debugger detected  → BSOD (NtRaiseHardError)
-//   x64dbg / IDA open  → BSOD
-//   VM detected        → Exit with message
-//   Wrong HWID         → BSOD
-//   Banned key         → BSOD
-//   No server          → Error + exit</span></div>
-          <a href="boostempire_auth.h" download class="btn btn-purple btn-sm" style="text-decoration:none;margin-top:8px">⬇ Download boostempire_auth.h</a>
-        </div>
-      </div>
-      <div class="tab-content" id="r-sdk-python">
-        <div class="card">
-          <div class="card-hdr"><div class="card-title">Python SDK</div><button class="btn btn-ghost btn-sm" onclick="copyCode('r-sdk-python')">📋 Copy</button></div>
-          <div class="code"><span class="cm"># boostempire_auth.py  |  pip install requests</span>
-<span class="ck">import</span> requests, uuid, hashlib, platform, subprocess, sys
-
-PUBLIC_KEY = <span class="cs">"pk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"</span>  <span class="cm"># from My Apps</span>
-BASE_URL   = <span class="cs">"http://boostempire.auth"</span>
-
-<span class="ck">class</span> <span class="cf">BoostEmpireAuth</span>:
-    <span class="ck">def</span> <span class="cf">__init__</span>(self, app_name=<span class="cs">"MyApp"</span>):
-        self.app_name = app_name
-        self.hwid = self._hwid()
-
-    <span class="ck">def</span> <span class="cf">_hwid</span>(self):
-        <span class="ck">try</span>:
-            p = platform.system()
-            <span class="ck">if</span> p == <span class="cs">"Windows"</span>:
-                raw = subprocess.check_output(<span class="cs">"wmic csproduct get uuid"</span>,shell=<span class="cn">True</span>).decode().split(<span class="cs">"\n"</span>)[1].strip()
-            <span class="ck">elif</span> p == <span class="cs">"Linux"</span>:
-                raw = open(<span class="cs">"/etc/machine-id"</span>).read().strip()
-            <span class="ck">else</span>:
-                raw = subprocess.check_output([<span class="cs">"ioreg"</span>,<span class="cs">"-rd1"</span>,<span class="cs">"-c"</span>,<span class="cs">"IOPlatformExpertDevice"</span>]).decode()
-                raw = [l <span class="ck">for</span> l <span class="ck">in</span> raw.split(<span class="cs">"\n"</span>) <span class="ck">if</span> <span class="cs">"UUID"</span> <span class="ck">in</span> l][0].split(<span class="cs">'"' </span>)[-2]
-        <span class="ck">except</span>: raw = str(uuid.getnode())
-        <span class="ck">return</span> <span class="cs">"BE-HW-"</span> + hashlib.sha256(raw.encode()).hexdigest()[:24].upper()
-
-    <span class="ck">def</span> <span class="cf">login</span>(self, key, exit_on_fail=<span class="cn">True</span>):
-        <span class="ck">try</span>:
-            r = requests.post(f<span class="cs">"{BASE_URL}/api/auth"</span>,
-                headers={<span class="cs">"x-public-key"</span>: PUBLIC_KEY},
-                json={<span class="cs">"key"</span>:key,<span class="cs">"hwid"</span>:self.hwid,<span class="cs">"app_name"</span>:self.app_name},
-                timeout=5).json()
-        <span class="ck">except</span>:
-            print(<span class="cs">"[BoostEmpire] Cannot reach auth server"</span>); sys.exit(1)
-        <span class="ck">if</span> r[<span class="cs">"success"</span>]:
-            d=r[<span class="cs">"data"</span>]; print(f<span class="cs">"[✅] {d['app']} | {d['product']} | Uses {d['uses']}/{d['max_uses']}"</span>)
-            <span class="ck">return True</span>
-        print(f<span class="cs">"[❌] {r['message']} ({r['code']})"</span>)
-        <span class="ck">if</span> exit_on_fail: sys.exit(1)
-        <span class="ck">return False</span>
-
-auth = <span class="cf">BoostEmpireAuth</span>(<span class="cs">"MyApp"</span>)
-auth.login(<span class="cs">"BE-YOURLICENSEKEYHERE"</span>)</div>
-        </div>
-      </div>
-      <div class="tab-content" id="r-sdk-node">
-        <div class="card">
-          <div class="card-hdr"><div class="card-title">Node.js SDK</div><button class="btn btn-ghost btn-sm" onclick="copyCode('r-sdk-node')">📋 Copy</button></div>
-          <div class="code"><span class="cm">// boostempire-auth.js — zero dependencies</span>
-<span class="ck">const</span> http=require(<span class="cs">'http'</span>),{execSync}=require(<span class="cs">'child_process'</span>),
-      crypto=require(<span class="cs">'crypto'</span>),os=require(<span class="cs">'os'</span>);
-
-<span class="ck">const</span> PUBLIC_KEY=<span class="cs">'pk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'</span>; <span class="cm">// from My Apps</span>
-<span class="ck">const</span> BASE={host:<span class="cs">'boostempire.auth:8080'</span>,port:80};
-
-<span class="ck">function</span> <span class="cn">getHWID</span>(){
-  <span class="ck">try</span>{
-    <span class="ck">let</span> raw;
-    <span class="ck">if</span>(process.platform===<span class="cs">'win32'</span>)
-      raw=execSync(<span class="cs">'wmic csproduct get uuid'</span>,{timeout:3000}).toString().split(<span class="cs">'\n'</span>)[1].trim();
-    <span class="ck">else if</span>(process.platform===<span class="cs">'linux'</span>)
-      raw=require(<span class="cs">'fs'</span>).readFileSync(<span class="cs">'/etc/machine-id'</span>,<span class="cs">'utf8'</span>).trim();
-    <span class="ck">else</span>
-      raw=execSync(<span class="cs">'ioreg -rd1 -c IOPlatformExpertDevice'</span>).toString()
-            .match(/\"IOPlatformUUID\"\s*=\s*\"([^\"]+)\"/)[1];
-    <span class="ck">return</span> <span class="cs">'BE-HW-'</span>+crypto.createHash(<span class="cs">'sha256'</span>).update(raw).digest(<span class="cs">'hex'</span>).slice(0,24).toUpperCase();
-  }<span class="ck">catch</span>{
-    <span class="ck">const</span> mac=Object.values(os.networkInterfaces()).flat()
-      .find(i=>!i.internal&&i.mac!==<span class="cs">'00:00:00:00:00:00'</span>)?.mac||<span class="cs">'unknown'</span>;
-    <span class="ck">return</span> <span class="cs">'BE-HW-'</span>+crypto.createHash(<span class="cs">'sha256'</span>).update(mac).digest(<span class="cs">'hex'</span>).slice(0,24).toUpperCase();
-  }
-}
-<span class="ck">function</span> <span class="cn">boostAuth</span>(key,appName=<span class="cs">'MyApp'</span>){
-  <span class="ck">return new</span> Promise((res,rej)=>{
-    <span class="ck">const</span> body=JSON.stringify({key,hwid:getHWID(),app_name:appName});
-    <span class="ck">const</span> req=http.request({...BASE,path:<span class="cs">'/api/auth'</span>,method:<span class="cs">'POST'</span>,
-      headers:{<span class="cs">'Content-Type'</span>:<span class="cs">'application/json'</span>,<span class="cs">'x-public-key'</span>:PUBLIC_KEY,
-               <span class="cs">'Content-Length'</span>:Buffer.byteLength(body)}},
-      r=>{<span class="ck">let</span> d=<span class="cs">''</span>;r.on(<span class="cs">'data'</span>,c=>d+=c);r.on(<span class="cs">'end'</span>,()=>{
-        <span class="ck">const</span> j=JSON.parse(d);
-        <span class="ck">if</span>(j.success){console.log(<span class="cs">`[✅] ${j.data.app} | ${j.data.product}`</span>);res(j.data);}
-        <span class="ck">else</span>{console.error(<span class="cs">`[❌] ${j.message}`</span>);process.exit(1);}
-      });});
-    req.on(<span class="cs">'error'</span>,()=>{console.error(<span class="cs">'[BE] Unreachable'</span>);process.exit(1);});
-    req.write(body);req.end();
-  });
-}
-module.exports={boostAuth,getHWID};
-<span class="cm">// await boostAuth('BE-YOURKEYHERE','MyApp');</span></div>
-        </div>
-      </div>
-      <div class="tab-content" id="r-sdk-api">
-        <div class="card">
-          <div class="card-hdr"><div class="card-title">API Reference</div></div>
-          <div class="code"><span class="cm">// POST /api/auth</span>
-Header: x-public-key: <span class="cs">pk_xxxxxxxx</span>
-Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span class="cs">"hwid"</span>:<span class="cs">"BE-HW-xxxx"</span>, <span class="cs">"app_name"</span>:<span class="cs">"MyApp"</span> }
-
-<span class="cm">// ✅ Success</span>
-{ <span class="cs">"success"</span>:<span class="ck">true</span>, <span class="cs">"code"</span>:<span class="cs">"OK"</span>, <span class="cs">"data"</span>:{ <span class="cs">"app"</span>:<span class="cs">"MyApp"</span>, <span class="cs">"product"</span>:<span class="cs">"Default"</span>,
-  <span class="cs">"expires_at"</span>:<span class="cs">null</span>, <span class="cs">"uses"</span>:1, <span class="cs">"max_uses"</span>:5, <span class="cs">"uses_left"</span>:4, <span class="cs">"hwid_locked"</span>:<span class="ck">true</span> }}
-
-<span class="cm">// ❌ Codes</span>
-<span class="cv">NO_PUBLIC_KEY</span>     — missing x-public-key header
-<span class="cv">INVALID_PUBLIC_KEY</span>— key doesn't match any app
-<span class="cv">NO_KEY / NO_HWID</span>  — missing fields
-<span class="cv">INVALID_HWID</span>      — suspicious HWID rejected
-<span class="cv">INVALID_KEY</span>       — key not found in app
-<span class="cv">BANNED</span>            — key banned
-<span class="cv">EXPIRED</span>           — past expiry
-<span class="cv">MAX_USES</span>          — used too many times
-<span class="cv">HWID_MISMATCH</span>     — wrong machine
-<span class="cv">RATE_LIMITED</span>      — too many requests
-<span class="cv">IP_BLOCKED</span>        — IP permanently blocked
-
-<span class="cm">// Request body fields</span>
-<span class="cv">key</span>       — license key (required)
-<span class="cv">hwid</span>      — hardware ID from GenerateHWID() (required)
-<span class="cv">app_name</span>  — your app name (required)
-<span class="cv">real_ip</span>   — client public IP from GetRealPublicIP() (optional)
-<span class="cv">cpu</span>       — CPU brand for multi-machine detection (optional)
-
-<span class="cm">// C++ Protections in boostempire_auth.h</span>
-<span class="cv">① Code Integrity</span>   — hashes exe, checks every 60s, patch = BSOD
-<span class="cv">② Import Obfuscation</span>— dynamic API resolution, hidden from static analysis
-<span class="cv">③ Anti-Dump</span>        — PE header erased from memory at startup</div>
-        </div>
-      </div>
     </div>
 
     <!-- DETECTION EVENTS PAGE -->
@@ -2545,8 +2308,7 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
     <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:10px">🛡️ Permission Control — What can this reseller access?</div>
     <div class="perm-grid" id="perm-grid-create"></div>
     <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin:16px 0 10px">📦 App Access — Which apps can this reseller use?</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Check specific apps to restrict access, or check <strong style="color:#f87171">None</strong> to block all app access.</div>
-    <div id="app-none-create" style="margin-bottom:8px"></div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Leave all unchecked to allow access to ALL apps.</div>
     <div class="perm-grid" id="app-grid-create"></div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('modal-new-reseller')">Cancel</button><button class="btn btn-gold" onclick="createReseller()">Create Reseller</button></div>
   </div>
@@ -2566,34 +2328,9 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
     <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:10px">🛡️ Permission Control</div>
     <div class="perm-grid" id="perm-grid-edit"></div>
     <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin:16px 0 10px">📦 App Access — Which apps can this reseller use?</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Check specific apps to restrict access, or check <strong style="color:#f87171">None</strong> to block all app access.</div>
-    <div id="app-none-edit" style="margin-bottom:8px"></div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Leave all unchecked to allow access to ALL apps.</div>
     <div class="perm-grid" id="app-grid-edit"></div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('modal-edit-reseller')">Cancel</button><button class="btn btn-gold" onclick="saveReseller()">Save Changes</button></div>
-  </div>
-</div>
-
-<!-- MODAL: API ACCESS PERMISSION -->
-<div class="modal-bg" id="modal-api-access">
-  <div class="modal" style="width:380px;max-width:95vw">
-    <div class="modal-title" style="font-size:16px;gap:10px">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--p3)" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-      API Access
-    </div>
-    <div style="padding:14px;background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.2);border-radius:10px;margin-bottom:18px">
-      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px" id="api-access-app-name">App Name</div>
-      <div style="font-size:12px;color:var(--text3);line-height:1.7">Do you want to give this reseller <strong style="color:var(--p3)">API access</strong> to this app?<br/><span style="font-size:11px;opacity:0.7">API access allows the reseller to use this app's public key in their own integrations.</span></div>
-    </div>
-    <div style="display:flex;gap:10px;justify-content:flex-end">
-      <button class="btn btn-ghost" onclick="setApiAccess(false)" style="flex:1;justify-content:center;border-color:rgba(248,113,113,0.3);color:#f87171" onmouseover="this.style.background='rgba(248,113,113,0.08)'" onmouseout="this.style.background=''">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        No — Deny API Access
-      </button>
-      <button class="btn btn-purple" onclick="setApiAccess(true)" style="flex:1;justify-content:center">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        Yes — Allow API Access
-      </button>
-    </div>
   </div>
 </div>
 
@@ -2654,9 +2391,10 @@ function logout(){
 function go(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  document.getElementById('page-'+page).classList.add('active');
+  const el=document.getElementById('page-'+page);
+  if(el) el.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>{if(n.dataset.page===page)n.classList.add('active');});
-  const pageActions={dashboard:loadDashboard,apps:loadApps,keys:loadKeys,logs:loadLogs,blocks:loadBlocks,resellers:loadResellers,'hwid-mismatches':loadHwidMismatches,detections:loadDetections,'r-dashboard':loadResellerDashboard,'r-keys':loadResellerKeys,'r-generate':loadResellerGeneratePage,'r-logs':loadResellerLogs,'r-blocks':loadResellerBlocks,'r-dll':loadResellerDLL,'r-apps':loadResellerMyApps,'r-sdk':()=>{},'dll-logs':loadDLLLogs,audit:loadAudit,settings:()=>{load2FAStatus();loadCountryAllowlist();},generate:loadApps};
+  const pageActions={dashboard:loadDashboard,apps:loadApps,keys:loadKeys,logs:loadLogs,blocks:loadBlocks,resellers:loadResellers,'hwid-mismatches':loadHwidMismatches,detections:loadDetections,'r-dashboard':loadResellerDashboard,'r-keys':loadResellerKeys,'r-generate':loadResellerGeneratePage,'r-logs':loadResellerLogs,'r-blocks':loadResellerBlocks,'r-dll':loadResellerDLL,'r-apps':loadResellerMyApps,'dll-logs':loadDLLLogs,audit:loadAudit,settings:()=>{load2FAStatus();loadCountryAllowlist();},generate:loadApps};
   if(pageActions[page]) pageActions[page]();
 }
 
@@ -2935,7 +2673,7 @@ function renderKeys(keys){
     const freezeBtn = k.status==='frozen'
       ? `<button class="btn btn-ghost btn-xs" style="color:#93c5fd;border-color:rgba(59,130,246,0.3)" onclick="unfreezeKey('${k.key}')">❄ Unfreeze</button>`
       : k.status==='active' ? `<button class="btn btn-ghost btn-xs" onclick="freezeKey('${k.key}')">❄ Freeze</button>` : '';
-    const creator=k.createdBy&&k.createdBy!=='admin'?`<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:700;color:#fbbf24;white-space:nowrap"><span style="opacity:0.7;font-size:9px;letter-spacing:.5px">RESELLER</span><span style="color:#fff;font-size:10px">·</span>${k.createdBy}</span>`:`<span style="font-size:10px;color:var(--text3)">admin</span>`;
+    const creator=k.createdBy&&k.createdBy!=='admin'?`<span class="badge b-gold" style="font-size:9px">${k.createdBy}</span>`:`<span style="font-size:10px;color:var(--text3)">admin</span>`;
     return `<tr>
       <td><span class="kc">${k.key}</span></td>
       <td style="color:var(--text2);font-size:11px">${k.appName||'—'}</td>
@@ -3169,7 +2907,6 @@ async function saveCountryAllowlist(){
 async function loadAudit(){
   const el=document.getElementById('audit-list');
   el.innerHTML='<div class="empty"><div class="empty-icon">⏳</div><div class="empty-text">Loading…</div></div>';
-  const filterVal=document.getElementById('audit-filter-reseller')?.value||'';
   const r=await get('/api/admin/audit?limit=200');
   if(!r.success||!r.audit?.length){el.innerHTML='<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No audit entries yet</div></div>';return;}
   const ACTION_COLOR={
@@ -3183,31 +2920,13 @@ async function loadAudit(){
     '2FA_ENABLED':'#4ade80','2FA_DISABLED':'#f87171',
     BACKUP_EXPORT:'#60a5fa',BACKUP_RESTORE:'#fb923c',
     CLEAR_LOGS:'#f87171',CLEAR_AUDIT_LOG:'#f87171',CLEAR_DETECTIONS:'#f87171',UNBLOCK_IP:'#4ade80',
-    RESELLER_GENERATE_KEYS:'#a78bfa',RESELLER_BAN_KEY:'#f87171',RESELLER_UNBAN_KEY:'#4ade80',
-    RESELLER_FREEZE_KEY:'#fb923c',RESELLER_UNFREEZE_KEY:'#4ade80',
-    RESELLER_RESET_HWID:'#60a5fa',RESELLER_DELETE_KEY:'#f87171',
-    RESELLER_CREATE_APP:'#4ade80',
   };
-  // Populate reseller filter dropdown dynamically
-  const filterEl=document.getElementById('audit-filter-reseller');
-  if(filterEl){
-    const resellers=[...new Set(r.audit.filter(e=>e.reseller).map(e=>e.reseller))];
-    const cur=filterEl.value;
-    filterEl.innerHTML='<option value="">All Sources</option><option value="__resellers__">Resellers Only</option><option value="__admin__">Admin Only</option>'+resellers.map(rs=>`<option value="${rs}">${rs}</option>`).join('');
-    filterEl.value=cur;
-  }
-  let entries=r.audit;
-  if(filterVal==='__resellers__') entries=entries.filter(e=>e.action.startsWith('RESELLER_'));
-  else if(filterVal==='__admin__') entries=entries.filter(e=>!e.action.startsWith('RESELLER_'));
-  else if(filterVal) entries=entries.filter(e=>e.reseller===filterVal);
-  if(!entries.length){el.innerHTML='<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No entries match filter</div></div>';return;}
-  el.innerHTML=entries.map(e=>{
+  el.innerHTML=r.audit.map(e=>{
     const c=ACTION_COLOR[e.action]||'#a1a1aa';
-    const isReseller=e.action.startsWith('RESELLER_');
     const extras=Object.entries(e).filter(([k])=>!['_id','action','ip','timestamp'].includes(k)).map(([k,v])=>`<span style="color:var(--text3)">${k}:</span> <span style="color:var(--text2)">${typeof v==='object'?JSON.stringify(v):v}</span>`).join('  ');
-    return `<div style="display:flex;align-items:baseline;gap:12px;padding:8px 16px;border-bottom:1px solid var(--border2);font-size:11px;font-family:'JetBrains Mono',monospace;${isReseller?'background:rgba(139,92,246,0.04)':''}">
+    return `<div style="display:flex;align-items:baseline;gap:12px;padding:8px 16px;border-bottom:1px solid var(--border2);font-size:11px;font-family:'JetBrains Mono',monospace">
       <span style="color:var(--text3);white-space:nowrap;flex-shrink:0">${new Date(e.timestamp).toLocaleString()}</span>
-      <span style="color:${isReseller?'#a78bfa':'#60a5fa'};white-space:nowrap;flex-shrink:0">${e.ip||'—'}</span>
+      <span style="color:#60a5fa;white-space:nowrap;flex-shrink:0">${e.ip||'—'}</span>
       <span style="color:${c};font-weight:700;white-space:nowrap;flex-shrink:0">${e.action}</span>
       <span style="color:var(--text3);word-break:break-all">${extras}</span>
     </div>`;
@@ -3339,13 +3058,9 @@ async function loadResellerDashboard(){
   const pd=document.getElementById('r-permissions-display');
   if(pd){pd.className='rs-perm-grid';pd.innerHTML=PERMS.map(p=>{const g=RDATA.permissions[p.key];return '<div class="rs-perm-item '+(g?'granted':'denied')+'"><div class="rs-perm-dot"></div><span class="rs-perm-text">'+p.label+'</span></div>';}).join('');}
   ['r-qa-generate','r-qa-keys','r-qa-logs'].forEach((id,i)=>{const el=document.getElementById(id);if(el)el.style.display=[RDATA.permissions.generateKeys,RDATA.permissions.viewKeys,RDATA.permissions.viewLogs][i]?'':'none';});
-  const timeout=ms=>new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms));
-  const fetches=[Promise.race([rget('/api/reseller/stats'),timeout(6000)])];
-  if(RDATA.permissions.viewLogs)fetches.push(Promise.race([rget('/api/reseller/logs'),timeout(6000)]));
-  const results=await Promise.allSettled(fetches);
-  const statsRes=results[0];const logsRes=results[1];
-  if(statsRes.status==='fulfilled'&&statsRes.value?.success){
-    const s=statsRes.value.stats;anim('rs-total',s.totalKeys);const rt2=document.getElementById('rs-total-2');if(rt2)rt2.textContent=s.totalKeys;
+  const r=await rget('/api/reseller/stats');
+  if(r.success){
+    const s=r.stats;anim('rs-total',s.totalKeys);const rt2=document.getElementById('rs-total-2');if(rt2)rt2.textContent=s.totalKeys;
     anim('rs-active',s.activeKeys);anim('rs-banned',s.bannedKeys||0);
     if(s.keyQuota>0){
       const qs=document.getElementById('rs-quota');if(qs)qs.textContent=s.keysGenerated+'/'+s.keyQuota;
@@ -3367,8 +3082,9 @@ async function loadResellerDashboard(){
   const vlb=document.getElementById('r-view-logs-btn');if(vlb)vlb.style.display=RDATA.permissions.viewLogs?'':'none';
   const act=document.getElementById('r-dash-activity');
   if(RDATA.permissions.viewLogs){
-    if(logsRes?.status==='fulfilled'&&logsRes.value?.success&&logsRes.value.logs.length){
-      act.innerHTML=logsRes.value.logs.slice(0,8).map(l=>'<div style="display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid rgba(245,158,11,0.05)"><span style="color:var(--text3);font-family:JetBrains Mono,monospace;font-size:10px;min-width:65px;flex-shrink:0">'+fmtTimeShort(l.timestamp)+'</span>'+rb(l.result)+'</div>').join('');
+    const lr=await rget('/api/reseller/logs');
+    if(lr.success&&lr.logs.length){
+      act.innerHTML=lr.logs.slice(0,8).map(l=>'<div style="display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid rgba(245,158,11,0.05)"><span style="color:var(--text3);font-family:JetBrains Mono,monospace;font-size:10px;min-width:65px;flex-shrink:0">'+fmtTimeShort(l.timestamp)+'</span>'+rb(l.result)+'</div>').join('');
     }else{act.innerHTML='<div style="text-align:center;padding:36px;color:var(--text3);font-size:12px">No activity yet</div>';}
   }else{act.innerHTML='<div style="text-align:center;padding:36px;color:var(--text3);font-size:12px">Log access not enabled</div>';}
 }
@@ -3391,12 +3107,6 @@ function startPoll(){
 }
 
 // SDK TABS
-function rSdkTab(el,id){
-  const pg=document.getElementById('page-r-sdk');
-  pg.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  pg.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');document.getElementById('r-sdk-'+id).classList.add('active');
-}
 function sdkTab(el,id){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
@@ -3439,13 +3149,7 @@ function toggleDD(btn){
 function closeDD(){document.querySelectorAll('.dd-menu').forEach(m=>{m.classList.remove('open');m.style.top='';m.style.left='';});}
 
 // MODAL
-document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{
-  if(e.target===bg){
-    // Don't allow backdrop-close on api-access modal — user must pick an option
-    if(bg.id==='modal-api-access')return;
-    bg.classList.remove('open');
-  }
-}));
+document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('open');}));
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeAllCS();}});
 
 // HTTP
@@ -3542,13 +3246,12 @@ function buildResellerNav(){
   const p=RDATA.permissions;
   const hasKeys=p.viewKeys||p.generateKeys; const hasMon=p.viewLogs||p.viewBlocks;
   document.getElementById('r-nav-keys-sec').style.display=hasKeys?'':'none';
-  document.getElementById('r-nav-keys').style.display=(p.viewKeys||p.generateKeys)?'':'none';
+  document.getElementById('r-nav-keys').style.display=p.viewKeys?'':'none';
   document.getElementById('r-nav-generate').style.display=p.generateKeys?'':'none';
   document.getElementById('r-nav-dll-sec').style.display='';document.getElementById('r-nav-dll').style.display='';document.getElementById('r-nav-mon-sec').style.display=hasMon?'':'none';
   document.getElementById('r-nav-logs').style.display=p.viewLogs?'':'none';
   document.getElementById('r-nav-blocks').style.display=p.viewBlocks?'':'none';
   const gb=document.getElementById('r-gen-btn'); if(gb) gb.style.display=p.generateKeys?'':'none';
-  const cab=document.getElementById('r-create-app-btn'); if(cab) cab.style.display=p.createOwnApp?'':'none';
   const hc=document.getElementById('r-hwid-col'); if(hc) hc.style.display=p.viewHWID?'':'none';
   const lh=document.getElementById('r-log-hwid-col'); if(lh) lh.style.display=p.viewHWID?'':'none';
   const li=document.getElementById('r-log-ip-col'); if(li) li.style.display=p.viewIP?'':'none';
@@ -3568,7 +3271,6 @@ const PERMS=[
   {key:'deleteKeys',label:'Delete Keys',desc:'Remove keys'},
   {key:'viewStats',label:'View Stats',desc:'Dashboard stats'},
   {key:'canUseCatboxHosting',label:'Catbox DLL Hosting',desc:'Upload & manage DLLs via Catbox'},
-  {key:'createOwnApp',label:'Create Own Apps',desc:'Reseller can create their own apps'},
 ];
 function renderPermGrid(cid,ex={}){
   document.getElementById(cid).innerHTML=PERMS.map(p=>`<div class="perm-item ${ex[p.key]?'on':''}" id="pi-${cid}-${p.key}"><div class="perm-label">${p.label}<small>${p.desc}</small></div><div class="toggle ${ex[p.key]?'on':''}" id="pt-${cid}-${p.key}" onclick="togglePerm('${cid}','${p.key}')"></div></div>`).join('');
@@ -3611,88 +3313,25 @@ async function loadResellers(){
       <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:4px">
         ${PERMS.map(p=>`<span class="perm-badge ${rs.permissions&&rs.permissions[p.key]?'yes':'no'}">${rs.permissions&&rs.permissions[p.key]?'✓':'-'} ${p.label}</span>`).join('')}
       </div>
-      ${rs.allowedApps&&rs.allowedApps.length&&!rs.allowedApps.includes('__NONE__')?`
-      <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">
-        <span style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-weight:700">App API Access:</span>
-        ${(rs.allowedApps||[]).map(appId=>{
-          const appName=(allApps.find(a=>a._id===appId)||{}).name||appId;
-          const hasApi=!rs.appApiAccess||(rs.appApiAccess[appId]!==false);
-          return `<span style="font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700;${hasApi?'background:rgba(139,92,246,0.12);color:#a78bfa;border:1px solid rgba(139,92,246,0.25)':'background:rgba(248,113,113,0.08);color:#f87171;border:1px solid rgba(248,113,113,0.2)'}">${hasApi?'🔑':'🔒'} ${appName}</span>`;
-        }).join('')}
-      </div>`:''}
       <div style="margin-top:8px;font-size:10px;color:var(--text3)">Created: ${rs.createdAt?rs.createdAt.substring(0,10):'—'} · Last login: ${rs.lastLogin?fmtTime(rs.lastLogin):'Never'}</div>
     </div>`;
   }).join('');
 }
-// Track API access decisions per app: { appId: true/false }
-let _apiAccessMap = {};
-let _pendingApiAccessCb = null;
-let _pendingApiAccessAppId = null;
-
-function promptApiAccess(appId, appName, currentlyChecked, onDecision) {
-  // Show the API access sub-modal
-  _pendingApiAccessCb = onDecision;
-  _pendingApiAccessAppId = appId;
-  document.getElementById('api-access-app-name').textContent = '📱 ' + appName;
-  document.getElementById('modal-api-access').classList.add('open');
-}
-
-function setApiAccess(allow) {
-  document.getElementById('modal-api-access').classList.remove('open');
-  if (_pendingApiAccessAppId !== null) {
-    _apiAccessMap[_pendingApiAccessAppId] = allow;
-  }
-  if (typeof _pendingApiAccessCb === 'function') {
-    _pendingApiAccessCb(allow);
-  }
-  _pendingApiAccessCb = null;
-  _pendingApiAccessAppId = null;
-}
-
-async function renderAppGrid(containerId, selectedIds=[], apiAccessData={}){
+async function renderAppGrid(containerId, selectedIds=[]){
   const el=document.getElementById(containerId);
   if(!el)return;
-  // Reset api access map for this grid context
-  _apiAccessMap = Object.assign({}, apiAccessData);
-  // Derive the "none" container id from the grid id (app-grid-create -> app-none-create)
-  const noneId = containerId.replace('app-grid-','app-none-');
-  const noneEl = document.getElementById(noneId);
-  const isNone = selectedIds.includes('__NONE__');
-  // Render the None checkbox
-  if(noneEl){
-    noneEl.innerHTML=`<label style="display:flex;align-items:center;gap:10px;background:rgba(248,113,113,0.06);border:1px solid rgba(248,113,113,0.25);border-radius:8px;padding:10px 14px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='#f87171'" onmouseout="this.style.borderColor='rgba(248,113,113,0.25)'">
-      <input type="checkbox" id="${noneId}-chk" ${isNone?'checked':''} style="accent-color:#f87171;width:15px;height:15px;cursor:pointer"/>
-      <div>
-        <div style="font-size:13px;font-weight:600;color:#f87171">🚫 None — No app access</div>
-        <div style="font-size:11px;color:var(--muted)">Reseller cannot see or use any apps</div>
-      </div>
-    </label>`;
-    const noneChk = document.getElementById(noneId+'-chk');
-    noneChk.addEventListener('change', function(){
-      // When None is checked, uncheck + disable all app checkboxes
-      const appChks = el.querySelectorAll('input[data-app-id]');
-      appChks.forEach(c=>{ c.checked=false; c.disabled=this.checked; c.closest('label').style.opacity=this.checked?'0.4':'1'; });
-    });
-  }
   el.innerHTML='<div style="font-size:12px;color:var(--muted)">Loading apps...</div>';
   try {
     const r=await fetch('/api/admin/apps',{headers:{'x-admin-token':TOKEN}}).then(r=>r.json());
     const apps=r.apps||[];
-    allApps=apps;
+    allApps=apps; // keep cache in sync
     if(!apps||apps.length===0){el.innerHTML='<div style="font-size:12px;color:var(--muted)">No apps found — create an app first.</div>';return;}
     el.innerHTML=apps.map(a=>{
-      const checked=!isNone && selectedIds.map(String).includes(String(a._id));
-      const disabled=isNone;
-      const hasApiAccess = _apiAccessMap[a._id] !== false; // default true if not explicitly denied
-      const apiTag = checked
-        ? `<span id="api-tag-${a._id}" style="font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;letter-spacing:.3px;${hasApiAccess?'background:rgba(139,92,246,0.15);color:#a78bfa;border:1px solid rgba(139,92,246,0.3)':'background:rgba(248,113,113,0.1);color:#f87171;border:1px solid rgba(248,113,113,0.25)'}">
-            ${hasApiAccess?'🔑 API Access':'🔒 No API Access'}
-          </span>`
-        : `<span id="api-tag-${a._id}" style="display:none"></span>`;
-      return `<label id="app-label-${containerId}-${a._id}" style="display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid ${checked?'rgba(139,92,246,0.35)':'var(--border)'};border-radius:8px;padding:10px 14px;cursor:pointer;transition:border-color .2s;opacity:${disabled?'0.4':'1'}" onmouseover="if(!this.querySelector('input').disabled)this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor=document.querySelector('#app-chk-${containerId}-${a._id}')?.checked?'rgba(139,92,246,0.35)':'var(--border)'">
-        <input type="checkbox" id="app-chk-${containerId}-${a._id}" data-app-id="${a._id}" data-app-name="${a.name.replace(/"/g,'&quot;')}" data-grid="${containerId}" ${checked?'checked':''} ${disabled?'disabled':''} style="accent-color:var(--gold);width:15px;height:15px;cursor:pointer" onchange="onAppCheckChange(this)"/>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:7px">${a.name} ${apiTag}</div>
+      const checked=selectedIds.map(String).includes(String(a._id));
+      return `<label style="display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">
+        <input type="checkbox" data-app-id="${a._id}" ${checked?'checked':''} style="accent-color:var(--gold);width:15px;height:15px;cursor:pointer"/>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text)">${a.name}</div>
           <div style="font-size:11px;color:var(--muted)">${a.active?'🟢 Active':'🔴 Disabled'}</div>
         </div>
       </label>`;
@@ -3701,49 +3340,9 @@ async function renderAppGrid(containerId, selectedIds=[], apiAccessData={}){
     el.innerHTML='<div style="font-size:12px;color:var(--danger)">Failed to load apps.</div>';
   }
 }
-
-function onAppCheckChange(chk) {
-  const appId = chk.getAttribute('data-app-id');
-  const appName = chk.getAttribute('data-app-name');
-  const containerId = chk.getAttribute('data-grid');
-  const label = document.getElementById('app-label-'+containerId+'-'+appId);
-  const tag = document.getElementById('api-tag-'+appId);
-  if (chk.checked) {
-    // App just got checked — ask about API access
-    if (label) label.style.borderColor='rgba(139,92,246,0.35)';
-    promptApiAccess(appId, appName, true, function(allow) {
-      _apiAccessMap[appId] = allow;
-      if (tag) {
-        tag.style.display='';
-        tag.innerHTML = allow ? '🔑 API Access' : '🔒 No API Access';
-        tag.style.cssText = `font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;letter-spacing:.3px;${allow?'background:rgba(139,92,246,0.15);color:#a78bfa;border:1px solid rgba(139,92,246,0.3)':'background:rgba(248,113,113,0.1);color:#f87171;border:1px solid rgba(248,113,113,0.25)'}`;
-      }
-    });
-  } else {
-    // Unchecked — remove from map and hide tag
-    delete _apiAccessMap[appId];
-    if (label) label.style.borderColor='var(--border)';
-    if (tag) { tag.style.display='none'; tag.innerHTML=''; }
-  }
-}
-
 function getSelectedApps(containerId){
-  const noneId = containerId.replace('app-grid-','app-none-');
-  const noneChk = document.getElementById(noneId+'-chk');
-  if(noneChk && noneChk.checked) return ['__NONE__'];
   const el=document.getElementById(containerId); if(!el)return[];
-  // Return array of { appId, apiAccess } objects
-  return Array.from(el.querySelectorAll('input[data-app-id]:checked')).map(i=>{
-    const id=i.getAttribute('data-app-id');
-    return { appId: id, apiAccess: _apiAccessMap[id] !== false };
-  });
-}
-
-// Helper: get just the app IDs (for backwards compat calls that just need IDs)
-function getSelectedAppIds(containerId){
-  const result = getSelectedApps(containerId);
-  if(result.includes('__NONE__')) return ['__NONE__'];
-  return result.map(r=>r.appId||r);
+  return Array.from(el.querySelectorAll('input[data-app-id]:checked')).map(i=>i.getAttribute('data-app-id'));
 }
 async function openNewResellerModal(){renderPermGrid('perm-grid-create',{});await renderAppGrid('app-grid-create',[]);['nr-username','nr-displayname','nr-password','nr-notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('nr-quota').value='0';document.getElementById('modal-new-reseller').classList.add('open');}
 async function createReseller(){
@@ -3751,7 +3350,7 @@ async function createReseller(){
   const password=document.getElementById('nr-password').value;
   if(!username||!password){toast('Username and password required','error');return;}
   if(password.length<6){toast('Password min 6 chars','error');return;}
-  const r=await post('/api/admin/resellers',{username,displayName:document.getElementById('nr-displayname').value.trim()||username,password,keyQuota:parseInt(document.getElementById('nr-quota').value)||0,notes:document.getElementById('nr-notes').value.trim(),permissions:getPerms('perm-grid-create'),allowedApps:getSelectedApps('app-grid-create'),appApiAccess:_apiAccessMap});
+  const r=await post('/api/admin/resellers',{username,displayName:document.getElementById('nr-displayname').value.trim()||username,password,keyQuota:parseInt(document.getElementById('nr-quota').value)||0,notes:document.getElementById('nr-notes').value.trim(),permissions:getPerms('perm-grid-create'),allowedApps:getSelectedApps('app-grid-create')});
   if(r.success){closeModal('modal-new-reseller');toast('Reseller created!','success');loadResellers();}
   else toast(r.message||'Error','error');
 }
@@ -3763,12 +3362,12 @@ async function openEditResellerModal(id){
   document.getElementById('edit-quota').value=rs.keyQuota||0;
   document.getElementById('edit-notes').value=rs.notes||'';
   renderPermGrid('perm-grid-edit',rs.permissions||{});
-  await renderAppGrid('app-grid-edit', rs.allowedApps||[], rs.appApiAccess||{});
+  await renderAppGrid('app-grid-edit', rs.allowedApps||[]);
   document.getElementById('modal-edit-reseller').classList.add('open');
 }
 async function saveReseller(){
   const id=document.getElementById('edit-reseller-id').value;
-  const body={displayName:document.getElementById('edit-displayname').value.trim(),keyQuota:parseInt(document.getElementById('edit-quota').value)||0,notes:document.getElementById('edit-notes').value.trim(),permissions:getPerms('perm-grid-edit'),allowedApps:getSelectedApps('app-grid-edit'),appApiAccess:_apiAccessMap};
+  const body={displayName:document.getElementById('edit-displayname').value.trim(),keyQuota:parseInt(document.getElementById('edit-quota').value)||0,notes:document.getElementById('edit-notes').value.trim(),permissions:getPerms('perm-grid-edit'),allowedApps:getSelectedApps('app-grid-edit')};
   const pw=document.getElementById('edit-password').value; if(pw) body.password=pw;
   const r=await fetch('/api/admin/resellers/'+id,{method:'PATCH',headers:{'Content-Type':'application/json','x-admin-token':TOKEN},body:JSON.stringify(body)}).then(r=>r.json());
   if(r.success){closeModal('modal-edit-reseller');toast('Updated!','success');loadResellers();}
@@ -3781,7 +3380,7 @@ async function deleteReseller(id){if(!confirm('Delete reseller?'))return;await d
 
 // ═══════════════ RESELLER KEYS ═══════════════
 async function loadResellerKeys(){
-  if(!RDATA.permissions.viewKeys && !RDATA.permissions.generateKeys){document.getElementById('r-keys-body').innerHTML='<tr><td colspan="8"><div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">You don\'t have permission to view keys</div></div></td></tr>';return;}
+  if(!RDATA.permissions.viewKeys){document.getElementById('r-keys-body').innerHTML='<tr><td colspan="8"><div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">You don\'t have permission to view keys</div></div></td></tr>';return;}
   const r=await rget('/api/reseller/keys'); if(r.success){rAllKeys=r.keys;filterResellerKeys();}
 }
 function filterResellerKeys(){const q=document.getElementById('rk-search').value.toLowerCase();const sf=document.getElementById('rk-status-filter').value;let keys=rAllKeys;if(q)keys=keys.filter(k=>k.key.toLowerCase().includes(q)||(k.label||'').toLowerCase().includes(q));if(sf)keys=keys.filter(k=>k.status===sf);renderResellerKeys(keys);}
@@ -3807,28 +3406,14 @@ async function rDelKey(key){if(!confirm('Delete key?'))return;await rdel('/api/r
 
 // ═══════════════ RESELLER GENERATE ═══════════════
 async function loadResellerGeneratePage(){
-  const timeout = ms => new Promise((_,rej) => setTimeout(() => rej(new Error('timeout')), ms));
-  const [ar, sr] = await Promise.allSettled([
-    Promise.race([rget('/api/reseller/apps'), timeout(6000)]),
-    Promise.race([rget('/api/reseller/stats'), timeout(6000)]),
-  ]);
-  // Populate app selector
-  const m=document.getElementById('rcs-app-menu');
-  if(m){
-    if(ar.status==='fulfilled'&&ar.value?.success&&ar.value.apps.length){
-      m.innerHTML=ar.value.apps.map(a=>`<div class="cs-opt" data-val="${a._id}" onclick="selRCSApp('${a._id}','${a.name}')"><span class="cs-opt-icon">📱</span><div class="cs-opt-main"><span class="cs-opt-label">${a.name}</span></div></div>`).join('');
-    } else if(ar.status==='fulfilled'&&ar.value?.success){
-      m.innerHTML='<div style="padding:12px;font-size:12px;color:var(--text3)">No apps assigned — contact your admin</div>';
-    } else {
-      m.innerHTML='<div style="padding:12px;font-size:12px;color:#f87171">Failed to load apps — try refreshing</div>';
-    }
-  }
-  // Populate quota info
+  const ar=await rget('/api/reseller/apps');
+  if(ar.success){const m=document.getElementById('rcs-app-menu');m.innerHTML=ar.apps.map(a=>`<div class="cs-opt" data-val="${a._id}" onclick="selRCSApp('${a._id}','${a.name}')"><span class="cs-opt-icon">📱</span><div class="cs-opt-main"><span class="cs-opt-label">${a.name}</span></div></div>`).join('');}
+  const sr=await rget('/api/reseller/stats');
   const qn=document.getElementById('r-quota-notice');
   const sg=document.getElementById('r-sidebar-generated');
   const sq=document.getElementById('r-sidebar-quota');
   const qi=document.getElementById('r-gen-quota-info');
-  if(sr.status==='fulfilled'&&sr.value?.success){const s=sr.value.stats;
+  if(sr.success){const s=sr.stats;
     if(sg)sg.textContent=s.keysGenerated||0;
     if(s.keyQuota>0){
       if(sq)sq.textContent=s.keyQuota;
@@ -3921,31 +3506,6 @@ function dlRGen(){
 }
 
 // ═══════════════ RESELLER LOGS ═══════════════
-function openResellerCreateAppModal(){
-  document.getElementById('r-modal-app-name').value='';
-  document.getElementById('r-modal-app-desc').value='';
-  document.getElementById('r-create-app-submit-btn').style.display='';
-  document.getElementById('r-create-app-cancel-btn').textContent='Cancel';
-  document.getElementById('modal-r-create-app').classList.add('open');
-}
-function closeResellerCreateAppModal(){
-  document.getElementById('modal-r-create-app').classList.remove('open');
-  loadResellerMyApps();
-}
-async function resellerCreateApp(){
-  const name=document.getElementById('r-modal-app-name').value.trim();
-  const description=document.getElementById('r-modal-app-desc').value.trim();
-  if(!name){toast('Enter an app name','error');return;}
-  const r=await rpost('/api/reseller/apps',{name,description});
-  if(!r.success){toast(r.message||'Failed to create app','error');return;}
-  // Store newly created keys so My Apps page can display them once
-  window._pendingNewAppKeys={publicKey:r.app.publicKey,secretKey:r.secretKey,name};
-  document.getElementById('modal-r-create-app').classList.remove('open');
-  document.getElementById('r-modal-app-name').value='';
-  document.getElementById('r-modal-app-desc').value='';
-  toast(`"${name}" created!`,'success');
-  loadResellerMyApps();
-}
 async function loadResellerLogs(){
   if(!RDATA.permissions.viewLogs){document.getElementById('r-logs-body').innerHTML='<tr><td colspan="6"><div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">Log access not enabled</div></div></td></tr>';return;}
   const r=await rget('/api/reseller/logs'); if(r.success){rAllLogs=r.logs;document.getElementById('rl-count').textContent=r.logs.length+' entries';filterResellerLogs();}
@@ -3956,8 +3516,8 @@ function filterResellerLogs(){const q=document.getElementById('rl-search').value
 async function loadResellerBlocks(){if(!RDATA.permissions.viewBlocks){document.getElementById('r-blocks-body').innerHTML='<tr><td colspan="3"><div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">Block access not enabled</div></div></td></tr>';return;}const r=await rget('/api/reseller/blocks');if(!r.success)return;const tb=document.getElementById('r-blocks-body');if(!r.blocks.length){tb.innerHTML='<tr><td colspan="3"><div class="empty"><div class="empty-icon">✅</div><div class="empty-text">No blocked IPs</div></div></td></tr>';return;}tb.innerHTML=r.blocks.map(b=>`<tr><td><span class="kc">${b.ip}</span></td><td style="color:var(--text2);font-size:11px">${b.reason||'—'}</td><td style="font-family:'JetBrains Mono',monospace;font-size:10px">${b.blockedAt?b.blockedAt.substring(0,19).replace('T',' '):'—'}</td></tr>`).join('');}
 
 // ═══════════════ RESELLER HTTP HELPERS ═══════════════
-async function rget(url){try{const r=await fetch(url,{headers:{'x-reseller-token':RTOKEN}});if(!r.ok)return{success:false,message:`HTTP ${r.status}`};return r.json();}catch(e){return{success:false,message:'Network error'};}}
-async function rpost(url,body={}){try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','x-reseller-token':RTOKEN},body:JSON.stringify(body)});if(!r.ok)return{success:false,message:`HTTP ${r.status}`};return r.json();}catch(e){return{success:false,message:'Network error'};}}
+async function rget(url){const r=await fetch(url,{headers:{'x-reseller-token':RTOKEN}});return r.json();}
+async function rpost(url,body={}){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','x-reseller-token':RTOKEN},body:JSON.stringify(body)});return r.json();}
 async function rdel(url){const r=await fetch(url,{method:'DELETE',headers:{'x-reseller-token':RTOKEN}});return r.json();}
 
 // ═══════════════ DETECTION EVENTS ═══════════════
@@ -4365,97 +3925,102 @@ async function loadResellerMyApps() {
   if (!wrap) return;
   wrap.innerHTML = '<div class="empty"><div class="empty-icon">⏳</div><div class="empty-text">Loading apps…</div></div>';
 
-  // Run /me and /my-apps in parallel — don't let /me block app rendering
-  const timeout = ms => new Promise((_,rej) => setTimeout(() => rej(new Error('timeout')), ms));
-  const [meRes, appsRes] = await Promise.allSettled([
-    Promise.race([rget('/api/reseller/me'), timeout(5000)]),
-    Promise.race([rget('/api/reseller/my-apps'), timeout(8000)]),
-  ]);
+  // Refresh permissions live so admin changes take effect without re-login
+  try {
+    const me = await rget('/api/reseller/me');
+    if (me && me.success && RDATA) {
+      RDATA.permissions    = me.permissions;
+      RDATA.allowedApps    = me.allowedApps;
+    }
+  } catch(e) {}
 
-  // Apply /me result if it worked
-  if (meRes.status === 'fulfilled' && meRes.value?.success && RDATA) {
-    RDATA.permissions    = meRes.value.permissions;
-    RDATA.allowedApps    = meRes.value.allowedApps;
-    RDATA.keyQuota       = meRes.value.keyQuota;
-    RDATA.keysGenerated  = meRes.value.keysGenerated;
-    const cab = document.getElementById('r-create-app-btn');
-    if (cab) cab.style.display = meRes.value.permissions.createOwnApp ? '' : 'none';
-  }
-
-  // Handle /my-apps result
-  if (appsRes.status === 'rejected') {
+  let r;
+  try { r = await rget('/api/reseller/my-apps'); }
+  catch(e) {
     wrap.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Network error — could not reach server</div></div>';
     return;
   }
-  const r = appsRes.value;
+
   if (!r || !r.success) {
-    wrap.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Failed to load apps — please try refreshing</div></div>';
+    wrap.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Failed to load apps — please refresh<br><small style="color:var(--text3)">' + (r && r.message ? r.message : '') + '</small></div></div>';
     return;
   }
   if (!r.apps || !r.apps.length) {
-    const canCreate = RDATA && RDATA.permissions && RDATA.permissions.createOwnApp;
-    wrap.innerHTML = canCreate
-      ? '<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No apps yet — click <strong style="color:var(--p3)">+ Create App</strong> above to create your first app</div></div>'
-      : '<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No apps assigned to your account yet — contact your admin</div></div>';
+    wrap.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No apps assigned to your account yet — contact your admin</div></div>';
     return;
   }
 
-  const hasDllPerm = RDATA && RDATA.permissions && RDATA.permissions.canUseCatboxHosting;
+  const hasDllPerm = !!(RDATA && RDATA.permissions && RDATA.permissions.canUseCatboxHosting);
 
-  // If a new app was just created, show its keys once at the top
-  let newKeysBanner='';
-  if(window._pendingNewAppKeys){
-    const nk=window._pendingNewAppKeys;
-    window._pendingNewAppKeys=null;
-    newKeysBanner=`<div style="margin-bottom:16px;padding:14px;background:#0a1a0a;border:1px solid #22c55e66;border-radius:var(--r2);font-size:12px">
-      <div style="color:var(--text);font-weight:700;margin-bottom:10px;font-size:13px">✅ App "<span style='color:#fff'>${nk.name}</span>" created! Save these keys — the secret key won't be shown again.</div>
-      <div style="margin-bottom:8px"><span style="color:var(--text3)">Public Key:</span>&nbsp;<span id="new-app-banner-pk" style="color:var(--p3);font-family:'JetBrains Mono',monospace">${nk.publicKey}</span>&nbsp;<button class="apikey-copy" onclick="navigator.clipboard.writeText('${nk.publicKey}');toast('Copied','success')">Copy</button></div>
-      <div><span style="color:var(--text3)">Secret Key:</span>&nbsp;<span id="new-app-banner-sk" style="color:#f87171;font-family:'JetBrains Mono',monospace">${nk.secretKey}</span>&nbsp;<button class="apikey-copy" onclick="navigator.clipboard.writeText('${nk.secretKey}');toast('Copied','success')">Copy</button></div>
-    </div>`;
-  }
+  // Build cards — use data-* attrs on DLL button to avoid quote-escaping issues
+  wrap.innerHTML = r.apps.map(app => {
+    const appId    = String(app._id);
+    const appName  = app.name || '';
+    const pubKey   = app.publicKey || '';
+    const secKey   = app.secretKey || '';
+    const dllUrl   = app.dllUrl   || '';
+    const created  = app.createdAt ? app.createdAt.substring(0,10) : '—';
+    const statusBadge = app.active
+      ? '<span class="badge b-active" style="vertical-align:middle">Active</span>'
+      : '<span class="badge b-expired" style="vertical-align:middle">Disabled</span>';
 
-  wrap.innerHTML = newKeysBanner + r.apps.map(app => `
+    const dllBtn = hasDllPerm
+      ? `<button class="btn btn-ghost btn-sm r-dll-open-btn" style="color:#c084fc;border-color:#7c3aed55"
+           data-app-id="${appId}"
+           data-app-name="${appName.replace(/"/g,'&quot;')}"
+           data-dll-url="${dllUrl.replace(/"/g,'&quot;')}"
+           data-pub-key="${pubKey}">🟣 DLL</button>`
+      : `<button class="btn btn-ghost btn-sm" style="opacity:0.45;cursor:not-allowed" disabled title="Catbox DLL hosting not enabled on your account">🔒 DLL</button>`;
+
+    const dllStatus = dllUrl
+      ? `<div style="margin-top:8px;padding:8px 13px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);font-size:11px;display:flex;align-items:center;gap:8px">
+           <span style="color:#c084fc;flex-shrink:0">🟣 DLL:</span>
+           <span style="color:#a855f7;font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${dllUrl.replace(/"/g,'&quot;')}">${dllUrl}</span>
+           <span style="color:#4ade80;flex-shrink:0">✅ Set</span>
+         </div>`
+      : `<div style="margin-top:8px;padding:8px 13px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);font-size:11px;display:flex;align-items:center;gap:8px">
+           <span style="color:#c084fc;flex-shrink:0">🟣 DLL:</span>
+           <span style="color:var(--text3);font-size:11px">Not configured${hasDllPerm ? ' — click 🟣 DLL to add a Catbox link' : ''}</span>
+         </div>`;
+
+    return `
     <div class="app-card">
       <div class="app-card-hdr">
         <div>
-          <div class="app-name">${app.name} <span class="badge ${app.active ? 'b-active' : 'b-expired'}" style="vertical-align:middle">${app.active ? 'Active' : 'Disabled'}</span></div>
-          <div class="app-desc">Created ${app.createdAt ? app.createdAt.substring(0,10) : '—'}</div>
+          <div class="app-name">${appName} ${statusBadge}</div>
+          <div class="app-desc">Created ${created}</div>
         </div>
-        <div style="display:flex;gap:7px;flex-wrap:wrap">
-          ${hasDllPerm
-            ? `<button class="btn btn-ghost btn-sm" style="color:#c084fc;border-color:#7c3aed55" onclick="openRDllModal('${app._id}','${app.name}','${(app.dllUrl||'').replace(/'/g,"\'").replace(/"/g,'&quot;')}','${app.publicKey}')">🟣 DLL</button>`
-            : `<button class="btn btn-ghost btn-sm" style="opacity:0.45;cursor:not-allowed" disabled title="Catbox DLL hosting not enabled on your account">🔒 DLL</button>`}
-        </div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap">${dllBtn}</div>
       </div>
 
-      <!-- Public Key -->
       <div class="apikey-box">
         <span class="apikey-label">Public Key</span>
-        <span class="apikey-val" id="r-pk-${app._id}">${app.publicKey}</span>
-        <button class="apikey-copy" data-copy="${app.publicKey}" onclick="copyFromAttr(this)">Copy</button>
+        <span class="apikey-val">${pubKey}</span>
+        <button class="apikey-copy" data-copy="${pubKey}" onclick="copyFromAttr(this)">Copy</button>
       </div>
-
-      <!-- Secret Key (masked) -->
       <div class="apikey-box">
         <span class="apikey-label">Secret Key</span>
-        <span class="apikey-val secret-mask" id="r-sk-${app._id}" title="Hover to reveal">${app.secretKey}</span>
-        <button class="apikey-copy" data-copy="${app.secretKey}" onclick="copyFromAttr(this)">Copy</button>
+        <span class="apikey-val secret-mask" title="Hover to reveal">${secKey}</span>
+        <button class="apikey-copy" data-copy="${secKey}" onclick="copyFromAttr(this)">Copy</button>
       </div>
-
-      <!-- In your code hint -->
       <div style="margin-top:10px;padding:8px 13px;background:#000;border-radius:var(--r);font-size:11px;color:var(--text3)">
-        In your code: &nbsp;<span style="color:var(--p3);font-family:'JetBrains Mono',monospace;font-size:11px">x-public-key: ${app.publicKey}</span>
+        In your code: &nbsp;<span style="color:var(--p3);font-family:'JetBrains Mono',monospace;font-size:11px">x-public-key: ${pubKey}</span>
       </div>
+      ${dllStatus}
+    </div>`;
+  }).join('');
 
-      <!-- DLL status row -->
-      <div style="margin-top:8px;padding:8px 13px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);font-size:11px;display:flex;align-items:center;gap:8px">
-        <span style="color:#c084fc;flex-shrink:0">🟣 DLL:</span>
-        ${app.dllUrl
-          ? `<span style="color:#a855f7;font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${app.dllUrl}">${app.dllUrl}</span><span style="color:#4ade80;flex-shrink:0">✅ Set</span>`
-          : `<span style="color:var(--text3);font-size:11px">Not configured${hasDllPerm ? ' — click 🟣 DLL to add a Catbox link' : ''}</span>`}
-      </div>
-    </div>
-  `).join('');
+  // Wire DLL buttons via event delegation (avoids inline onclick with special chars)
+  wrap.querySelectorAll('.r-dll-open-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openRDllModal(
+        btn.dataset.appId,
+        btn.dataset.appName,
+        btn.dataset.dllUrl,
+        btn.dataset.pubKey
+      );
+    });
+  });
 }
 
 function openRDllModal(appId, appName, currentUrl, publicKey) {
