@@ -2034,7 +2034,7 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
           </div>
         </div>
       </div>
-        </div>
+      <div style="margin-top:16px">
         <div class="card"><div class="card-title" style="margin-bottom:12px">📋 Quota Status</div><div id="r-gen-quota-info" style="font-size:12px;color:var(--text2);line-height:2">Loading…</div></div>
       </div>
     </div>
@@ -4048,7 +4048,10 @@ async function loadResellerMyApps() {
     return;
   }
   if (!r.apps || !r.apps.length) {
-    wrap.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No apps assigned to your account yet — contact your admin</div></div>';
+    const canCreate = RDATA && RDATA.permissions && RDATA.permissions.createOwnApp;
+    wrap.innerHTML = canCreate
+      ? '<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No apps yet — click <strong style="color:var(--p3)">+ Create App</strong> above to create your first app</div></div>'
+      : '<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No apps assigned to your account yet — contact your admin</div></div>';
     return;
   }
 
