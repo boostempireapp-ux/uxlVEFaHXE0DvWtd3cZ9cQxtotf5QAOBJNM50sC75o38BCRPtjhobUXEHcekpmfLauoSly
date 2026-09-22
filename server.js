@@ -1282,7 +1282,7 @@ app.get('/api/reseller/stats', requireReseller, async (req, res) => {
 
 // ── RESELLER: KEYS ────────────────────────────────────────────────────────────
 app.get('/api/reseller/keys', requireReseller, async (req, res) => {
-  if (!req.reseller.permissions.viewKeys) return res.status(403).json({ success:false, message:'Access denied' });
+  if (!req.reseller.permissions.viewKeys && !req.reseller.permissions.generateKeys) return res.status(403).json({ success:false, message:'Access denied' });
   const allowed = req.reseller.allowedApps || [];
   const filter = { createdBy:req.reseller.username };
   if (req.query.appId) {
