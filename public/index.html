@@ -2029,7 +2029,7 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
         </div>
       </div>
         </div>
-        <div class="card"><div class="card-title" style="margin-bottom:12px">📋 Quota Status</div><div id="r-gen-quota-info" style="font-size:12px;color:var(--text2);line-height:2">Loading…</div></div>
+        <div class="card" id="r-gen-quota-card" style="display:none"><div class="card-title" style="margin-bottom:12px">📋 Quota Status</div><div id="r-gen-quota-info" style="font-size:12px;color:var(--text2);line-height:2"></div></div>
       </div>
     </div>
 
@@ -2308,7 +2308,7 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
     <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:10px">🛡️ Permission Control — What can this reseller access?</div>
     <div class="perm-grid" id="perm-grid-create"></div>
     <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin:16px 0 10px">📦 App Access — Which apps can this reseller use?</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Leave all unchecked to allow access to ALL apps.</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Click an app to select it — a popup will ask whether to grant API keys (public &amp; secret key) for that app.</div>
     <div class="perm-grid" id="app-grid-create"></div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('modal-new-reseller')">Cancel</button><button class="btn btn-gold" onclick="createReseller()">Create Reseller</button></div>
   </div>
@@ -2328,7 +2328,7 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
     <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:10px">🛡️ Permission Control</div>
     <div class="perm-grid" id="perm-grid-edit"></div>
     <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin:16px 0 10px">📦 App Access — Which apps can this reseller use?</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Leave all unchecked to allow access to ALL apps.</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Click an app to select it — a popup will ask whether to grant API keys (public &amp; secret key) for that app.</div>
     <div class="perm-grid" id="app-grid-edit"></div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('modal-edit-reseller')">Cancel</button><button class="btn btn-gold" onclick="saveReseller()">Save Changes</button></div>
   </div>
@@ -3317,33 +3317,150 @@ async function loadResellers(){
     </div>`;
   }).join('');
 }
-async function renderAppGrid(containerId, selectedIds=[]){
+// Per-grid state: { [containerId]: { [appId]: { selected: bool, apiAccess: bool } } }
+window._appGridState = {};
+
+async function renderAppGrid(containerId, selectedIds=[], existingApiAccess={}){
   const el=document.getElementById(containerId);
   if(!el)return;
   el.innerHTML='<div style="font-size:12px;color:var(--muted)">Loading apps...</div>';
   try {
     const r=await fetch('/api/admin/apps',{headers:{'x-admin-token':TOKEN}}).then(r=>r.json());
     const apps=r.apps||[];
-    allApps=apps; // keep cache in sync
+    allApps=apps;
     if(!apps||apps.length===0){el.innerHTML='<div style="font-size:12px;color:var(--muted)">No apps found — create an app first.</div>';return;}
-    el.innerHTML=apps.map(a=>{
-      const checked=selectedIds.map(String).includes(String(a._id));
-      return `<label style="display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">
-        <input type="checkbox" data-app-id="${a._id}" ${checked?'checked':''} style="accent-color:var(--gold);width:15px;height:15px;cursor:pointer"/>
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--text)">${a.name}</div>
-          <div style="font-size:11px;color:var(--muted)">${a.active?'🟢 Active':'🔴 Disabled'}</div>
-        </div>
-      </label>`;
-    }).join('');
-    el.dataset.appsLoaded='1'; // mark so saveReseller knows grid actually loaded
+
+    // Build initial state
+    window._appGridState[containerId]={};
+    apps.forEach(a=>{
+      const sel=selectedIds.map(String).includes(String(a._id));
+      const api=sel?(existingApiAccess[String(a._id)]===true):false;
+      window._appGridState[containerId][String(a._id)]={selected:sel,apiAccess:api};
+    });
+
+    el.innerHTML=`
+      <div style="display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="appGridSelectAll('${containerId}','no-api')" style="font-size:11px">✓ Select All (No API Keys)</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="appGridSelectAll('${containerId}','api')" style="font-size:11px;color:#4ade80;border-color:#4ade8055">✓ Select All (With API Keys)</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="appGridSelectAll('${containerId}','none')" style="font-size:11px;color:#f87171;border-color:#f8717155">✕ Deselect All</button>
+      </div>
+      <div class="perm-grid" id="${containerId}-cards">
+        ${apps.map(a=>renderAppCard(containerId,a)).join('')}
+      </div>`;
+
+    el.dataset.appsLoaded='1';
   } catch(e) {
     el.innerHTML='<div style="font-size:12px;color:var(--danger)">Failed to load apps.</div>';
   }
 }
+
+function renderAppCard(containerId, a){
+  const state=window._appGridState[containerId]||{};
+  const s=state[String(a._id)]||{selected:false,apiAccess:false};
+  const borderColor=s.selected?(s.apiAccess?'#4ade80':'var(--gold)'):'var(--border)';
+  const apiLabel=s.selected
+    ?(s.apiAccess?'<span style="font-size:10px;font-weight:700;color:#4ade80;background:rgba(74,222,128,0.1);border:1px solid #4ade8055;border-radius:4px;padding:1px 5px">API ✓</span>'
+      :'<span style="font-size:10px;font-weight:700;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:1px 5px">No API</span>')
+    :'';
+  const checkIcon=s.selected?'<span style="font-size:14px;color:'+(s.apiAccess?'#4ade80':'var(--gold)')+'">✓</span>':'<span style="font-size:14px;color:var(--border)">○</span>';
+  return `<div id="app-card-${containerId}-${a._id}"
+    onclick="onAppCardClick('${containerId}','${a._id}','${(a.name||'').replace(/'/g,'\\\'')}')"
+    style="display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid ${borderColor};border-radius:8px;padding:10px 14px;cursor:pointer;transition:border-color .2s;user-select:none">
+    ${checkIcon}
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:600;color:var(--text)">${a.name}</div>
+      <div style="font-size:11px;color:var(--muted)">${a.active?'🟢 Active':'🔴 Disabled'}</div>
+    </div>
+    <div>${apiLabel}</div>
+  </div>`;
+}
+
+function refreshAppCards(containerId){
+  const state=window._appGridState[containerId];
+  if(!state)return;
+  allApps.forEach(a=>{
+    const card=document.getElementById('app-card-'+containerId+'-'+a._id);
+    if(!card)return;
+    const s=state[String(a._id)]||{selected:false,apiAccess:false};
+    const borderColor=s.selected?(s.apiAccess?'#4ade80':'var(--gold)'):'var(--border)';
+    const apiLabel=s.selected
+      ?(s.apiAccess?'<span style="font-size:10px;font-weight:700;color:#4ade80;background:rgba(74,222,128,0.1);border:1px solid #4ade8055;border-radius:4px;padding:1px 5px">API ✓</span>'
+        :'<span style="font-size:10px;font-weight:700;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:1px 5px">No API</span>')
+      :'';
+    const checkIcon=s.selected?'<span style="font-size:14px;color:'+(s.apiAccess?'#4ade80':'var(--gold)')+'">✓</span>':'<span style="font-size:14px;color:var(--border)">○</span>';
+    card.style.borderColor=borderColor;
+    card.children[0].outerHTML=checkIcon;
+    card.children[2].innerHTML=apiLabel;
+  });
+}
+
+function onAppCardClick(containerId, appId, appName){
+  const state=window._appGridState[containerId];
+  if(!state)return;
+  const s=state[appId]||{selected:false,apiAccess:false};
+  if(s.selected){
+    // Already selected — clicking deselects
+    state[appId]={selected:false,apiAccess:false};
+    refreshAppCards(containerId);
+  } else {
+    // Not selected — show API access popup
+    showApiAccessPopup(containerId, appId, appName);
+  }
+}
+
+function showApiAccessPopup(containerId, appId, appName){
+  // Remove existing popup if any
+  const old=document.getElementById('api-access-popup');
+  if(old)old.remove();
+
+  const popup=document.createElement('div');
+  popup.id='api-access-popup';
+  popup.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center';
+  popup.innerHTML=`
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:340px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px">📦 ${appName}</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:18px">Give this reseller API access (Public Key + Secret Key) for this app?</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <button onclick="resolveApiPopup('${containerId}','${appId}',true)" style="background:linear-gradient(135deg,#4ade80,#22c55e);border:none;border-radius:8px;padding:10px;font-weight:700;color:#000;cursor:pointer;font-size:12px">✓ Yes — Give API Access</button>
+        <button onclick="resolveApiPopup('${containerId}','${appId}',false)" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;font-weight:700;color:var(--text);cursor:pointer;font-size:12px">✕ No — Keys Only</button>
+      </div>
+      <button onclick="document.getElementById('api-access-popup').remove()" style="width:100%;background:transparent;border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text3);cursor:pointer;font-size:11px">Cancel</button>
+    </div>`;
+  document.body.appendChild(popup);
+}
+
+function resolveApiPopup(containerId, appId, giveApi){
+  const popup=document.getElementById('api-access-popup');
+  if(popup)popup.remove();
+  const state=window._appGridState[containerId];
+  if(!state)return;
+  state[appId]={selected:true,apiAccess:!!giveApi};
+  refreshAppCards(containerId);
+}
+
+function appGridSelectAll(containerId, mode){
+  const state=window._appGridState[containerId];
+  if(!state)return;
+  Object.keys(state).forEach(appId=>{
+    if(mode==='none')state[appId]={selected:false,apiAccess:false};
+    else if(mode==='api')state[appId]={selected:true,apiAccess:true};
+    else state[appId]={selected:true,apiAccess:false};
+  });
+  refreshAppCards(containerId);
+}
+
 function getSelectedApps(containerId){
-  const el=document.getElementById(containerId); if(!el)return[];
-  return Array.from(el.querySelectorAll('input[data-app-id]:checked')).map(i=>i.getAttribute('data-app-id'));
+  const state=window._appGridState[containerId];
+  if(!state)return[];
+  return Object.entries(state).filter(([,s])=>s.selected).map(([id])=>id);
+}
+
+function getAppApiAccess(containerId){
+  const state=window._appGridState[containerId];
+  if(!state)return{};
+  const map={};
+  Object.entries(state).forEach(([id,s])=>{if(s.selected)map[id]=s.apiAccess;});
+  return map;
 }
 async function openNewResellerModal(){renderPermGrid('perm-grid-create',{});await renderAppGrid('app-grid-create',[]);['nr-username','nr-displayname','nr-password','nr-notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('nr-quota').value='0';document.getElementById('modal-new-reseller').classList.add('open');}
 async function createReseller(){
@@ -3351,7 +3468,7 @@ async function createReseller(){
   const password=document.getElementById('nr-password').value;
   if(!username||!password){toast('Username and password required','error');return;}
   if(password.length<6){toast('Password min 6 chars','error');return;}
-  const r=await post('/api/admin/resellers',{username,displayName:document.getElementById('nr-displayname').value.trim()||username,password,keyQuota:parseInt(document.getElementById('nr-quota').value)||0,notes:document.getElementById('nr-notes').value.trim(),permissions:getPerms('perm-grid-create'),allowedApps:getSelectedApps('app-grid-create')});
+  const r=await post('/api/admin/resellers',{username,displayName:document.getElementById('nr-displayname').value.trim()||username,password,keyQuota:parseInt(document.getElementById('nr-quota').value)||0,notes:document.getElementById('nr-notes').value.trim(),permissions:getPerms('perm-grid-create'),allowedApps:getSelectedApps('app-grid-create'),appApiAccess:getAppApiAccess('app-grid-create')});
   if(r.success){closeModal('modal-new-reseller');toast('Reseller created!','success');loadResellers();}
   else toast(r.message||'Error','error');
 }
@@ -3363,7 +3480,7 @@ async function openEditResellerModal(id){
   document.getElementById('edit-quota').value=rs.keyQuota||0;
   document.getElementById('edit-notes').value=rs.notes||'';
   renderPermGrid('perm-grid-edit',rs.permissions||{});
-  await renderAppGrid('app-grid-edit', rs.allowedApps||[]);
+  await renderAppGrid('app-grid-edit', rs.allowedApps||[], rs.appApiAccess||{});
   document.getElementById('modal-edit-reseller').classList.add('open');
 }
 async function saveReseller(){
@@ -3373,6 +3490,7 @@ async function saveReseller(){
   const grid=document.getElementById('app-grid-edit');
   if(grid && grid.dataset.appsLoaded==='1'){
     body.allowedApps=getSelectedApps('app-grid-edit');
+    body.appApiAccess=getAppApiAccess('app-grid-edit');
   } else if(grid && grid.dataset.appsLoaded!=='1'){
     // Grid failed to load — warn admin and abort to avoid clearing existing app access
     toast('App grid failed to load — app assignments were NOT changed. Reload and try again.','error');
@@ -3423,19 +3541,21 @@ async function loadResellerGeneratePage(){
   const sg=document.getElementById('r-sidebar-generated');
   const sq=document.getElementById('r-sidebar-quota');
   const qi=document.getElementById('r-gen-quota-info');
+  const qcard=document.getElementById('r-gen-quota-card');
   if(sr.success){const s=sr.stats;
     if(sg)sg.textContent=s.keysGenerated||0;
     if(s.keyQuota>0){
       if(sq)sq.textContent=s.keyQuota;
       if(qn){qn.style.display=s.slotsLeft<=0?'':'none';qn.textContent='Quota exhausted. Contact admin.';}
       if(qi)qi.innerHTML=`<div>Keys generated: <b>${s.keysGenerated||0}</b> / <b>${s.keyQuota}</b></div><div>Slots remaining: <b>${s.slotsLeft??'—'}</b></div>`;
+      if(qcard)qcard.style.display='';
     } else {
       if(sq)sq.textContent='Unlimited';
       if(qn)qn.style.display='none';
-      if(qi)qi.innerHTML=`<div>Keys generated: <b>${s.keysGenerated||0}</b></div><div>Quota: <b>Unlimited</b></div>`;
+      if(qcard)qcard.style.display='none';
     }
   } else {
-    if(qi)qi.textContent='Failed to load quota — try refreshing.';
+    if(qi){qi.textContent='Failed to load quota — try refreshing.';if(qcard)qcard.style.display='';}
   }
 }
 function selRCSApp(id,name){document.getElementById('rg-app').value=id;document.getElementById('rcs-app-label').textContent=name;document.querySelectorAll('#rcs-app-menu .cs-opt').forEach(o=>o.classList.toggle('selected',o.dataset.val===id));closeAllCS();}
@@ -3939,8 +4059,9 @@ async function loadResellerMyApps() {
   try {
     const me = await rget('/api/reseller/me');
     if (me && me.success && RDATA) {
-      RDATA.permissions    = me.permissions;
-      RDATA.allowedApps    = me.allowedApps;
+      RDATA.permissions   = me.permissions;
+      RDATA.allowedApps   = me.allowedApps;
+      RDATA.appApiAccess  = me.appApiAccess || {};
     }
   } catch(e) {}
 
@@ -4003,7 +4124,9 @@ async function loadResellerMyApps() {
         <div style="display:flex;gap:7px;flex-wrap:wrap">${dllBtn}</div>
       </div>
 
-      <div class="apikey-box">
+      ${app.apiAccessGranted===false
+        ? `<div style="margin-top:4px;padding:10px 13px;background:rgba(248,113,113,0.05);border:1px solid rgba(248,113,113,0.2);border-radius:var(--r);font-size:12px;color:#f87171;display:flex;align-items:center;gap:8px"><span>🔒</span><span>API Keys not granted — contact your admin to request access.</span></div>`
+        : `<div class="apikey-box">
         <span class="apikey-label">Public Key</span>
         <span class="apikey-val">${pubKey}</span>
         <button class="apikey-copy" data-copy="${pubKey}" onclick="copyFromAttr(this)">Copy</button>
@@ -4015,7 +4138,7 @@ async function loadResellerMyApps() {
       </div>
       <div style="margin-top:10px;padding:8px 13px;background:#000;border-radius:var(--r);font-size:11px;color:var(--text3)">
         In your code: &nbsp;<span style="color:var(--p3);font-family:'JetBrains Mono',monospace;font-size:11px">x-public-key: ${pubKey}</span>
-      </div>
+      </div>`}
       ${dllStatus}
     </div>`;
   }).join('');
