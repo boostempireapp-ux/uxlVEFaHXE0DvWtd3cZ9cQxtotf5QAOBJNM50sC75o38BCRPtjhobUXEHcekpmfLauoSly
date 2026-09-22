@@ -2573,6 +2573,30 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
   </div>
 </div>
 
+<!-- MODAL: API ACCESS PERMISSION -->
+<div class="modal-bg" id="modal-api-access">
+  <div class="modal" style="width:380px;max-width:95vw">
+    <div class="modal-title" style="font-size:16px;gap:10px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--p3)" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+      API Access
+    </div>
+    <div style="padding:14px;background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.2);border-radius:10px;margin-bottom:18px">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px" id="api-access-app-name">App Name</div>
+      <div style="font-size:12px;color:var(--text3);line-height:1.7">Do you want to give this reseller <strong style="color:var(--p3)">API access</strong> to this app?<br/><span style="font-size:11px;opacity:0.7">API access allows the reseller to use this app's public key in their own integrations.</span></div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="setApiAccess(false)" style="flex:1;justify-content:center;border-color:rgba(248,113,113,0.3);color:#f87171" onmouseover="this.style.background='rgba(248,113,113,0.08)'" onmouseout="this.style.background=''">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        No — Deny API Access
+      </button>
+      <button class="btn btn-purple" onclick="setApiAccess(true)" style="flex:1;justify-content:center">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Yes — Allow API Access
+      </button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -3415,7 +3439,13 @@ function toggleDD(btn){
 function closeDD(){document.querySelectorAll('.dd-menu').forEach(m=>{m.classList.remove('open');m.style.top='';m.style.left='';});}
 
 // MODAL
-document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('open');}));
+document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{
+  if(e.target===bg){
+    // Don't allow backdrop-close on api-access modal — user must pick an option
+    if(bg.id==='modal-api-access')return;
+    bg.classList.remove('open');
+  }
+}));
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeAllCS();}});
 
 // HTTP
@@ -3581,13 +3611,49 @@ async function loadResellers(){
       <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:4px">
         ${PERMS.map(p=>`<span class="perm-badge ${rs.permissions&&rs.permissions[p.key]?'yes':'no'}">${rs.permissions&&rs.permissions[p.key]?'✓':'-'} ${p.label}</span>`).join('')}
       </div>
+      ${rs.allowedApps&&rs.allowedApps.length&&!rs.allowedApps.includes('__NONE__')?`
+      <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+        <span style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-weight:700">App API Access:</span>
+        ${(rs.allowedApps||[]).map(appId=>{
+          const appName=(allApps.find(a=>a._id===appId)||{}).name||appId;
+          const hasApi=!rs.appApiAccess||(rs.appApiAccess[appId]!==false);
+          return `<span style="font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700;${hasApi?'background:rgba(139,92,246,0.12);color:#a78bfa;border:1px solid rgba(139,92,246,0.25)':'background:rgba(248,113,113,0.08);color:#f87171;border:1px solid rgba(248,113,113,0.2)'}">${hasApi?'🔑':'🔒'} ${appName}</span>`;
+        }).join('')}
+      </div>`:''}
       <div style="margin-top:8px;font-size:10px;color:var(--text3)">Created: ${rs.createdAt?rs.createdAt.substring(0,10):'—'} · Last login: ${rs.lastLogin?fmtTime(rs.lastLogin):'Never'}</div>
     </div>`;
   }).join('');
 }
-async function renderAppGrid(containerId, selectedIds=[]){
+// Track API access decisions per app: { appId: true/false }
+let _apiAccessMap = {};
+let _pendingApiAccessCb = null;
+let _pendingApiAccessAppId = null;
+
+function promptApiAccess(appId, appName, currentlyChecked, onDecision) {
+  // Show the API access sub-modal
+  _pendingApiAccessCb = onDecision;
+  _pendingApiAccessAppId = appId;
+  document.getElementById('api-access-app-name').textContent = '📱 ' + appName;
+  document.getElementById('modal-api-access').classList.add('open');
+}
+
+function setApiAccess(allow) {
+  document.getElementById('modal-api-access').classList.remove('open');
+  if (_pendingApiAccessAppId !== null) {
+    _apiAccessMap[_pendingApiAccessAppId] = allow;
+  }
+  if (typeof _pendingApiAccessCb === 'function') {
+    _pendingApiAccessCb(allow);
+  }
+  _pendingApiAccessCb = null;
+  _pendingApiAccessAppId = null;
+}
+
+async function renderAppGrid(containerId, selectedIds=[], apiAccessData={}){
   const el=document.getElementById(containerId);
   if(!el)return;
+  // Reset api access map for this grid context
+  _apiAccessMap = Object.assign({}, apiAccessData);
   // Derive the "none" container id from the grid id (app-grid-create -> app-none-create)
   const noneId = containerId.replace('app-grid-','app-none-');
   const noneEl = document.getElementById(noneId);
@@ -3617,10 +3683,16 @@ async function renderAppGrid(containerId, selectedIds=[]){
     el.innerHTML=apps.map(a=>{
       const checked=!isNone && selectedIds.map(String).includes(String(a._id));
       const disabled=isNone;
-      return `<label style="display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;cursor:pointer;transition:border-color .2s;opacity:${disabled?'0.4':'1'}" onmouseover="if(!this.querySelector('input').disabled)this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">
-        <input type="checkbox" data-app-id="${a._id}" ${checked?'checked':''} ${disabled?'disabled':''} style="accent-color:var(--gold);width:15px;height:15px;cursor:pointer"/>
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--text)">${a.name}</div>
+      const hasApiAccess = _apiAccessMap[a._id] !== false; // default true if not explicitly denied
+      const apiTag = checked
+        ? `<span id="api-tag-${a._id}" style="font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;letter-spacing:.3px;${hasApiAccess?'background:rgba(139,92,246,0.15);color:#a78bfa;border:1px solid rgba(139,92,246,0.3)':'background:rgba(248,113,113,0.1);color:#f87171;border:1px solid rgba(248,113,113,0.25)'}">
+            ${hasApiAccess?'🔑 API Access':'🔒 No API Access'}
+          </span>`
+        : `<span id="api-tag-${a._id}" style="display:none"></span>`;
+      return `<label id="app-label-${containerId}-${a._id}" style="display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid ${checked?'rgba(139,92,246,0.35)':'var(--border)'};border-radius:8px;padding:10px 14px;cursor:pointer;transition:border-color .2s;opacity:${disabled?'0.4':'1'}" onmouseover="if(!this.querySelector('input').disabled)this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor=document.querySelector('#app-chk-${containerId}-${a._id}')?.checked?'rgba(139,92,246,0.35)':'var(--border)'">
+        <input type="checkbox" id="app-chk-${containerId}-${a._id}" data-app-id="${a._id}" data-app-name="${a.name.replace(/"/g,'&quot;')}" data-grid="${containerId}" ${checked?'checked':''} ${disabled?'disabled':''} style="accent-color:var(--gold);width:15px;height:15px;cursor:pointer" onchange="onAppCheckChange(this)"/>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:7px">${a.name} ${apiTag}</div>
           <div style="font-size:11px;color:var(--muted)">${a.active?'🟢 Active':'🔴 Disabled'}</div>
         </div>
       </label>`;
@@ -3629,12 +3701,49 @@ async function renderAppGrid(containerId, selectedIds=[]){
     el.innerHTML='<div style="font-size:12px;color:var(--danger)">Failed to load apps.</div>';
   }
 }
+
+function onAppCheckChange(chk) {
+  const appId = chk.getAttribute('data-app-id');
+  const appName = chk.getAttribute('data-app-name');
+  const containerId = chk.getAttribute('data-grid');
+  const label = document.getElementById('app-label-'+containerId+'-'+appId);
+  const tag = document.getElementById('api-tag-'+appId);
+  if (chk.checked) {
+    // App just got checked — ask about API access
+    if (label) label.style.borderColor='rgba(139,92,246,0.35)';
+    promptApiAccess(appId, appName, true, function(allow) {
+      _apiAccessMap[appId] = allow;
+      if (tag) {
+        tag.style.display='';
+        tag.innerHTML = allow ? '🔑 API Access' : '🔒 No API Access';
+        tag.style.cssText = `font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;letter-spacing:.3px;${allow?'background:rgba(139,92,246,0.15);color:#a78bfa;border:1px solid rgba(139,92,246,0.3)':'background:rgba(248,113,113,0.1);color:#f87171;border:1px solid rgba(248,113,113,0.25)'}`;
+      }
+    });
+  } else {
+    // Unchecked — remove from map and hide tag
+    delete _apiAccessMap[appId];
+    if (label) label.style.borderColor='var(--border)';
+    if (tag) { tag.style.display='none'; tag.innerHTML=''; }
+  }
+}
+
 function getSelectedApps(containerId){
   const noneId = containerId.replace('app-grid-','app-none-');
   const noneChk = document.getElementById(noneId+'-chk');
   if(noneChk && noneChk.checked) return ['__NONE__'];
   const el=document.getElementById(containerId); if(!el)return[];
-  return Array.from(el.querySelectorAll('input[data-app-id]:checked')).map(i=>i.getAttribute('data-app-id'));
+  // Return array of { appId, apiAccess } objects
+  return Array.from(el.querySelectorAll('input[data-app-id]:checked')).map(i=>{
+    const id=i.getAttribute('data-app-id');
+    return { appId: id, apiAccess: _apiAccessMap[id] !== false };
+  });
+}
+
+// Helper: get just the app IDs (for backwards compat calls that just need IDs)
+function getSelectedAppIds(containerId){
+  const result = getSelectedApps(containerId);
+  if(result.includes('__NONE__')) return ['__NONE__'];
+  return result.map(r=>r.appId||r);
 }
 async function openNewResellerModal(){renderPermGrid('perm-grid-create',{});await renderAppGrid('app-grid-create',[]);['nr-username','nr-displayname','nr-password','nr-notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('nr-quota').value='0';document.getElementById('modal-new-reseller').classList.add('open');}
 async function createReseller(){
@@ -3642,7 +3751,7 @@ async function createReseller(){
   const password=document.getElementById('nr-password').value;
   if(!username||!password){toast('Username and password required','error');return;}
   if(password.length<6){toast('Password min 6 chars','error');return;}
-  const r=await post('/api/admin/resellers',{username,displayName:document.getElementById('nr-displayname').value.trim()||username,password,keyQuota:parseInt(document.getElementById('nr-quota').value)||0,notes:document.getElementById('nr-notes').value.trim(),permissions:getPerms('perm-grid-create'),allowedApps:getSelectedApps('app-grid-create')});
+  const r=await post('/api/admin/resellers',{username,displayName:document.getElementById('nr-displayname').value.trim()||username,password,keyQuota:parseInt(document.getElementById('nr-quota').value)||0,notes:document.getElementById('nr-notes').value.trim(),permissions:getPerms('perm-grid-create'),allowedApps:getSelectedApps('app-grid-create'),appApiAccess:_apiAccessMap});
   if(r.success){closeModal('modal-new-reseller');toast('Reseller created!','success');loadResellers();}
   else toast(r.message||'Error','error');
 }
@@ -3654,12 +3763,12 @@ async function openEditResellerModal(id){
   document.getElementById('edit-quota').value=rs.keyQuota||0;
   document.getElementById('edit-notes').value=rs.notes||'';
   renderPermGrid('perm-grid-edit',rs.permissions||{});
-  await renderAppGrid('app-grid-edit', rs.allowedApps||[]);
+  await renderAppGrid('app-grid-edit', rs.allowedApps||[], rs.appApiAccess||{});
   document.getElementById('modal-edit-reseller').classList.add('open');
 }
 async function saveReseller(){
   const id=document.getElementById('edit-reseller-id').value;
-  const body={displayName:document.getElementById('edit-displayname').value.trim(),keyQuota:parseInt(document.getElementById('edit-quota').value)||0,notes:document.getElementById('edit-notes').value.trim(),permissions:getPerms('perm-grid-edit'),allowedApps:getSelectedApps('app-grid-edit')};
+  const body={displayName:document.getElementById('edit-displayname').value.trim(),keyQuota:parseInt(document.getElementById('edit-quota').value)||0,notes:document.getElementById('edit-notes').value.trim(),permissions:getPerms('perm-grid-edit'),allowedApps:getSelectedApps('app-grid-edit'),appApiAccess:_apiAccessMap};
   const pw=document.getElementById('edit-password').value; if(pw) body.password=pw;
   const r=await fetch('/api/admin/resellers/'+id,{method:'PATCH',headers:{'Content-Type':'application/json','x-admin-token':TOKEN},body:JSON.stringify(body)}).then(r=>r.json());
   if(r.success){closeModal('modal-edit-reseller');toast('Updated!','success');loadResellers();}
