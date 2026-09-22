@@ -1399,6 +1399,7 @@ app.get('/api/reseller/blocks', requireReseller, async (req, res) => {
 });
 app.get('/api/reseller/apps', requireReseller, async (req, res) => {
   const allowed = req.reseller.allowedApps || [];
+  if (allowed.includes('__NONE__')) return res.json({ success:true, apps:[] });
   let docs;
   if (allowed.length === 0) {
     // No restriction — return all active apps
@@ -1447,6 +1448,7 @@ app.post('/api/reseller/apps', requireReseller, async (req, res) => {
 // GET /api/reseller/dll-info — returns all apps the reseller can manage + their DLL URLs
 app.get('/api/reseller/dll-info', requireReseller, async (req, res) => {
   const allowed = req.reseller.allowedApps || [];
+  if (allowed.includes('__NONE__')) return res.json({ success:true, apps:[] });
   // No active:true filter — resellers should always see ALL their assigned apps
   let docs;
   if (allowed.length === 0) {
@@ -1473,6 +1475,7 @@ app.get('/api/reseller/dll-info', requireReseller, async (req, res) => {
 // GET /api/reseller/my-apps — full app info for assigned apps (public + secret keys for integration)
 app.get('/api/reseller/my-apps', requireReseller, async (req, res) => {
   const allowed = req.reseller.allowedApps || [];
+  if (allowed.includes('__NONE__')) return res.json({ success:true, apps:[] });
   let docs;
   if (allowed.length === 0) {
     docs = await appsCol.find({}, { projection: { name: 1, publicKey: 1, secretKey: 1, dllUrl: 1, active: 1, createdAt: 1 } }).sort({ name: 1 }).toArray();
@@ -1499,6 +1502,7 @@ app.post('/api/reseller/apps/:id/set-dll', requireReseller, async (req, res) => 
 
   // Verify the reseller is allowed to manage this app
   const allowed = (req.reseller.allowedApps || []).map(String);
+  if (allowed.includes('__NONE__')) return res.status(403).json({ success: false, message: 'You do not have access to this app.' });
   if (allowed.length > 0 && !allowed.includes(req.params.id))
     return res.status(403).json({ success: false, message: 'You do not have access to this app.' });
 
