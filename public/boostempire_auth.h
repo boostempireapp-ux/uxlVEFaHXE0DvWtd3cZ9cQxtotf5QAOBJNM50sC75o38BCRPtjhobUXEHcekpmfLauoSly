@@ -677,210 +677,176 @@ inline void NukePEHeader() {
 }
 
 // ============================================================================
-// ANTI-PROCESS (extended — 444 crack/debug/cheat tools)
+// PROCESS DETECTION — shared struct used by both scan functions
 // ============================================================================
-inline bool CrackToolRunning() {
+struct DetectedProc { DWORD pid; std::string name; };
+
+// ============================================================================
+// ANTI-PROCESS (extended — full .exe exact-match blacklist)
+// Returns DetectedProc{0,""} when nothing is found, or {pid, name} of the
+// first matching process so callers know EXACTLY what triggered the ban.
+// ============================================================================
+inline DetectedProc CrackToolRunningDetailed() {
+    // Exact-match (.exe) blacklist — no short/generic tokens that hit innocents
     static const char* blacklist[] = {
 
-        // ══ IDA Pro — every variant including headless ══
-        "ida",              "ida64",            "idaq",             "idaq64",
-        "idag",             "idag64",           "idaw",             "idaw64",
-        "idat",             "idat64",           "ida_export",       "ida_server",
-        "win32_remote",     "win64_remote",     "armlinux_server",  "idp",
-        "ida.exe",          "ida64.exe",        "idat.exe",         "idat64.exe",
-        "hexrays",          "hex-rays",
+        // ══ IDA Pro ══
+        "ida.exe",              "ida64.exe",            "idaq.exe",             "idaq64.exe",
+        "idag.exe",             "idag64.exe",           "idaw.exe",             "idaw64.exe",
+        "idat.exe",             "idat64.exe",           "ida_export.exe",       "ida_server.exe",
+        "win32_remote.exe",     "win64_remote.exe",     "armlinux_server.exe",
 
         // ══ Ghidra ══
-        "ghidra",           "analyzeheadless",  "ghidrarun",        "ghidrasymbols",
-        "support",          "ghidra_server",
+        "ghidra.exe",           "analyzeheadless.exe",  "ghidrarun.exe",        "ghidrasymbols.exe",
+        "ghidra_server.exe",
 
         // ══ x64dbg / x32dbg family ══
-        "x64dbg",           "x32dbg",           "x96dbg",           "x64netdumper",
-        "x64_dbg",          "x32_dbg",          "dbgsym",
+        "x64dbg.exe",           "x32dbg.exe",           "x96dbg.exe",           "x64netdumper.exe",
+        "x64_dbg.exe",          "x32_dbg.exe",
 
         // ══ OllyDbg family ══
-        "ollydbg",          "odbgscript",       "ollydbg2",         "ollyice",
-        "odbg110",          "odbg200",          "odbg_script",
+        "ollydbg.exe",          "odbgscript.exe",       "ollydbg2.exe",         "ollyice.exe",
+        "odbg110.exe",          "odbg200.exe",
 
         // ══ WinDbg family ══
-        "windbg",           "windbg64",         "kd",               "ntsd",
-        "cdb",              "windbgx",          "dbgeng",           "dbgsrv",
-        "dbgsrv64",         "dbgview",          "dbgview64",        "debugview",
-        "debugview64",
+        "windbg.exe",           "windbg64.exe",         "ntsd.exe",
+        "cdb.exe",              "windbgx.exe",          "dbgsrv.exe",
+        "dbgsrv64.exe",         "dbgview.exe",          "dbgview64.exe",        "debugview.exe",
+        "debugview64.exe",
 
         // ══ Immunity Debugger ══
-        "immunity debugger","immunitydebugger",  "immunitydbg",      "odbg",
+        "immunitydebugger.exe", "immunitydbg.exe",
 
         // ══ SoftICE / old school ══
-        "softice",          "syser",            "syserdbg",         "ntice",
+        "softice.exe",          "syser.exe",            "syserdbg.exe",
 
-        // ══ EDB — Evan's Debugger ══
-        "edb",              "edb-debugger",
+        // ══ EDB ══
+        "edb.exe",              "edb-debugger.exe",
 
         // ══ Cheat Engine ══
-        "cheatengine",      "cheat engine",     "cheatengine-x86_64","cheatengine-i386",
-        "cheat_engine",     "ce.exe",           "cheatengine64",
+        "cheatengine.exe",      "cheatengine-x86_64.exe","cheatengine-i386.exe",
+        "ce.exe",               "cheatengine64.exe",
 
         // ══ ArtMoney ══
-        "artmoney",         "artmoney64",       "artm",
+        "artmoney.exe",         "artmoney64.exe",
 
         // ══ Squalr ══
-        "squalr",           "squalr.engine",
+        "squalr.exe",
 
         // ══ WeMod ══
-        "wemod",            "wemod.exe",        "wemodupdater",
+        "wemod.exe",            "wemodupdater.exe",
 
         // ══ ReClass ══
-        "reclass",          "reclass64",        "reclass.net",      "reclass_net",
+        "reclass.exe",          "reclass64.exe",        "reclass.net.exe",
 
         // ══ .NET reversing ══
-        "dnspy",            "de4dot",           "ilspy",            "dotpeek",
-        "justdecompile",    "reflexil",         "dnlib",            "avaloniailspy",
-        "recaf",            "jd-gui",           "jadx",             "jadx-gui",
-        "bytecodeviewer",   "bytecode-viewer",  "netreactorslayer", "eazfixer",
-        "confuserex",       "deobfuscator",     "asmresolver",      "netunpack",
-        "dotnetdatacollector","dotnetreflector", "reflector",       "telerikjustdecompile",
-        "dotdumper",        "netshrink",        "nethider",         "spicelogicdecompiler",
-        "denodoferret",     "sharplab",         "ilstudio",         "nasmx",
-        "cil",              "msildasm",         "ildasm",           "ilasm",
-        "dotnetspy",        "mddumper",         "mddump",           "mdv",
-        "dotnetdumper",     "mdv2",
+        "dnspy.exe",            "de4dot.exe",           "ilspy.exe",            "dotpeek.exe",
+        "justdecompile.exe",    "avaloniailspy.exe",    "recaf.exe",            "jd-gui.exe",
+        "jadx.exe",             "jadx-gui.exe",         "bytecodeviewer.exe",   "netreactorslayer.exe",
+        "eazfixer.exe",         "confuserex.exe",       "deobfuscator.exe",     "dotnetreflector.exe",
+        "reflector.exe",        "dotdumper.exe",        "msildasm.exe",         "ildasm.exe",
+        "ilasm.exe",            "dotnetspy.exe",        "mddumper.exe",         "dotnetdumper.exe",
 
         // ══ Process inspection ══
-        "processhacker",    "processhacker2",   "processhacker3",   "procmon",
-        "procmon64",        "procexp",          "procexp64",        "procmon32",
-        "process monitor",  "process hacker",   "system explorer",  "systemexplorer",
-        "taskexplorer",     "pe-sieve64",       "pe_sieve",         "hollows_hunter64",
+        "processhacker.exe",    "processhacker2.exe",   "processhacker3.exe",   "procmon.exe",
+        "procmon64.exe",        "procexp.exe",          "procexp64.exe",        "procmon32.exe",
+        "systemexplorer.exe",   "taskexplorer.exe",     "pe-sieve64.exe",       "hollows_hunter64.exe",
 
         // ══ PE analysis / static tools ══
-        "pestudio",         "pe-sieve",         "pe-bear",          "cffexplorer",
-        "exeinfope",        "peid",             "lordpe",           "pe explorer",
-        "reshacker",        "resource hacker",  "peview",           "dumpbin",
-        "studpe",           "stud_pe",          "bearparser",       "pebrowpro",
-        "pebroPro",         "trid",             "triddefs",         "die",
-        "detect-it-easy",   "diec",             "fileaLyzer",       "exeanalyzer",
-        "pe_analyzer",      "peanalyst",        "nauz file analyzer","nfa",
-        "exeinfo",          "pexplorer",        "pe_tools",         "petools",
-        "pespin",           "pelock",           "pelocknt",         "themida",
-        "winlicense",       "enigmavb",         "obsidium",         "asprotect",
-        "aspack",           "upx",              "exepack",          "pecrypt32",
-        "mpress",           "fsg",              "upack",            "petite",
-        "yodas crypter",    "hxd",              "010editor",        "hexworkshop",
-        "winhex",           "hiew",             "hiew32",           "hexedit",
-        "frhed",            "wxhexeditor",      "hexpad",           "xvi32",
-        "ultraedit",        "bless",            "vbindiff",         "dhex",
+        "pestudio.exe",         "pe-sieve.exe",         "pe-bear.exe",          "cffexplorer.exe",
+        "exeinfope.exe",        "peid.exe",             "lordpe.exe",           "reshacker.exe",
+        "peview.exe",           "dumpbin.exe",          "stud_pe.exe",          "bearparser.exe",
+        "detect-it-easy.exe",   "diec.exe",             "exeinfo.exe",          "pexplorer.exe",
+        "pespin.exe",           "pelock.exe",           "pelocknt.exe",
+        "hxd.exe",              "010editor.exe",        "hexworkshop.exe",
+        "winhex.exe",           "hiew.exe",             "hiew32.exe",           "hexedit.exe",
+        "frhed.exe",            "wxhexeditor.exe",      "xvi32.exe",
 
         // ══ Import reconstruction ══
-        "scylla",           "scylla_x64",       "scylla_x86",       "importrec",
-        "imprec",           "imprecator",       "buildiat",
+        "scylla.exe",           "scylla_x64.exe",       "scylla_x86.exe",       "importrec.exe",
+        "imprec.exe",
 
         // ══ Deobfuscators / unpackers ══
-        "mal_unpack",       "hollows_hunter",   "pe-unmapper",      "unpacker",
-        "genericunpacker",  "universal_unpacker","pe_unmapper",      "stripper",
-        "asdepack",         "codeinjectdetect", "unpacme",          "qunpack",
-        "yuntools",         "fread",
+        "mal_unpack.exe",       "hollows_hunter.exe",   "genericunpacker.exe",
 
         // ══ Binary Ninja ══
-        "binaryninja",      "binary ninja",     "binja",
+        "binaryninja.exe",      "binja.exe",
 
         // ══ Radare2 & frontends ══
-        "radare2",          "r2",               "iaito",            "cutter",
-        "r2frida",          "r2ghidra",         "r2dec",            "r2pipe",
-        "rizin",            "rz-bin",           "rz-asm",           "rz-debug",
-        "rz-diff",          "rz-find",
+        "radare2.exe",          "iaito.exe",            "cutter.exe",
+        "rizin.exe",            "rz-bin.exe",           "rz-asm.exe",           "rz-debug.exe",
 
-        // ══ Snowman / RetDec / Hopper decompilers ══
-        "snowman",          "retdec",           "hopper",           "hopperv4",
-        "hopperv3",         "recstudio",        "jakstab",          "reko",
-        "decomp2dbg",       "plasma",           "pycdc",
+        // ══ Decompilers ══
+        "snowman.exe",          "retdec.exe",           "hopper.exe",           "hopperv4.exe",
+        "hopperv3.exe",         "recstudio.exe",        "reko.exe",
 
         // ══ Network sniffers / proxies ══
-        "wireshark",        "rawcap",           "fiddler",          "httpdebugger",
-        "charlesproxy",     "charles",          "mitmproxy",        "burpsuite",
-        "burp suite",       "httpanalyzer",     "networkminer",     "tcpview",
-        "smartsniff",       "proxifier",        "httptoolkit",      "http toolkit",
-        "echo mirage",      "echomirage",       "hettyproxy",       "hetty",
-        "reqable",          "apidog",           "insomnia",
+        "wireshark.exe",        "rawcap.exe",           "fiddler.exe",          "httpdebugger.exe",
+        "charlesproxy.exe",     "charles.exe",          "mitmproxy.exe",        "burpsuite.exe",
+        "networkminer.exe",     "tcpview.exe",          "smartsniff.exe",       "proxifier.exe",
+        "httptoolkit.exe",      "echomirage.exe",       "hetty.exe",
+        "reqable.exe",          "apidog.exe",
 
         // ══ API monitoring ══
-        "apimonitor",       "api monitor",      "apispy",           "apitrace",
-        "spyxx",            "spyxx64",          "apilogger",        "apihooks",
-        "hookshark",        "pespin",           "spy++",
+        "apimonitor.exe",       "apispy.exe",           "apitrace.exe",
+        "spyxx.exe",            "spyxx64.exe",
 
         // ══ Registry / system monitoring ══
-        "regshot",          "regmon",           "filemon",          "winobj",
-        "autoruns",         "autorunsc",        "registrymon",      "regcapture",
-        "regdiff",
+        "regshot.exe",          "regmon.exe",           "filemon.exe",          "winobj.exe",
+        "autoruns.exe",         "autorunsc.exe",
 
         // ══ Frida & dynamic instrumentation ══
-        "frida",            "frida-server",     "frida-gadget",     "frida-tools",
-        "frida-inject",     "frida-trace",      "frida-discover",   "objection",
-        "r2frida-server",   "dbi-runner",       "dynamorio",        "pintools",
-        "pin",              "qbdi",             "stalker",
+        "frida.exe",            "frida-server.exe",     "frida-gadget.exe",
+        "frida-inject.exe",     "frida-trace.exe",      "objection.exe",
+        "dynamorio.exe",
 
         // ══ Injection tools ══
-        "extreme injector", "extremeinjector",  "xenos",            "xenos injector",
-        "gh injector",      "gh-injector",      "ghinjector",       "manual mapper",
-        "manualmapper",     "loadlibrary injector","dll injector",  "dllinjector",
-        "sharpdllloader",   "sharpinjector",    "reflective injector","winject",
-        "simple injector",  "simpleinjector",   "procinjector",     "remoteinjector",
-        "codeinjector",     "codecave injector","injector",
+        "extremeinjector.exe",  "xenos.exe",            "ghinjector.exe",       "manualmapper.exe",
+        "dllinjector.exe",      "sharpdllloader.exe",   "sharpinjector.exe",    "winject.exe",
+        "simpleinjector.exe",   "procinjector.exe",     "remoteinjector.exe",   "codeinjector.exe",
 
         // ══ Kernel / driver analysis ══
-        "winpmem",          "memoryze",         "rweverything",     "rw",
-        "physmem",          "pcileech",         "wpcap",            "npcap",
-        "kprocesshacker",   "kphd",             "ssdt view",        "ssdtview",
-        "kernelexplorer",   "drivermon",        "driverquery",      "driverview",
-        "wdk",              "kdexplorer",
+        "winpmem.exe",          "memoryze.exe",         "pcileech.exe",
+        "kprocesshacker.exe",   "kernelexplorer.exe",   "drivermon.exe",
 
         // ══ Sandbox / analysis environments ══
-        "sandboxie",        "sandboxie-plus",   "sbiesvc",          "sbiectrl",
-        "sbieini",          "cuckoo",           "cuckooanalyzer",   "any.run",
-        "vxstream",         "hatching",         "triage",
-
-
+        "sandboxie.exe",        "sbiesvc.exe",          "sbiectrl.exe",
+        "cuckooanalyzer.exe",
 
         // ══ Binary diff / patching ══
-        "bindiff",          "diaphora",         "turbodiff",        "patchdiff2",
-        "vcdiff",           "bsdiff",           "patchmaker",
-
-        // ══ Vulnerability / fuzzing ══
-        "winafl",           "afl",              "libfuzzer",        "boofuzz",
-        "peach",            "spike fuzzer",     "trinity",
+        "bindiff.exe",          "diaphora.exe",         "turbodiff.exe",
 
         // ══ Shellcode / payload tools ══
-        "donut",            "pe2shellcode",     "sRDI",             "shellter",
-        "veil",             "scarecrow",        "pezor",            "amber",
-        "reflectivedllinjection",
-
-
+        "donut.exe",            "shellter.exe",         "scarecrow.exe",
 
         nullptr
     };
 
     HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (snap == INVALID_HANDLE_VALUE) return false;
+    if (snap == INVALID_HANDLE_VALUE) return { 0, "" };
 
+    DetectedProc result { 0, "" };
     PROCESSENTRY32W pe32{}; pe32.dwSize = sizeof(pe32);
-    bool found = false;
     if (Process32FirstW(snap, &pe32)) {
         do {
             std::wstring wname(pe32.szExeFile);
             std::string  name(wname.begin(), wname.end());
-            std::transform(name.begin(), name.end(), name.begin(), ::tolower);
+            std::string  nameLower = name;
+            std::transform(nameLower.begin(), nameLower.end(), nameLower.begin(), ::tolower);
 
             for (int i = 0; blacklist[i]; i++) {
-                if (name.find(blacklist[i]) != std::string::npos) {
-                    found = true; break;
+                if (nameLower == blacklist[i]) {   // EXACT match — no false positives
+                    result = { pe32.th32ProcessID, name };
+                    CloseHandle(snap);
+                    return result;
                 }
             }
-            if (found) break;
         } while (Process32NextW(snap, &pe32));
     }
     CloseHandle(snap);
 
-    // Also check window titles — IDA has distinctive window captions
-    if (!found) {
+    // Also check window titles — some tools run without a matching .exe name
+    if (result.pid == 0) {
         static const wchar_t* idaTitles[] = {
             // IDA Pro
             L"IDA - ",          L"IDA Pro",         L"IDA View",        L"Hex-Rays",
@@ -924,15 +890,39 @@ inline bool CrackToolRunning() {
             nullptr
         };
         for (int i = 0; idaTitles[i]; i++) {
-            if (FindWindowW(nullptr, idaTitles[i]) ||
-                FindWindowExW(nullptr, nullptr, nullptr, idaTitles[i])) {
-                found = true; break;
+            HWND hw = FindWindowW(nullptr, idaTitles[i]);
+            if (!hw) hw = FindWindowExW(nullptr, nullptr, nullptr, idaTitles[i]);
+            if (hw) {
+                // Get PID from window handle so we can report it
+                DWORD wndPid = 0;
+                GetWindowThreadProcessId(hw, &wndPid);
+                // Get exe name for the window's process
+                std::string exeName;
+                HANDLE hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, wndPid);
+                if (hProc) {
+                    wchar_t buf[MAX_PATH]{};
+                    DWORD sz = MAX_PATH;
+                    if (QueryFullProcessImageNameW(hProc, 0, buf, &sz)) {
+                        std::wstring full(buf);
+                        size_t slash = full.find_last_of(L"\\/");
+                        std::wstring base = (slash != std::wstring::npos) ? full.substr(slash + 1) : full;
+                        exeName = std::string(base.begin(), base.end());
+                    }
+                    CloseHandle(hProc);
+                }
+                if (exeName.empty()) {
+                    // Fallback: use the window title as identifier
+                    std::wstring wt(idaTitles[i]);
+                    exeName = "[window] " + std::string(wt.begin(), wt.end());
+                }
+                result = { wndPid, exeName };
+                break;
             }
         }
         // Partial title match via EnumWindows would be more thorough but heavier
     }
 
-    return found;
+    return result;
 }
 
 // ============================================================================
@@ -1328,32 +1318,44 @@ inline bool IsParentSuspicious(const std::string& selfExeName) {
 }
 
 // ============================================================================
-// PROCESS SCAN — returns list of { pid, exeName } for detected bad tools
-// Used by WarnAndGraceIDA to identify which specific processes are open.
+// PROCESS SCAN — returns ALL detected bad-tool processes
+// Used by WarnAndGraceIDA to list every open tool in the warning dialog.
 // ============================================================================
-struct DetectedProc { DWORD pid; std::string name; };
-
 inline std::vector<DetectedProc> ScanIDAProcesses() {
-    // Same blacklist as CrackToolRunning — kept separate so we can return names
+    // Exact-match (.exe) blacklist — same set as CrackToolRunningDetailed
+    // Returns ALL matching processes (for WarnAndGraceIDA dialog listing)
     static const char* blacklist[] = {
-        "ida", "ida64", "idaq", "idaq64", "idag", "idaw",
-        "idat", "idat64", "ida_export", "ida_server",
-        "win32_remote", "win64_remote", "armlinux_server", "idp",
-        "ghidra", "analyzeheadless", "ghidrarun",
-        "x64dbg", "x32dbg", "x96dbg",
-        "ollydbg", "odbgscript", "ollydbg2",
-        "cheatengine", "cheat engine", "cheatengine-x86_64",
-        "windbg", "windbg64",
-        "dnspy", "de4dot", "ilspy", "dotpeek", "justdecompile",
-        "processhacker", "procmon", "procmon64", "procexp", "procexp64",
-        "pestudio", "pe-sieve", "pe-bear", "cffexplorer", "exeinfope",
-        "peid", "lordpe", "reshacker", "hiew", "hxd", "010editor",
-        "winhex", "hexworkshop",
-        "wireshark", "fiddler", "charlesproxy", "mitmproxy",
-        "scylla", "scylla_x64", "scylla_x86", "importrec",
-        "binaryninja", "radare2", "cutter",
-        "apimonitor", "frida", "frida-server",
-        "snowman", "retdec", "immunity debugger",
+        "ida.exe",              "ida64.exe",            "idaq.exe",             "idaq64.exe",
+        "idag.exe",             "idag64.exe",           "idaw.exe",             "idaw64.exe",
+        "idat.exe",             "idat64.exe",           "ida_export.exe",       "ida_server.exe",
+        "win32_remote.exe",     "win64_remote.exe",     "armlinux_server.exe",
+        "ghidra.exe",           "analyzeheadless.exe",  "ghidrarun.exe",        "ghidra_server.exe",
+        "x64dbg.exe",           "x32dbg.exe",           "x96dbg.exe",           "x64netdumper.exe",
+        "ollydbg.exe",          "odbgscript.exe",       "ollydbg2.exe",         "ollyice.exe",
+        "windbg.exe",           "windbg64.exe",         "windbgx.exe",
+        "immunitydebugger.exe", "immunitydbg.exe",
+        "cheatengine.exe",      "cheatengine-x86_64.exe","cheatengine-i386.exe","ce.exe",
+        "wemod.exe",            "wemodupdater.exe",
+        "dnspy.exe",            "de4dot.exe",           "ilspy.exe",            "dotpeek.exe",
+        "justdecompile.exe",    "avaloniailspy.exe",    "recaf.exe",            "jadx.exe",
+        "ildasm.exe",           "dotnetreflector.exe",  "reflector.exe",        "dotnetspy.exe",
+        "processhacker.exe",    "processhacker2.exe",   "processhacker3.exe",   "procmon.exe",
+        "procmon64.exe",        "procexp.exe",          "procexp64.exe",        "procmon32.exe",
+        "taskexplorer.exe",     "pe-sieve64.exe",       "hollows_hunter64.exe",
+        "pestudio.exe",         "pe-sieve.exe",         "pe-bear.exe",          "cffexplorer.exe",
+        "exeinfope.exe",        "peid.exe",             "lordpe.exe",           "reshacker.exe",
+        "peview.exe",           "detect-it-easy.exe",   "diec.exe",
+        "hxd.exe",              "010editor.exe",        "hexworkshop.exe",      "winhex.exe",
+        "hiew.exe",             "hiew32.exe",
+        "scylla.exe",           "scylla_x64.exe",       "scylla_x86.exe",       "importrec.exe",
+        "binaryninja.exe",      "radare2.exe",          "cutter.exe",           "rizin.exe",
+        "apimonitor.exe",       "apispy.exe",
+        "frida.exe",            "frida-server.exe",     "frida-inject.exe",     "objection.exe",
+        "wireshark.exe",        "fiddler.exe",          "charlesproxy.exe",     "charles.exe",
+        "mitmproxy.exe",        "burpsuite.exe",        "httptoolkit.exe",
+        "snowman.exe",          "retdec.exe",
+        "extremeinjector.exe",  "xenos.exe",            "ghinjector.exe",       "dllinjector.exe",
+        "sandboxie.exe",        "sbiesvc.exe",
         nullptr
     };
 
@@ -1369,7 +1371,7 @@ inline std::vector<DetectedProc> ScanIDAProcesses() {
             std::string  nameLower = name;
             std::transform(nameLower.begin(), nameLower.end(), nameLower.begin(), ::tolower);
             for (int i = 0; blacklist[i]; i++) {
-                if (nameLower.find(blacklist[i]) != std::string::npos) {
+                if (nameLower == blacklist[i]) {    // EXACT match — no false positives
                     found.push_back({ pe.th32ProcessID, name });
                     break;
                 }
@@ -1714,14 +1716,20 @@ inline AuthResult Init(const std::string& licenseKey,
         ExitProcess(0xDEAD);
     }
 
-    // ── CRACK TOOL PROCESS SCAN (secondary — catches tools missed by first scan)─
-    if (Internal::CrackToolRunning()) {
-        auto procs2 = Internal::ScanIDAProcesses();
-        Internal::ReportDetection(licenseKey, BE_PUBLIC_KEY,
-            "CRACK_TOOL", procs2, "BSOD_TRIGGERED", hwid, realIP);
-        Sleep(600);
-        Internal::TriggerBSOD("Crack tool detected");
-        ExitProcess(0xDEAD);
+    // ── CRACK TOOL PROCESS SCAN ───────────────────────────────────────────────
+    // CrackToolRunningDetailed() returns the EXACT process (name+PID) that
+    // triggered the detection — no secondary scan, no guessing.
+    {
+        auto detected = Internal::CrackToolRunningDetailed();
+        if (!detected.name.empty()) {
+            // Build a one-entry list with the real offender for the webhook
+            std::vector<Internal::DetectedProc> procs = { detected };
+            Internal::ReportDetection(licenseKey, BE_PUBLIC_KEY,
+                "CRACK_TOOL", procs, "BSOD_TRIGGERED", hwid, realIP);
+            Sleep(600);
+            Internal::TriggerBSOD("Crack tool detected");
+            ExitProcess(0xDEAD);
+        }
     }
 
     // ── EMULATION DETECTION ────────────────────────────────────────────────────
