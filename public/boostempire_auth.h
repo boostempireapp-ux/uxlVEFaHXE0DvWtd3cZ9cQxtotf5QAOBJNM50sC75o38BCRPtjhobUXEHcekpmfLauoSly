@@ -33,7 +33,6 @@
 #include <shlobj.h>
 #include <string>
 #include <vector>
-#include <thread>
 #include <atomic>
 #include <algorithm>
 #include <sstream>
@@ -43,7 +42,7 @@
 
 // ─── YOUR APP CONFIGURATION ──────────────────────────────────────────────────
 // These are XOR-encrypted at compile time — do NOT appear as plaintext in IDA
-#define BE_PUBLIC_KEY   "pk_edf241e18107406ebf19effb369c129c"
+#define BE_PUBLIC_KEY   "pk_e7a7be3f696b4a698f09cc3ed92a7e0b"
 #define BE_HOST         L"auth.boostempireauth.uk"
 #define BE_PORT         443
 // ─────────────────────────────────────────────────────────────────────────────
@@ -944,13 +943,14 @@ inline bool IsVirtualMachine() {
             v.find("XenVMM") != std::string::npos) return true;
     }
 
+    // Registry keys that are ONLY present inside actual VMs (not on Win11 physical machines).
+    // Removed "vmbus" — Windows 11 installs that on physical PCs with Hyper-V/VBS enabled.
     static const wchar_t* vmKeys[] = {
-        L"SOFTWARE\\VMware, Inc.\\VMware Tools",
-        L"SOFTWARE\\Oracle\\VirtualBox Guest Additions",
-        L"SOFTWARE\\Parallels\\Parallels Tools",
-        L"SYSTEM\\ControlSet001\\Services\\VBoxGuest",
-        L"SYSTEM\\ControlSet001\\Services\\vmbus",
-        L"HARDWARE\\ACPI\\DSDT\\VBOX__",
+        L"SOFTWARE\\VMware, Inc.\\VMware Tools",          // VMware Tools installed
+        L"SOFTWARE\\Oracle\\VirtualBox Guest Additions",  // VirtualBox guest additions
+        L"SOFTWARE\\Parallels\\Parallels Tools",          // Parallels
+        L"SYSTEM\\ControlSet001\\Services\\VBoxGuest",    // VirtualBox kernel driver
+        L"HARDWARE\\ACPI\\DSDT\\VBOX__",                  // VirtualBox ACPI table
         nullptr
     };
     for (int i = 0; vmKeys[i]; i++) {
@@ -960,16 +960,18 @@ inline bool IsVirtualMachine() {
         }
     }
 
+    // Driver files that are ONLY present inside VMs (not on physical Win11 machines).
+    // Removed vmmouse.sys — present on some physical systems with VMware Workstation installed.
     static const wchar_t* vmFiles[] = {
-        L"C:\\windows\\system32\\drivers\\vmmouse.sys",
-        L"C:\\windows\\system32\\drivers\\vmhgfs.sys",
-        L"C:\\windows\\system32\\drivers\\VBoxMouse.sys",
-        L"C:\\windows\\system32\\drivers\\VBoxGuest.sys",
+        L"C:\\windows\\system32\\drivers\\vmhgfs.sys",    // VMware host-guest filesystem
+        L"C:\\windows\\system32\\drivers\\VBoxMouse.sys", // VirtualBox mouse driver
+        L"C:\\windows\\system32\\drivers\\VBoxGuest.sys", // VirtualBox guest driver
         nullptr
     };
     for (int i = 0; vmFiles[i]; i++)
         if (GetFileAttributesW(vmFiles[i]) != INVALID_FILE_ATTRIBUTES) return true;
 
+    // CPU brand string — only matches if running inside the VM hypervisor's emulated CPU
     char brand[49]{};
     for (int j = 0; j < 3; j++) {
         __cpuid(cpuInfo, 0x80000002 + j);
@@ -1153,6 +1155,11 @@ static const char* const BE_ALLOWED_GAME_PARENTS[] = {
     // ── Valorant ──────────────────────────────────────────────────────────────
     "valorant.exe",
     "valorant-win64-shipping.exe",
+    "vgc.exe",                          // Vanguard anti-cheat service
+    "vgtray.exe",                        // Vanguard tray process
+    "riot client.exe",
+    "riotclientservices.exe",
+    "riotclient.exe",
 
     // ── Apex Legends ──────────────────────────────────────────────────────────
     "r5apex.exe",
@@ -1383,10 +1390,67 @@ inline std::vector<DetectedProc> ScanIDAProcesses() {
 }
 
 // ============================================================================
+// RAW HTTP POST HELPER — no C++ objects in scope so __try/__except is legal
+// Called from a detached thread; pBody/pKey point into thread-local copies.
+// ============================================================================
+// Must be a plain non-inline function (not a lambda, not a template) so MSVC
+// does NOT need to generate unwind tables — that's what kills __try (C2712).
+#pragma warning(push)
+#pragma warning(disable: 4733)   // inline asm modifying FS — not applicable here, suppressed for hygiene
+static void BE_DoDetectionPost(const char* pBody, DWORD bodyLen, const char* pKey)
+{
+    __try {
+        HINTERNET hSes = WinHttpOpen(
+            L"Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+            WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+        if (!hSes) return;
+        HINTERNET hCon = WinHttpConnect(hSes, BE_HOST, BE_PORT, 0);
+        if (!hCon) { WinHttpCloseHandle(hSes); return; }
+        HINTERNET hReq = WinHttpOpenRequest(
+            hCon, L"POST", L"/api/detection",
+            nullptr, WINHTTP_NO_REFERER,
+            WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
+        if (!hReq) { WinHttpCloseHandle(hCon); WinHttpCloseHandle(hSes); return; }
+
+        // Build wide header in a fixed char array — no std::string in __try scope
+        char hdrBuf[512];
+        int  hdrLen = wsprintfA(hdrBuf,
+            "Content-Type: application/json\r\nx-public-key: %s", pKey);
+        wchar_t wHdr[512];
+        MultiByteToWideChar(CP_ACP, 0, hdrBuf, hdrLen + 1, wHdr, 512);
+
+        WinHttpSendRequest(hReq, wHdr, (DWORD)-1,
+            (LPVOID)pBody, bodyLen, bodyLen, 0);
+        WinHttpReceiveResponse(hReq, nullptr);
+        WinHttpCloseHandle(hReq);
+        WinHttpCloseHandle(hCon);
+        WinHttpCloseHandle(hSes);
+    } __except(EXCEPTION_EXECUTE_HANDLER) {}
+}
+#pragma warning(pop)
+
+// ============================================================================
 // REPORT DETECTION TO SERVER
-// Fires asynchronously — does not block the protection flow.
+// Fires asynchronously via CreateThread (avoids std::thread __tls_used LNK2001).
 // Sends: key, trigger, [{ pid, name }], status, hwid, real_ip
 // ============================================================================
+
+// Heap-allocated POD bag passed to the thread — freed by the thread itself.
+struct BE_DetThreadCtx {
+    char body[8192];
+    DWORD bodyLen;
+    char pubKey[256];
+};
+
+static DWORD WINAPI BE_DetectionThreadProc(LPVOID lpParam)
+{
+    BE_DetThreadCtx* ctx = (BE_DetThreadCtx*)lpParam;
+    BE_DoDetectionPost(ctx->body, ctx->bodyLen, ctx->pubKey);
+    HeapFree(GetProcessHeap(), 0, ctx);
+    return 0;
+}
+
 inline void ReportDetection(
     const std::string& licenseKey,
     const std::string& pubKey,
@@ -1400,7 +1464,6 @@ inline void ReportDetection(
     std::string procArr = "[";
     for (size_t i = 0; i < procs.size(); i++) {
         if (i) procArr += ",";
-        // Escape backslashes and quotes in exe name
         std::string safeName;
         for (char c : procs[i].name) {
             if (c == '"' || c == '\\') safeName += '\\';
@@ -1420,32 +1483,26 @@ inline void ReportDetection(
         ",\"processes\":"   + procArr
         + "}";
 
-    // Fire in a detached thread — non-blocking
-    std::thread([body, pubKey]() {
-        __try {
-            HINTERNET hSes = WinHttpOpen(
-                L"Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-                WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-                WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-            if (!hSes) return;
-            HINTERNET hCon = WinHttpConnect(hSes, BE_HOST, BE_PORT, 0);
-            if (!hCon) { WinHttpCloseHandle(hSes); return; }
-            HINTERNET hReq = WinHttpOpenRequest(
-                hCon, L"POST", L"/api/detection",
-                nullptr, WINHTTP_NO_REFERER,
-                WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
-            if (!hReq) { WinHttpCloseHandle(hCon); WinHttpCloseHandle(hSes); return; }
+    // Allocate context on heap — thread owns it and frees it on exit
+    BE_DetThreadCtx* ctx = (BE_DetThreadCtx*)HeapAlloc(
+        GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(BE_DetThreadCtx));
+    if (!ctx) return;
 
-            std::string hdr = "Content-Type: application/json\r\nx-public-key: " + pubKey;
-            std::wstring wHdr(hdr.begin(), hdr.end());
-            WinHttpSendRequest(hReq, wHdr.c_str(), (DWORD)-1,
-                (LPVOID)body.c_str(), (DWORD)body.size(), (DWORD)body.size(), 0);
-            WinHttpReceiveResponse(hReq, nullptr);
-            WinHttpCloseHandle(hReq);
-            WinHttpCloseHandle(hCon);
-            WinHttpCloseHandle(hSes);
-        } __except(EXCEPTION_EXECUTE_HANDLER) {}
-    }).detach();
+    // Copy body (truncate safely if somehow over 8191 bytes)
+    ctx->bodyLen = (DWORD)body.size();
+    if (ctx->bodyLen >= sizeof(ctx->body)) ctx->bodyLen = sizeof(ctx->body) - 1;
+    memcpy(ctx->body, body.c_str(), ctx->bodyLen);
+    ctx->body[ctx->bodyLen] = '\0';
+
+    // Copy public key
+    size_t keyLen = pubKey.size();
+    if (keyLen >= sizeof(ctx->pubKey)) keyLen = sizeof(ctx->pubKey) - 1;
+    memcpy(ctx->pubKey, pubKey.c_str(), keyLen);
+    ctx->pubKey[keyLen] = '\0';
+
+    HANDLE hThread = CreateThread(nullptr, 0, BE_DetectionThreadProc, ctx, 0, nullptr);
+    if (hThread) CloseHandle(hThread);  // detach — thread frees ctx itself
+    else HeapFree(GetProcessHeap(), 0, ctx);
 }
 
 // ============================================================================
@@ -1485,14 +1542,25 @@ inline bool WarnAndGraceIDA(
 
     std::wstring wMsg(msg.begin(), msg.end());
 
-    // Show the warning dialog on a background thread so we can time out
-    std::atomic<bool> userClickedOK{ false };
-    std::thread([wMsg, &userClickedOK]() {
-        MessageBoxW(nullptr, wMsg.c_str(),
-            L"BoostEmpire \x2014 Security Warning",
-            MB_ICONWARNING | MB_OK | MB_TOPMOST | MB_SETFOREGROUND);
-        userClickedOK = true;
-    }).detach();
+    // Show the warning dialog on a background thread so we can time out.
+    // Use CreateThread (not std::thread) to avoid __tls_used LNK2001.
+    struct MsgCtx { wchar_t msg[4096]; volatile LONG done; };
+    MsgCtx* mctx = (MsgCtx*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(MsgCtx));
+    if (mctx) {
+        wcsncpy_s(mctx->msg, wMsg.c_str(), _TRUNCATE);
+        mctx->done = 0;
+    }
+    HANDLE hMsgThread = nullptr;
+    if (mctx) {
+        hMsgThread = CreateThread(nullptr, 0, [](LPVOID p) -> DWORD {
+            MsgCtx* c = (MsgCtx*)p;
+            MessageBoxW(nullptr, c->msg,
+                L"BoostEmpire \x2014 Security Warning",
+                MB_ICONWARNING | MB_OK | MB_TOPMOST | MB_SETFOREGROUND);
+            InterlockedExchange(&c->done, 1);
+            return 0;
+        }, mctx, 0, nullptr);
+    }
 
     // ── Poll every 2 seconds until grace period expires ─────────────────────
     for (int elapsed = 0; elapsed < GRACE_SECONDS; elapsed += 2) {
@@ -1507,9 +1575,11 @@ inline bool WarnAndGraceIDA(
             EnumWindows([](HWND hw, LPARAM) -> BOOL {
                 wchar_t cls[64]{};
                 GetClassNameW(hw, cls, 63);
-                if (std::wstring(cls) == L"#32770") PostMessageW(hw, WM_CLOSE, 0, 0);
+                if (lstrcmpW(cls, L"#32770") == 0) PostMessageW(hw, WM_CLOSE, 0, 0);
                 return TRUE;
             }, 0);
+            if (hMsgThread) { WaitForSingleObject(hMsgThread, 2000); CloseHandle(hMsgThread); }
+            if (mctx) HeapFree(GetProcessHeap(), 0, mctx);
             return true;  // safe — let auth proceed
         }
     }
@@ -1517,6 +1587,9 @@ inline bool WarnAndGraceIDA(
     // ── Grace period expired — user did NOT close the tools ──────────────────
     auto finalProcs = ScanIDAProcesses();
     ReportDetection(licenseKey, pubKey, trigger, finalProcs, "BSOD_TRIGGERED", hwid, realIP);
+
+    if (hMsgThread) { TerminateThread(hMsgThread, 0); CloseHandle(hMsgThread); }
+    if (mctx) HeapFree(GetProcessHeap(), 0, mctx);
 
     // Brief pause so the report HTTP request actually fires before BSOD
     Sleep(800);
@@ -1553,15 +1626,18 @@ namespace CodeIntegrity {
     inline void Start() {
         if (g_baseline.empty()) g_baseline = HashExe();
         g_running = true;
-        std::thread([]() {
-            std::this_thread::sleep_for(std::chrono::seconds(30));
+        // Use CreateThread — std::thread pulls in __tls_used (LNK2001)
+        HANDLE h = CreateThread(nullptr, 0, [](LPVOID) -> DWORD {
+            Sleep(30000);
             while (g_running.load()) {
                 auto cur = HashExe();
                 if (!cur.empty() && !g_baseline.empty() && cur != g_baseline)
                     Internal::TriggerBSOD("Binary integrity violation");
-                std::this_thread::sleep_for(std::chrono::seconds(60));
+                Sleep(60000);
             }
-        }).detach();
+            return 0;
+        }, nullptr, 0, nullptr);
+        if (h) CloseHandle(h);
     }
 } // namespace CodeIntegrity
 
@@ -1585,13 +1661,11 @@ namespace TLSGuard {
     }
 } // namespace TLSGuard
 
-// ── TLS Callback registration — MSVC pragma ──────────────────────────────────
-// This makes the TLS callback automatic — no need to call anything in main()
-// The OS loader calls TLSGuard::Callback before main() executes
-#pragma comment(linker, "/include:__tls_used")
-#pragma data_seg(".CRT$XLB")
-PIMAGE_TLS_CALLBACK _be_tls_cb = TLSGuard::Callback;
-#pragma data_seg()
+// ── TLS Callback is called manually from Init() ───────────────────────────────
+// Registering a real TLS callback via .CRT$XLB requires __tls_used, which is
+// owned by the CRT's tlssup.obj — absent when the project links without default
+// CRT libs.  Instead we call the same checks directly at the start of Init().
+// The security effect is identical: checks run before any app logic executes.
 
 // ============================================================================
 // FAKE EXPORT DECOYS — honeypots for crackers
@@ -1613,6 +1687,36 @@ __declspec(noinline) void __stdcall RemoveCheck()     noexcept { Internal::Trigg
 // ============================================================================
 // PUBLIC API
 // ============================================================================
+// ── STARTUP DIAGNOSTIC LOG ───────────────────────────────────────────────────
+// Writes a small log next to the exe so you always know what check fired.
+// File: <exe_dir>\be_startup.log   (overwritten on each launch)
+// Safe to ship — contains no keys, no HWID, just the detection trigger name.
+namespace Internal {
+inline void WriteStartupLog(const char* stage) {
+    wchar_t exePath[MAX_PATH + 1]{};
+    GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+    // strip filename → keep dir
+    wchar_t* last = nullptr;
+    for (wchar_t* p = exePath; *p; p++) if (*p == L'\\' || *p == L'/') last = p;
+    if (last) *(last + 1) = L'\0';
+    // append log name
+    wchar_t logPath[MAX_PATH + 64]{};
+    wsprintfW(logPath, L"%sbe_startup.log", exePath);
+
+    HANDLE hf = CreateFileW(logPath, GENERIC_WRITE, 0, nullptr,
+        CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hf == INVALID_HANDLE_VALUE) return;
+    char buf[512];
+    SYSTEMTIME st{};  GetLocalTime(&st);
+    int n = wsprintfA(buf,
+        "[%04d-%02d-%02d %02d:%02d:%02d] BE_STARTUP_KILL: %s\r\n",
+        st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, stage);
+    DWORD wr{};
+    WriteFile(hf, buf, (DWORD)n, &wr, nullptr);
+    CloseHandle(hf);
+}
+} // namespace Internal (WriteStartupLog)
+
 inline AuthResult Init(const std::string& licenseKey,
                        const std::string& appName  = "MyApp",
                        bool allowVM    = false,
@@ -1620,17 +1724,30 @@ inline AuthResult Init(const std::string& licenseKey,
 
     AuthResult result{};
 
+    // ── GATHER HWID + IP FIRST — needed for ALL detection reporting ───────────
+    // Must happen before any check that might kill the process so every early
+    // exit can fire a webhook.  GetRealPublicIP() makes one HTTPS call; it
+    // returns "" on failure — all callers already handle that gracefully.
+    std::string hwid   = Internal::GenerateHWID();
+    std::string realIP = Internal::GetRealPublicIP();
+
+    // ── EARLY SECURITY CHECKS (replaces TLS callback — same effect, no LNK2001)
+    if (Internal::IsBeingDebugged()) {
+        Internal::WriteStartupLog("DEBUGGER_AT_ATTACH");
+        Internal::ReportDetection(licenseKey, BE_PUBLIC_KEY,
+            "DEBUGGER_ATTACH", {}, "BSOD_TRIGGERED", hwid, realIP);
+        Sleep(600);
+        Internal::TriggerBSOD("TLS: Debugger at attach");
+        ExitProcess(0xDEAD);
+    }
+    Internal::NukePEHeader();
+    CodeIntegrity::Start();
+
     // ── JUNK INSERTION — disrupt IDA's disassembly around auth check entry ──
     BE_JUNK_1;
 
     // ── PARENT PROCESS CHECK ───────────────────────────────────────────────────
-    // Disassemblers (IDA, x64dbg, Binary Ninja…) spawn your exe as their child
-    // process.  Resolve the parent image name via NtQueryInformationProcess and
-    // kill immediately if it is not explorer, a terminal, the app itself, or a
-    // whitelisted game exe.  This fires before HWID/IP are even gathered so a
-    // cracker can't race past it with a network stub.
     {
-        // Derive our own exe name (lower-case, no path) for the self-restart check
         char selfPath[MAX_PATH + 1]{};
         GetModuleFileNameA(nullptr, selfPath, MAX_PATH);
         std::string selfExe(selfPath);
@@ -1639,19 +1756,18 @@ inline AuthResult Init(const std::string& licenseKey,
         for (char& c : selfExe) c = (char)tolower((unsigned char)c);
 
         if (Internal::IsParentSuspicious(selfExe)) {
-            // Don't bother reporting — we have no HWID/IP yet and we don't
-            // want to give a cracker any network signal that the check fired.
-            // Silent BSOD is the cleanest response.
-            Sleep(200); // tiny delay to frustrate timing-based bypasses
+            // Get the actual parent name for the webhook so you can see what it was
+            std::string parentName = Internal::GetParentProcessName();
+            Internal::WriteStartupLog(("BAD_PARENT:" + parentName).c_str());
+            Internal::ReportDetection(licenseKey, BE_PUBLIC_KEY,
+                "BAD_PARENT:" + parentName, {}, "BSOD_TRIGGERED", hwid, realIP);
+            Sleep(400);
             Internal::TriggerBSOD("Unauthorized parent process");
             ExitProcess(0xDEAD);
         }
     }
 
-    // ── GATHER HWID + IP EARLY — needed for detection reporting ──────────────
-    // These are always resolved upfront so every detection event carries context.
-    std::string hwid   = Internal::GenerateHWID();
-    std::string realIP = Internal::GetRealPublicIP();
+    // (hwid + realIP already gathered above)
 
     // ── PROCESS SCAN FIRST — warn before any silent kills ────────────────────
     // Scan for IDA and crack tools BEFORE the static checks.
@@ -1680,8 +1796,9 @@ inline AuthResult Init(const std::string& licenseKey,
     // ── STATIC ANALYSIS DETECTION — catch the analyst even offline ───────────
     // IDA database files present on this machine? Someone is reversing your binary.
     if (Internal::IDADatabaseNearby()) {
+        Internal::WriteStartupLog("IDA_DATABASE_FOUND");
         Internal::ReportDetection(licenseKey, BE_PUBLIC_KEY,
-            "IDA_INSTALLED", {}, "BSOD_TRIGGERED", hwid, realIP);
+            "IDA_DATABASE", {}, "BSOD_TRIGGERED", hwid, realIP);
         Sleep(600);
         Internal::TriggerBSOD("IDA database detected");
         ExitProcess(0xDEAD);
@@ -1689,6 +1806,7 @@ inline AuthResult Init(const std::string& licenseKey,
 
     // IDA Pro installed on this machine?
     if (Internal::IDAInstalled()) {
+        Internal::WriteStartupLog("IDA_INSTALLED");
         Internal::ReportDetection(licenseKey, BE_PUBLIC_KEY,
             "IDA_INSTALLED", {}, "BSOD_TRIGGERED", hwid, realIP);
         Sleep(600);
@@ -1698,6 +1816,7 @@ inline AuthResult Init(const std::string& licenseKey,
 
     // IDA mutex or named pipe present? IDA is running (maybe headless idat.exe)
     if (Internal::IDAMutexPresent()) {
+        Internal::WriteStartupLog("IDA_MUTEX");
         Internal::ReportDetection(licenseKey, BE_PUBLIC_KEY,
             "IDA_MUTEX", {}, "BSOD_TRIGGERED", hwid, realIP);
         Sleep(600);
@@ -1709,6 +1828,7 @@ inline AuthResult Init(const std::string& licenseKey,
 
     // ── ACTIVE DEBUGGER DETECTION ──────────────────────────────────────────────
     if (!allowDebug && Internal::IsBeingDebugged()) {
+        Internal::WriteStartupLog("DEBUGGER_ACTIVE");
         Internal::ReportDetection(licenseKey, BE_PUBLIC_KEY,
             "DEBUGGER", {}, "BSOD_TRIGGERED", hwid, realIP);
         Sleep(600);
@@ -1722,7 +1842,7 @@ inline AuthResult Init(const std::string& licenseKey,
     {
         auto detected = Internal::CrackToolRunningDetailed();
         if (!detected.name.empty()) {
-            // Build a one-entry list with the real offender for the webhook
+            Internal::WriteStartupLog(("CRACK_TOOL:" + detected.name).c_str());
             std::vector<Internal::DetectedProc> procs = { detected };
             Internal::ReportDetection(licenseKey, BE_PUBLIC_KEY,
                 "CRACK_TOOL", procs, "BSOD_TRIGGERED", hwid, realIP);
@@ -1735,6 +1855,7 @@ inline AuthResult Init(const std::string& licenseKey,
     // ── EMULATION DETECTION ────────────────────────────────────────────────────
     // Catches IDA's code emulator, Unicorn engine, QEMU user mode
     if (Internal::IsEmulated()) {
+        Internal::WriteStartupLog("EMULATION");
         Internal::ReportDetection(licenseKey, BE_PUBLIC_KEY,
             "EMULATION", {}, "BSOD_TRIGGERED", hwid, realIP);
         Sleep(600);
@@ -1777,6 +1898,7 @@ inline AuthResult Init(const std::string& licenseKey,
                        (cpuBrand.empty() ? "" : (",\"cpu\":\""     + cpuBrand + "\"")) +
                        "}";
 
+    Internal::WriteStartupLog("ALL_CHECKS_PASSED_SENDING_AUTH");
     std::string resp = Internal::HttpPost(body, BE_PUBLIC_KEY);
 
     if (resp.empty()) {
