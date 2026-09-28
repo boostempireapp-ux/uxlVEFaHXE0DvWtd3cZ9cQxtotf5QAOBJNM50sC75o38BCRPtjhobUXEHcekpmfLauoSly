@@ -47,6 +47,43 @@ function webhookBanned(key, reason, ip, appName) {
   });
 }
 
+// Rich detection webhook — shows the EXACT process(es) that caused the ban
+function webhookDetection(key, trigger, processes, status, ip, hwid, appName) {
+  const isBan   = status === 'BSOD_TRIGGERED';
+  const isWarn  = status === 'WARNED';
+  const isClear = status === 'CLOSED_BY_USER';
+
+  const emoji = isBan ? '🔨' : isWarn ? '⚠️' : '✅';
+  const color = isBan ? 0xFF0000 : isWarn ? 0xFF8C00 : 0x00C853;
+  const title = isBan
+    ? `${emoji} Key Banned — Anti-Cheat Detection`
+    : isWarn
+    ? `${emoji} Anti-Cheat Warning Shown to User`
+    : `${emoji} User Closed Detected Tool(s)`;
+
+  // Build a human-readable process list showing EXACT name + PID
+  let procText = '—';
+  if (Array.isArray(processes) && processes.length > 0) {
+    procText = processes
+      .map(p => `\`${p.name}\`  (PID ${p.pid})`)
+      .join('\n');
+    if (procText.length > 1020) procText = procText.substring(0, 1017) + '…';
+  }
+
+  const fields = [
+    { name: 'Key',        value: `\`${key || '—'}\``,       inline: true  },
+    { name: 'App',        value: appName  || '—',            inline: true  },
+    { name: 'Trigger',    value: `\`${trigger || '—'}\``,    inline: true  },
+    { name: 'Status',     value: `\`${status}\``,            inline: true  },
+    { name: 'IP',         value: ip   || '—',                inline: true  },
+    { name: 'HWID',       value: `\`${hwid || '—'}\``,       inline: true  },
+    { name: `Detected Process${processes && processes.length > 1 ? 'es' : ''} (${processes ? processes.length : 0})`,
+      value: procText, inline: false },
+  ];
+
+  sendDiscordAlert({ title, color, fields });
+}
+
 function webhookHwidFlood(key, count, ip, appName) {
   sendDiscordAlert({
     title: '⚠️ HWID Flood → Key Auto-Frozen',
@@ -1555,21 +1592,58 @@ app.post('/api/detection', rateLimit, async (req, res) => {
     return res.json({ success: false, code: 'NO_PUBLIC_KEY' });
   const appDoc = await appsCol.findOne({ publicKey });
   if (!appDoc) return res.json({ success: false, code: 'INVALID_PUBLIC_KEY' });
-  const { key='', trigger='UNKNOWN', processes=[], status='WARNED', hwid='', real_ip='' } = req.body;
+
+  const {
+    key       = '',
+    trigger   = 'UNKNOWN',
+    processes = [],   // [{ pid, name }, ...]  — the EXACT processes that triggered the ban
+    status    = 'WARNED',
+    hwid      = '',
+    real_ip   = '',
+    matched_process = '',   // optional: single exact matching entry (name that hit the blacklist)
+  } = req.body;
+
   const resolvedIP = real_ip || ip;
+
+  // Ensure processes is always an array (client sends JSON array)
+  const procList = Array.isArray(processes) ? processes : [];
+
+  // Build a clean summary of exactly what was detected
+  const procSummary = procList.length > 0
+    ? procList.map(p => `${p.name} (PID ${p.pid})`).join(', ')
+    : (matched_process || trigger);
+
   const doc = {
-    appId: String(appDoc._id), appName: appDoc.name,
-    key: key||'—', hwid: hwid||'—', ip: resolvedIP,
-    trigger, processes, status, timestamp: new Date().toISOString(),
+    appId:   String(appDoc._id),
+    appName: appDoc.name,
+    key:     key  || '—',
+    hwid:    hwid || '—',
+    ip:      resolvedIP,
+    trigger,
+    matched_process: matched_process || '',
+    processes: procList,
+    proc_summary: procSummary,
+    status,
+    timestamp: new Date().toISOString(),
   };
   await detectionsCol.insertOne(doc);
+
+  // Send rich Discord webhook for every detection event (warn, clear, and ban)
+  webhookDetection(key, trigger, procList, status, resolvedIP, hwid, appDoc.name);
+
   if (status === 'BSOD_TRIGGERED' && key) {
     await keysCol.updateOne({ key, appId: String(appDoc._id) }, { $set: { status: 'banned' } });
     activeSessions.delete(key);
-    webhookBanned(key, `Anti-cheat detection: ${trigger}`, resolvedIP, appDoc.name);
     log(appDoc._id, key, hwid, appDoc.name, 'DETECTION', 'BANNED', resolvedIP,
-        `Auto-banned: ${trigger} — ${processes.map(p=>p.name).join(', ')}`);
+        `Auto-banned: ${trigger} — ${procSummary}`);
+  } else if (status === 'WARNED') {
+    log(appDoc._id, key, hwid, appDoc.name, 'DETECTION', 'WARNED', resolvedIP,
+        `Warning shown: ${trigger} — ${procSummary}`);
+  } else if (status === 'CLOSED_BY_USER') {
+    log(appDoc._id, key, hwid, appDoc.name, 'DETECTION', 'CLOSED_BY_USER', resolvedIP,
+        `User closed tools: ${trigger} — ${procSummary}`);
   }
+
   res.json({ success: true, code: 'LOGGED' });
 });
 
