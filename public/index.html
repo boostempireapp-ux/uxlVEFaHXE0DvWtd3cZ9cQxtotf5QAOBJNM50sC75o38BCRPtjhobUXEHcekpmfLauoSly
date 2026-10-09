@@ -582,6 +582,10 @@ tbody td{padding:9px 13px;vertical-align:middle;}
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
           RESELLER
         </div>
+        <div class="login-tab" id="lt-verify" onclick="switchLoginTab('verify')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z"/></svg>
+          VERIFY BOT
+        </div>
       </div>
 
       <!-- Admin form -->
@@ -626,6 +630,21 @@ tbody td{padding:9px 13px;vertical-align:middle;}
         <div class="login-foot">
           <span>No account? <a href="https://discord.gg/hxu" target="_blank">Create one</a></span>
           <a class="login-foot-sub" href="https://discord.gg/hxu" target="_blank">Forgot your password? Contact support to reset.</a>
+        </div>
+      </div>
+
+      <!-- Verify Bot form — embedded dashboard -->
+      <div id="login-verify-form" style="display:none">
+        <div style="text-align:center;padding:8px 0 16px">
+          <div style="font-size:28px;margin-bottom:8px">🛡️</div>
+          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">Verify Bot Dashboard</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:18px;line-height:1.6">Live verification stats, logs, and bot status</div>
+          <button class="btn-login" onclick="openVerifyOverlay()" style="margin-bottom:10px">
+            Open Verify Dashboard
+          </button>
+          <div style="margin-top:10px;font-size:11px;color:var(--text3)">
+            Connects to: <span style="font-family:monospace;color:var(--p3)" id="vb-url-display">localhost:3000</span>
+          </div>
         </div>
       </div>
 
@@ -3216,8 +3235,10 @@ function switchLoginTab(m){
   loginMode=m;
   document.getElementById('lt-admin').classList.toggle('active',m==='admin');
   document.getElementById('lt-reseller').classList.toggle('active',m==='reseller');
+  document.getElementById('lt-verify').classList.toggle('active',m==='verify');
   document.getElementById('login-admin-form').style.display=m==='admin'?'':'none';
   document.getElementById('login-reseller-form').style.display=m==='reseller'?'':'none';
+  document.getElementById('login-verify-form').style.display=m==='verify'?'':'none';
   document.getElementById('lerr').textContent='';
 }
 async function doResellerLogin(){
@@ -4249,6 +4270,139 @@ function dllLogNext() { dllLogPage++; loadDLLLogs(); }
   Copyright &copy; Boost Empire 2026, All Rights Reserved
 </div>
 
+<!-- ── VERIFY BOT OVERLAY ───────────────────────────────────────────────── -->
+<div id="verify-overlay" style="
+  display:none;position:fixed;inset:0;z-index:300;
+  background:#000;flex-direction:column;
+">
+  <!-- Overlay top bar -->
+  <div style="
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 20px;background:#080810;
+    border-bottom:1px solid #1a1a2e;flex-shrink:0;
+  ">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span style="font-size:18px">🛡️</span>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#a78bfa;letter-spacing:.5px">VERIFY BOT DASHBOARD</div>
+        <div style="font-size:11px;color:#50507a" id="vb-overlay-url">Loading…</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button onclick="reloadVerifyFrame()" style="
+        padding:6px 14px;background:transparent;border:1px solid #1a1a2e;
+        border-radius:6px;color:#9090c0;font-size:12px;cursor:pointer;
+        transition:all .15s;
+      " onmouseover="this.style.borderColor='#8b5cf6';this.style.color='#a78bfa'"
+         onmouseout="this.style.borderColor='#1a1a2e';this.style.color='#9090c0'">
+        🔄 Reload
+      </button>
+      <button onclick="openVerifyExternal()" style="
+        padding:6px 14px;background:transparent;border:1px solid #1a1a2e;
+        border-radius:6px;color:#9090c0;font-size:12px;cursor:pointer;
+        transition:all .15s;
+      " onmouseover="this.style.borderColor='#8b5cf6';this.style.color='#a78bfa'"
+         onmouseout="this.style.borderColor='#1a1a2e';this.style.color='#9090c0'">
+        ↗ Open in Tab
+      </button>
+      <button onclick="closeVerifyOverlay()" style="
+        padding:6px 14px;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3);
+        border-radius:6px;color:#a78bfa;font-size:12px;cursor:pointer;font-weight:600;
+        transition:all .15s;
+      " onmouseover="this.style.background='rgba(139,92,246,.25)'"
+         onmouseout="this.style.background='rgba(139,92,246,.12)'">
+        ✕ Close
+      </button>
+    </div>
+  </div>
+  <!-- iframe -->
+  <iframe
+    id="verify-iframe"
+    src="about:blank"
+    style="flex:1;border:none;width:100%;background:#000;"
+    allow="same-origin"
+  ></iframe>
+  <!-- fallback message if iframe blocked -->
+  <div id="verify-fallback" style="display:none;position:absolute;inset:0;top:53px;
+    display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;
+    background:#000;
+  ">
+    <div style="font-size:32px">⚠️</div>
+    <div style="font-size:14px;color:#9090c0;text-align:center;max-width:400px;line-height:1.7">
+      The verify bot dashboard couldn't be embedded.<br/>
+      This usually means it's not running or blocks iframes.<br/>
+      <span style="color:#a78bfa;font-size:12px" id="verify-fallback-url"></span>
+    </div>
+    <button onclick="openVerifyExternal()" style="
+      padding:10px 24px;background:#8b5cf6;border:none;border-radius:8px;
+      color:#fff;font-size:13px;font-weight:600;cursor:pointer;
+    ">Open in New Tab ↗</button>
+  </div>
+</div>
+
+<script>
+// ── Verify Bot Overlay ─────────────────────────────────────────────────────
+function _getVerifyURL() {
+  return (window.VERIFY_BOT_URL || 'http://localhost:3000') + '/dashboard';
+}
+
+function openVerifyOverlay() {
+  const url = _getVerifyURL();
+  const overlay = document.getElementById('verify-overlay');
+  const iframe  = document.getElementById('verify-iframe');
+  const urlLabel = document.getElementById('vb-overlay-url');
+  // Update URL display
+  urlLabel.textContent = url;
+  document.getElementById('vb-url-display').textContent =
+    (window.VERIFY_BOT_URL || 'localhost:3000');
+  // Load iframe
+  iframe.src = url;
+  // Show overlay
+  overlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  // Handle load error (X-Frame-Options / CSP)
+  iframe.onerror = showVerifyFallback;
+  iframe.onload = function() {
+    try {
+      // If we can access contentDocument it's same-origin and loaded fine
+      void iframe.contentDocument;
+    } catch(e) {
+      // Cross-origin — assume it loaded (can't detect X-Frame-Options block this way)
+    }
+  };
+}
+
+function closeVerifyOverlay() {
+  const overlay = document.getElementById('verify-overlay');
+  const iframe  = document.getElementById('verify-iframe');
+  overlay.style.display = 'none';
+  iframe.src = 'about:blank';
+  document.body.style.overflow = '';
+}
+
+function reloadVerifyFrame() {
+  const iframe = document.getElementById('verify-iframe');
+  iframe.src = _getVerifyURL();
+}
+
+function openVerifyExternal() {
+  window.open(_getVerifyURL(), '_blank');
+}
+
+function showVerifyFallback() {
+  const fb = document.getElementById('verify-fallback');
+  document.getElementById('verify-fallback-url').textContent = _getVerifyURL();
+  fb.style.display = 'flex';
+}
+
+// Close overlay on Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const overlay = document.getElementById('verify-overlay');
+    if (overlay && overlay.style.display !== 'none') closeVerifyOverlay();
+  }
+});
+</script>
 
 </body>
 </html>
