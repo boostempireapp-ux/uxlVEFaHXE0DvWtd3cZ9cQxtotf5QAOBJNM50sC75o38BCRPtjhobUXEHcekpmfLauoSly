@@ -633,10 +633,15 @@ tbody td{padding:9px 13px;vertical-align:middle;}
         </div>
       </div>
 
-      <!-- Verify Bot form — password login -->
+      <!-- Verify Bot form — WispByte URL + password -->
       <div id="login-verify-form" style="display:none">
         <div class="lfield">
-          <label class="lfield-label">Password</label>
+          <label class="lfield-label">WispByte Bot URL</label>
+          <input class="inp" type="text" id="lv-url" placeholder="https://yourbot.wispbyte.com" onkeydown="if(event.key==='Enter')document.getElementById('lv').focus()"/>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">Your verify bot's WispByte URL — no trailing slash</div>
+        </div>
+        <div class="lfield">
+          <label class="lfield-label">Dashboard Password</label>
           <div class="inp-pw-wrap">
             <input class="inp" type="password" id="lv" placeholder="••••••••" onkeydown="if(event.key==='Enter')doVerifyLogin()"/>
             <button class="inp-eye" type="button" onclick="togglePw('lv',this)" tabindex="-1">
@@ -645,6 +650,9 @@ tbody td{padding:9px 13px;vertical-align:middle;}
           </div>
         </div>
         <button class="btn-login" onclick="doVerifyLogin()">Sign in to Verify Dashboard</button>
+        <div class="login-foot">
+          <span style="font-size:11px;color:var(--text3)">Set <code style="font-size:10px;background:rgba(139,92,246,0.1);padding:1px 5px;border-radius:4px">DASHBOARD_PASSWORD</code> in WispByte env vars</span>
+        </div>
       </div>
 
       <div class="lerr" id="lerr"></div>
@@ -2356,30 +2364,34 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
 
 <script>
 // ── VERIFY BOT CONFIG ─────────────────────────────────────────────────────────
-// Set this to your Render-hosted verify bot URL (no trailing slash).
-// Example: window.VERIFY_BOT_URL = 'https://your-verify-bot.onrender.com';
-// If left empty, the value stored in localStorage under 'vb_api_url' is used.
-// Same server — dashboard/api routes are on the KeyAuth server itself
+// Set this to your WispByte verify bot URL (no trailing slash) to hardcode it.
+// Example: window.VERIFY_BOT_URL = 'https://your-verify-bot.wispbyte.com';
+// If left empty, the URL typed in the login form is used (saved in localStorage).
 window.VERIFY_BOT_URL = '';
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function doVerifyLogin() {
-  const pw  = document.getElementById('lv').value.trim();
-  const err = document.getElementById('lerr');
-  if (!pw) { err.textContent = 'Enter your password'; return; }
+  const urlRaw = (document.getElementById('lv-url').value || '').trim().replace(/\/+$/, '');
+  const botUrl = urlRaw || window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || '';
+  const pw     = document.getElementById('lv').value.trim();
+  const err    = document.getElementById('lerr');
+  if (!botUrl) { err.textContent = 'Enter your WispByte bot URL first'; return; }
+  if (!pw)     { err.textContent = 'Enter your dashboard password'; return; }
   err.textContent = '';
+  // Remember the URL so next visit is pre-filled
+  localStorage.setItem('vb_api_url', botUrl);
+  document.getElementById('vb-url-input').value = botUrl;
   try {
-    const r = await fetch('/dashboard/api/login', {
+    const r = await fetch(botUrl + '/dashboard/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: pw })
     });
     const d = await r.json();
     if (!d.success) { err.textContent = d.message || 'Invalid password'; return; }
-    // Store token and tell the overlay to open already-authenticated
     localStorage.setItem('vb_token', d.token);
     window.openVerifyOverlayAuthed(d.token);
-  } catch(e) { err.textContent = 'Could not reach server'; }
+  } catch(e) { err.textContent = 'Could not reach bot — check the URL and make sure it\'s running'; }
 }
 
 let TOKEN='', RTOKEN='', RDATA=null, allKeys=[], allLogs=[], allApps=[], allResellers=[], rAllKeys=[], rAllLogs=[], logTimer=null, loginMode='admin';
@@ -4747,7 +4759,7 @@ function dllLogNext() { dllLogPage++; loadDLLLogs(); }
 
 (function() {
   // ── State ──────────────────────────────────────────────────────────────
-  let VB_API  = window.location.origin;
+  let VB_API  = window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || window.location.origin;
   let VB_TOKEN = localStorage.getItem('vb_token') || '';
   let vbStatsCache = null;
   let vbLogsCache  = [];
@@ -5054,8 +5066,9 @@ function dllLogNext() { dllLogPage++; loadDLLLogs(); }
     const overlay = document.getElementById('verify-overlay');
     overlay.classList.add('vb-open');
     document.body.style.overflow = 'hidden';
-    VB_API = window.location.origin;
+    VB_API = (window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || window.location.origin).replace(/\/+$/, '');
     document.getElementById('vb-connected-url').textContent = VB_API;
+    document.getElementById('vb-url-input').value = VB_API;
     // Re-read token from localStorage in case it was just saved
     const tok = localStorage.getItem('vb_token') || VB_TOKEN;
     if (tok) {
@@ -5076,11 +5089,13 @@ function dllLogNext() { dllLogPage++; loadDLLLogs(); }
   // Called by doVerifyLogin after a fresh login — token already valid, skip API check
   window.openVerifyOverlayAuthed = function(token) {
     VB_TOKEN = token;
+    VB_API   = window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || window.location.origin;
+    VB_API   = VB_API.replace(/\/+$/, '');
     const overlay = document.getElementById('verify-overlay');
     overlay.classList.add('vb-open');
     document.body.style.overflow = 'hidden';
-    VB_API = window.location.origin;
     document.getElementById('vb-connected-url').textContent = VB_API;
+    document.getElementById('vb-url-input').value = VB_API;
     showVbApp();
     vbLoadAll();
   };
@@ -5101,7 +5116,15 @@ function dllLogNext() { dllLogPage++; loadDLLLogs(); }
   });
 
   // ── Pre-fill URL input (always same-server origin) ───────────────────
-  document.getElementById('vb-url-input').value = window.location.origin;
+  // Pre-fill URL from storage or hardcoded config
+  (function() {
+    const saved = window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || '';
+    if (saved) {
+      document.getElementById('vb-url-input').value = saved;
+      const lvUrl = document.getElementById('lv-url');
+      if (lvUrl && !lvUrl.value) lvUrl.value = saved;
+    }
+  })();
 
 })();
 </script>
