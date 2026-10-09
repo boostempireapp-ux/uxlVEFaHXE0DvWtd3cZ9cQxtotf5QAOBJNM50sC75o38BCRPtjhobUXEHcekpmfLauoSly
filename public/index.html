@@ -633,19 +633,18 @@ tbody td{padding:9px 13px;vertical-align:middle;}
         </div>
       </div>
 
-      <!-- Verify Bot form — embedded dashboard -->
+      <!-- Verify Bot form — password login -->
       <div id="login-verify-form" style="display:none">
-        <div style="text-align:center;padding:8px 0 16px">
-          <div style="font-size:28px;margin-bottom:8px">🛡️</div>
-          <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">Verify Bot Dashboard</div>
-          <div style="font-size:12px;color:var(--text2);margin-bottom:18px;line-height:1.6">Live verification stats, logs, and bot status</div>
-          <button class="btn-login" onclick="openVerifyOverlay()" style="margin-bottom:10px">
-            Open Verify Dashboard
-          </button>
-          <div style="margin-top:10px;font-size:11px;color:var(--text3)">
-            Connects to: <span style="font-family:monospace;color:var(--p3)" id="vb-url-display">Your Render Server</span>
+        <div class="lfield">
+          <label class="lfield-label">Password</label>
+          <div class="inp-pw-wrap">
+            <input class="inp" type="password" id="lv" placeholder="••••••••" onkeydown="if(event.key==='Enter')doVerifyLogin()"/>
+            <button class="inp-eye" type="button" onclick="togglePw('lv',this)" tabindex="-1">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
           </div>
         </div>
+        <button class="btn-login" onclick="doVerifyLogin()">Sign in to Verify Dashboard</button>
       </div>
 
       <div class="lerr" id="lerr"></div>
@@ -2360,8 +2359,29 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
 // Set this to your Render-hosted verify bot URL (no trailing slash).
 // Example: window.VERIFY_BOT_URL = 'https://your-verify-bot.onrender.com';
 // If left empty, the value stored in localStorage under 'vb_api_url' is used.
+// Same server — dashboard/api routes are on the KeyAuth server itself
 window.VERIFY_BOT_URL = '';
 // ─────────────────────────────────────────────────────────────────────────────
+
+async function doVerifyLogin() {
+  const pw  = document.getElementById('lv').value.trim();
+  const err = document.getElementById('lerr');
+  if (!pw) { err.textContent = 'Enter your password'; return; }
+  err.textContent = '';
+  try {
+    const r = await fetch('/dashboard/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw })
+    });
+    const d = await r.json();
+    if (!d.success) { err.textContent = d.message || 'Invalid password'; return; }
+    // Store token for the overlay and open it
+    localStorage.setItem('vb_token', d.token);
+    localStorage.setItem('vb_api_url', window.location.origin);
+    window.openVerifyOverlay();
+  } catch(e) { err.textContent = 'Could not reach server'; }
+}
 
 let TOKEN='', RTOKEN='', RDATA=null, allKeys=[], allLogs=[], allApps=[], allResellers=[], rAllKeys=[], rAllLogs=[], logTimer=null, loginMode='admin';
 
@@ -4728,8 +4748,7 @@ function dllLogNext() { dllLogPage++; loadDLLLogs(); }
 
 (function() {
   // ── State ──────────────────────────────────────────────────────────────
-  const VB_RENDER_URL = window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || '';
-  let VB_API  = VB_RENDER_URL;
+  let VB_API  = window.location.origin;
   let VB_TOKEN = localStorage.getItem('vb_token') || '';
   let vbStatsCache = null;
   let vbLogsCache  = [];
@@ -5036,12 +5055,12 @@ function dllLogNext() { dllLogPage++; loadDLLLogs(); }
     const overlay = document.getElementById('verify-overlay');
     overlay.classList.add('vb-open');
     document.body.style.overflow = 'hidden';
-    // Use the hardcoded Render URL (set via VERIFY_BOT_URL global or localStorage fallback)
-    const saved = window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || '';
+    // Always same server
+    const saved = window.location.origin;
     document.getElementById('vb-url-input').value = saved;
     VB_API = saved;
-    document.getElementById('vb-connected-url').textContent = saved || 'Not configured';
-    document.getElementById('vb-url-display') && (document.getElementById('vb-url-display').textContent = saved || 'Not configured');
+    document.getElementById('vb-connected-url').textContent = saved;
+    document.getElementById('vb-url-display') && (document.getElementById('vb-url-display').textContent = saved);
     // Try auto-login if token saved
     if (VB_TOKEN) {
       vbApiGet('/dashboard/api/stats').then(r=>{
@@ -5077,9 +5096,8 @@ function dllLogNext() { dllLogPage++; loadDLLLogs(); }
       window.closeVerifyOverlay();
   });
 
-  // ── Pre-fill URL input with Render URL ───────────────────────────────
-  const _initUrl = window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || '';
-  if (_initUrl) document.getElementById('vb-url-input').value = _initUrl;
+  // ── Pre-fill URL input (always same-server origin) ───────────────────
+  document.getElementById('vb-url-input').value = window.location.origin;
 
 })();
 </script>
