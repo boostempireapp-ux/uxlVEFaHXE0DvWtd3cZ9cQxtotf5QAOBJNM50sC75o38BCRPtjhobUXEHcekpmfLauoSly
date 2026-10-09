@@ -1790,6 +1790,91 @@ app.delete('/api/bot/blocks/:ip', requireBot, async (req, res) => {
   res.json({ success: true });
 });
 
+// ── VERIFY BOT DASHBOARD API (served from same server as KeyAuth) ─────────────
+// These routes let the embedded verify-bot overlay in index.html talk to this
+// server directly — no separate WispByte deployment needed.
+
+const dashSessions = new Map(); // token -> { createdAt }
+const DASH_SESSION_TTL = 8 * 60 * 60 * 1000; // 8 hours
+
+function cleanDashSessions() {
+  const now = Date.now();
+  for (const [t, v] of dashSessions) if (now - v.createdAt > DASH_SESSION_TTL) dashSessions.delete(t);
+}
+
+function requireDash(req, res, next) {
+  cleanDashSessions();
+  const tok = req.headers['x-dash-token'] || '';
+  if (!tok || !dashSessions.has(tok)) return res.status(401).json({ success: false, message: 'Unauthorized' });
+  next();
+}
+
+// POST /dashboard/api/login  { password }
+app.post('/dashboard/api/login', async (req, res) => {
+  try {
+    const { password } = req.body || {};
+    if (!password) return res.status(400).json({ success: false, message: 'Password required' });
+    const adminDoc = await adminCol.findOne({ _id: 'admin' });
+    const ADMIN_HASH = '730aa79139462fd34d63c453a7d8b76da661b1800c6b716ebedd9428f0ce0d7b';
+    const hash = createHash('sha256').update(String(password)).digest('hex');
+    const expected = (adminDoc && adminDoc.password) ? adminDoc.password : ADMIN_HASH;
+    if (!timingSafeEqual(Buffer.from(hash), Buffer.from(expected)))
+      return res.status(401).json({ success: false, message: 'Invalid password' });
+    const token = randomUUID();
+    dashSessions.set(token, { createdAt: Date.now() });
+    res.json({ success: true, token });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// POST /dashboard/api/logout
+app.post('/dashboard/api/logout', requireDash, (req, res) => {
+  dashSessions.delete(req.headers['x-dash-token'] || '');
+  res.json({ success: true });
+});
+
+// GET /dashboard/api/stats  — auth stats pulled from MongoDB
+app.get('/dashboard/api/stats', requireDash, async (req, res) => {
+  try {
+    const total    = await keysCol.countDocuments({});
+    const active   = await keysCol.countDocuments({ status: 'active' });
+    const banned   = await keysCol.countDocuments({ status: 'banned' });
+    const frozen   = await keysCol.countDocuments({ status: 'frozen' });
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const todayAuths = await logsCol.countDocuments({ result: 'SUCCESS', timestamp: { $gte: todayStart.toISOString() } });
+    const totalAuths = await logsCol.countDocuments({ result: 'SUCCESS' });
+    // Guild breakdown — fake one entry using app names since this is KeyAuth not Discord
+    const apps = await appsCol.find({}, { projection: { name:1 } }).toArray();
+    const guildStats = await Promise.all(apps.map(async a => ({
+      id: String(a._id), name: a.name,
+      total: await logsCol.countDocuments({ appId: String(a._id), result: 'SUCCESS' }),
+      today: await logsCol.countDocuments({ appId: String(a._id), result: 'SUCCESS', timestamp: { $gte: todayStart.toISOString() } }),
+    })));
+    res.json({ success: true, stats: {
+      totalVerified: totalAuths, successToday: todayAuths,
+      totalKeys: total, activeKeys: active, bannedKeys: banned, frozenKeys: frozen,
+      guilds: guildStats, uptime: process.uptime(),
+    }});
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// GET /dashboard/api/logs?limit=200  — recent auth logs
+app.get('/dashboard/api/logs', requireDash, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+    const raw = await logsCol.find({}).sort({ timestamp: -1 }).limit(limit).toArray();
+    const logs = raw.map(l => ({
+      ts: new Date(l.timestamp).getTime(),
+      userId: l.key || '—',
+      guildId: l.appName || l.appId || '—',
+      ip: l.ip || '—',
+      ua: l.hwid || '—',
+      result: l.result,
+      passed: l.result === 'SUCCESS',
+    }));
+    res.json({ success: true, logs });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
 // ── START ─────────────────────────────────────────────────────────────────────
 connectDB().then(() => {
   app.listen(PORT, '0.0.0.0', () => {
