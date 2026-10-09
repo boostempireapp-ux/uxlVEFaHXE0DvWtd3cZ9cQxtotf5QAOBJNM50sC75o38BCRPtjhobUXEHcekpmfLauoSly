@@ -5101,8 +5101,24 @@ function dllLogNext() { dllLogPage++; loadDLLLogs(); }
   };
 
   window.closeVerifyOverlay = function() {
+    // Sign the session out on the bot server (best-effort)
+    if (VB_TOKEN && VB_API) {
+      fetch(VB_API + '/dashboard/api/logout', {
+        method: 'POST',
+        headers: { 'x-dash-token': VB_TOKEN }
+      }).catch(() => {});
+    }
+    // Clear local token state
+    VB_TOKEN = '';
+    localStorage.removeItem('vb_token');
+    // Close overlay
     document.getElementById('verify-overlay').classList.remove('vb-open');
     document.body.style.overflow = '';
+    // Land back on the VERIFY BOT login tab, not ADMIN
+    if (typeof switchLoginTab === 'function') switchLoginTab('verify');
+    // Clear the password field so they have to re-enter it
+    const lvInput = document.getElementById('lv');
+    if (lvInput) lvInput.value = '';
   };
 
   window.vbOpenExternal = function() {
