@@ -643,7 +643,7 @@ tbody td{padding:9px 13px;vertical-align:middle;}
             Open Verify Dashboard
           </button>
           <div style="margin-top:10px;font-size:11px;color:var(--text3)">
-            Connects to: <span style="font-family:monospace;color:var(--p3)" id="vb-url-display">localhost:3000</span>
+            Connects to: <span style="font-family:monospace;color:var(--p3)" id="vb-url-display">Your Render Server</span>
           </div>
         </div>
       </div>
@@ -2356,6 +2356,13 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
 <div id="toast"></div>
 
 <script>
+// ── VERIFY BOT CONFIG ─────────────────────────────────────────────────────────
+// Set this to your Render-hosted verify bot URL (no trailing slash).
+// Example: window.VERIFY_BOT_URL = 'https://your-verify-bot.onrender.com';
+// If left empty, the value stored in localStorage under 'vb_api_url' is used.
+window.VERIFY_BOT_URL = '';
+// ─────────────────────────────────────────────────────────────────────────────
+
 let TOKEN='', RTOKEN='', RDATA=null, allKeys=[], allLogs=[], allApps=[], allResellers=[], rAllKeys=[], rAllLogs=[], logTimer=null, loginMode='admin';
 
 // LOGIN
@@ -4520,12 +4527,12 @@ function dllLogNext() { dllLogPage++; loadDLLLogs(); }
     </div>
   </div>
 
-  <!-- URL config bar (always visible) -->
-  <div id="vb-url-config">
+  <!-- URL config bar (hidden — URL is set via VERIFY_BOT_URL or localStorage) -->
+  <div id="vb-url-config" style="display:none">
     <label for="vb-url-input">Bot URL:</label>
-    <input id="vb-url-input" type="text" value="http://localhost:3000" placeholder="https://yourproject.wispbyte.com"/>
+    <input id="vb-url-input" type="text" value="" placeholder="https://yourproject.wispbyte.com"/>
     <button id="vb-url-set-btn" onclick="vbSetURL()">Connect</button>
-    <span id="vb-url-status">Enter your WispByte URL and click Connect</span>
+    <span id="vb-url-status"></span>
   </div>
 
   <!-- Login screen -->
@@ -4721,7 +4728,8 @@ function dllLogNext() { dllLogPage++; loadDLLLogs(); }
 
 (function() {
   // ── State ──────────────────────────────────────────────────────────────
-  let VB_API  = localStorage.getItem('vb_api_url') || 'http://localhost:3000';
+  const VB_RENDER_URL = window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || '';
+  let VB_API  = VB_RENDER_URL;
   let VB_TOKEN = localStorage.getItem('vb_token') || '';
   let vbStatsCache = null;
   let vbLogsCache  = [];
@@ -5028,12 +5036,12 @@ function dllLogNext() { dllLogPage++; loadDLLLogs(); }
     const overlay = document.getElementById('verify-overlay');
     overlay.classList.add('vb-open');
     document.body.style.overflow = 'hidden';
-    // Restore saved URL
-    const saved = localStorage.getItem('vb_api_url') || 'http://localhost:3000';
+    // Use the hardcoded Render URL (set via VERIFY_BOT_URL global or localStorage fallback)
+    const saved = window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || '';
     document.getElementById('vb-url-input').value = saved;
     VB_API = saved;
-    document.getElementById('vb-connected-url').textContent = saved;
-    document.getElementById('vb-url-display') && (document.getElementById('vb-url-display').textContent = saved);
+    document.getElementById('vb-connected-url').textContent = saved || 'Not configured';
+    document.getElementById('vb-url-display') && (document.getElementById('vb-url-display').textContent = saved || 'Not configured');
     // Try auto-login if token saved
     if (VB_TOKEN) {
       vbApiGet('/dashboard/api/stats').then(r=>{
@@ -5069,9 +5077,9 @@ function dllLogNext() { dllLogPage++; loadDLLLogs(); }
       window.closeVerifyOverlay();
   });
 
-  // ── Pre-fill URL input with saved value ───────────────────────────────
-  const saved = localStorage.getItem('vb_api_url');
-  if (saved) document.getElementById('vb-url-input').value = saved;
+  // ── Pre-fill URL input with Render URL ───────────────────────────────
+  const _initUrl = window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || '';
+  if (_initUrl) document.getElementById('vb-url-input').value = _initUrl;
 
 })();
 </script>
