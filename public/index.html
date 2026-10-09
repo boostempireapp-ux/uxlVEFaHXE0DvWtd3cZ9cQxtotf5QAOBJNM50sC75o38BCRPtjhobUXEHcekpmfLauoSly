@@ -4271,137 +4271,809 @@ function dllLogNext() { dllLogPage++; loadDLLLogs(); }
 </div>
 
 <!-- ── VERIFY BOT OVERLAY ───────────────────────────────────────────────── -->
-<div id="verify-overlay" style="
-  display:none;position:fixed;inset:0;z-index:300;
-  background:#000;flex-direction:column;
-">
-  <!-- Overlay top bar -->
-  <div style="
-    display:flex;align-items:center;justify-content:space-between;
-    padding:12px 20px;background:#080810;
-    border-bottom:1px solid #1a1a2e;flex-shrink:0;
-  ">
-    <div style="display:flex;align-items:center;gap:12px">
-      <span style="font-size:18px">🛡️</span>
+<!-- Full inline verify dashboard — no iframe, direct API calls to VERIFY_BOT_URL -->
+<style>
+/* ── Verify overlay shell ── */
+#verify-overlay{
+  display:none;position:fixed;inset:0;z-index:500;
+  flex-direction:column;background:#000;overflow:hidden;
+}
+#verify-overlay.vb-open{display:flex}
+
+/* ── Verify top bar ── */
+#vb-topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 20px;background:#080810;
+  border-bottom:1px solid #1a1a2e;flex-shrink:0;
+}
+.vb-brand{display:flex;align-items:center;gap:10px}
+.vb-brand-name{font-size:13px;font-weight:700;color:#a78bfa;letter-spacing:.5px;font-family:'Inter',sans-serif}
+.vb-brand-sub{font-size:11px;color:#50507a;font-family:'Inter',sans-serif}
+.vb-topbar-btns{display:flex;align-items:center;gap:8px}
+.vb-btn-sm{
+  padding:5px 13px;background:transparent;border:1px solid #1a1a2e;
+  border-radius:6px;color:#9090c0;font-size:12px;cursor:pointer;
+  font-family:'Inter',sans-serif;transition:all .15s;
+}
+.vb-btn-sm:hover{border-color:#8b5cf6;color:#a78bfa}
+.vb-btn-close{
+  padding:5px 13px;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3);
+  border-radius:6px;color:#a78bfa;font-size:12px;cursor:pointer;font-weight:600;
+  font-family:'Inter',sans-serif;transition:all .15s;
+}
+.vb-btn-close:hover{background:rgba(139,92,246,.25)}
+
+/* ── Verify two-panel: login screen ── */
+#vb-login{
+  flex:1;display:flex;align-items:stretch;overflow:hidden;
+}
+#vb-login.vb-hidden{display:none}
+.vb-login-left{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:40px;background:#080810;border-right:1px solid #1a1a2e;
+}
+.vb-login-logo{font-size:36px;font-weight:700;color:#a78bfa;letter-spacing:2px;margin-bottom:6px;font-family:'Rajdhani','Inter',sans-serif}
+.vb-login-subtitle{color:#9090c0;font-size:14px;margin-bottom:36px;font-family:'Inter',sans-serif}
+.vb-login-feature{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 18px;background:#0d0d1a;border:1px solid #1a1a2e;
+  border-radius:10px;width:100%;max-width:340px;margin-bottom:10px;
+}
+.vb-login-feature-icon{font-size:18px;flex-shrink:0}
+.vb-login-feature-text{color:#9090c0;font-size:12px;font-family:'Inter',sans-serif}
+.vb-login-feature-text strong{color:#e8e8ff;display:block;font-size:13px;margin-bottom:1px}
+.vb-login-right{
+  width:440px;flex-shrink:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:40px 48px;
+}
+.vb-login-title{font-size:26px;font-weight:700;color:#e8e8ff;margin-bottom:4px;letter-spacing:.5px;font-family:'Rajdhani','Inter',sans-serif}
+.vb-login-sub{color:#9090c0;font-size:13px;margin-bottom:30px;font-family:'Inter',sans-serif}
+.vb-form-label{
+  display:block;font-size:11px;font-weight:600;color:#9090c0;
+  text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;font-family:'Inter',sans-serif;
+}
+.vb-form-input{
+  width:100%;max-width:380px;padding:11px 14px;background:#080810;
+  border:1px solid #1a1a2e;border-radius:8px;color:#e8e8ff;font-size:14px;
+  outline:none;font-family:'Inter',sans-serif;
+  transition:border-color .2s,box-shadow .2s;margin-bottom:14px;display:block;
+}
+.vb-form-input:focus{border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.12)}
+.vb-form-input::placeholder{color:#50507a}
+.vb-login-submit{
+  width:100%;max-width:380px;padding:12px;background:#8b5cf6;border:none;border-radius:8px;
+  color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
+  transition:background .2s;display:block;
+}
+.vb-login-submit:hover{background:#6d28d9}
+.vb-login-submit:disabled{opacity:.5;cursor:default}
+.vb-login-err{
+  color:#ef4444;font-size:13px;margin-top:12px;padding:9px 13px;
+  background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);
+  border-radius:8px;display:none;width:100%;max-width:380px;font-family:'Inter',sans-serif;
+}
+.vb-login-err.vb-show{display:block}
+
+/* ── Verify app shell ── */
+#vb-app{
+  flex:1;display:none;overflow:hidden;
+}
+#vb-app.vb-visible{display:flex}
+.vb-sidebar{
+  width:210px;flex-shrink:0;background:#080810;
+  border-right:1px solid #1a1a2e;display:flex;flex-direction:column;
+  overflow-y:auto;
+}
+.vb-sidebar-brand{padding:20px 16px 16px;border-bottom:1px solid #1a1a2e}
+.vb-sidebar-brand-name{font-size:18px;font-weight:700;color:#a78bfa;letter-spacing:1px;font-family:'Rajdhani','Inter',sans-serif}
+.vb-sidebar-brand-sub{color:#50507a;font-size:10px;margin-top:3px;font-family:'Inter',sans-serif}
+.vb-sidebar-section{padding:14px 12px 6px;color:#50507a;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;font-family:'Inter',sans-serif}
+.vb-nav-item{
+  display:flex;align-items:center;gap:9px;
+  padding:9px 12px;border-radius:7px;margin:2px 7px;
+  color:#9090c0;font-size:13px;font-weight:500;cursor:pointer;
+  font-family:'Inter',sans-serif;
+  transition:background .15s,color .15s;border-left:3px solid transparent;
+}
+.vb-nav-item:hover{background:#0d0d1a;color:#e8e8ff}
+.vb-nav-item.vb-active{background:rgba(139,92,246,.12);color:#a78bfa;border-left-color:#8b5cf6}
+.vb-nav-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.vb-sidebar-footer{margin-top:auto;padding:14px 16px;border-top:1px solid #1a1a2e}
+.vb-status-dot{
+  display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:#10b981;margin-right:7px;
+  box-shadow:0 0 0 2px rgba(16,185,129,.25);animation:vbpulse 2s infinite;
+}
+@keyframes vbpulse{0%,100%{box-shadow:0 0 0 2px rgba(16,185,129,.25)}50%{box-shadow:0 0 0 5px rgba(16,185,129,.1)}}
+.vb-status-dot.vb-offline{background:#ef4444;box-shadow:0 0 0 2px rgba(239,68,68,.25);animation:none}
+.vb-status-label{font-size:11px;color:#9090c0;font-family:'Inter',sans-serif}
+.vb-logout-btn{
+  width:100%;padding:8px 12px;background:transparent;
+  border:1px solid #1a1a2e;border-radius:7px;color:#9090c0;font-size:12px;
+  text-align:left;display:flex;align-items:center;gap:7px;margin-top:8px;
+  cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;
+}
+.vb-logout-btn:hover{background:#0d0d1a;border-color:#ef4444;color:#ef4444}
+
+/* ── Verify main content ── */
+.vb-main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.vb-topbar-inner{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 26px;border-bottom:1px solid #1a1a2e;background:#080810;flex-shrink:0;
+}
+.vb-page-title{font-size:20px;font-weight:700;color:#e8e8ff;letter-spacing:.5px;font-family:'Rajdhani','Inter',sans-serif}
+.vb-page-sub{color:#9090c0;font-size:12px;margin-top:2px;font-family:'Inter',sans-serif}
+.vb-refresh-btn{
+  display:flex;align-items:center;gap:5px;
+  padding:7px 13px;background:#0d0d1a;border:1px solid #1a1a2e;
+  border-radius:7px;color:#9090c0;font-size:12px;cursor:pointer;
+  font-family:'Inter',sans-serif;transition:all .15s;
+}
+.vb-refresh-btn:hover{background:rgba(139,92,246,.1);border-color:#8b5cf6;color:#a78bfa}
+.vb-content{padding:22px 26px;flex:1;overflow-y:auto}
+
+/* ── Stats grid ── */
+.vb-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.vb-stat{
+  background:#080810;border:1px solid #1a1a2e;border-radius:10px;
+  padding:18px 20px;position:relative;overflow:hidden;
+}
+.vb-stat::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--vb-stat-color,#8b5cf6)}
+.vb-stat-label{color:#9090c0;font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;font-family:'Inter',sans-serif}
+.vb-stat-value{font-size:30px;font-weight:700;color:#e8e8ff;line-height:1;font-family:'Rajdhani','Inter',sans-serif}
+.vb-stat-sub{color:#50507a;font-size:11px;margin-top:5px;font-family:'Inter',sans-serif}
+.vb-stat-icon{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:30px;opacity:.12}
+
+/* ── Cards ── */
+.vb-card{background:#080810;border:1px solid #1a1a2e;border-radius:10px;overflow:hidden;margin-bottom:20px}
+.vb-card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #1a1a2e}
+.vb-card-title{font-size:14px;font-weight:700;color:#e8e8ff;letter-spacing:.5px;font-family:'Rajdhani','Inter',sans-serif}
+.vb-card-badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:18px;background:rgba(139,92,246,.15);color:#a78bfa;border:1px solid rgba(139,92,246,.3);font-family:'Inter',sans-serif}
+
+/* ── Tables ── */
+.vb-table-wrap{overflow-x:auto}
+.vb-table{width:100%;border-collapse:collapse}
+.vb-table th{padding:9px 12px;background:#0d0d1a;border-bottom:1px solid #1a1a2e;color:#50507a;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;white-space:nowrap;text-align:left;font-family:'Inter',sans-serif}
+.vb-table td{padding:10px 12px;border-bottom:1px solid rgba(26,26,46,.6);color:#e8e8ff;font-size:12px;white-space:nowrap;font-family:'Inter',sans-serif}
+.vb-table tr:last-child td{border-bottom:none}
+.vb-table tr:hover td{background:rgba(139,92,246,.03)}
+.vb-mono{font-family:'JetBrains Mono',monospace;font-size:11px;color:#9090c0}
+.vb-badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:18px;white-space:nowrap;font-family:'Inter',sans-serif}
+.vb-badge-g{background:rgba(16,185,129,.12);color:#34d399;border:1px solid rgba(16,185,129,.25)}
+.vb-badge-y{background:rgba(245,158,11,.12);color:#fbbf24;border:1px solid rgba(245,158,11,.25)}
+.vb-badge-r{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+.vb-user-cell{display:flex;align-items:center;gap:8px}
+.vb-avatar{width:28px;height:28px;border-radius:50%;background:#0d0d1a;flex-shrink:0}
+.vb-user-tag{font-weight:500;color:#e8e8ff;font-size:12px}
+.vb-user-id{font-family:'JetBrains Mono',monospace;font-size:10px;color:#50507a}
+
+/* ── Flow expand ── */
+.vb-expand-btn{background:transparent;border:none;color:#50507a;font-size:13px;cursor:pointer;padding:1px 5px;border-radius:3px;transition:all .15s}
+.vb-expand-btn:hover{color:#a78bfa;background:rgba(139,92,246,.08)}
+.vb-flow-row td{background:#0d0d1a;padding:0;border-bottom:1px solid #1a1a2e}
+.vb-flow-wrap{padding:10px 14px 10px 50px;display:none}
+.vb-flow-wrap.vb-open{display:block}
+.vb-flow-step{display:flex;align-items:flex-start;gap:9px;padding:5px 0;border-bottom:1px solid #1a1a2e;font-size:11px}
+.vb-flow-step:last-child{border-bottom:none}
+.vb-flow-time{font-family:'JetBrains Mono',monospace;color:#50507a;min-width:80px;flex-shrink:0}
+.vb-flow-name{color:#a78bfa;font-weight:600;min-width:220px;font-family:'Inter',sans-serif}
+.vb-flow-detail{color:#9090c0;font-family:'Inter',sans-serif}
+
+/* ── Filter row ── */
+.vb-filter-row{display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid #1a1a2e}
+.vb-search{padding:8px 14px;background:#0d0d1a;border:1px solid #1a1a2e;border-radius:7px;color:#e8e8ff;font-size:12px;outline:none;width:200px;font-family:'Inter',sans-serif;transition:border-color .2s}
+.vb-search:focus{border-color:#8b5cf6}
+.vb-search::placeholder{color:#50507a}
+.vb-select{padding:7px 10px;background:#0d0d1a;border:1px solid #1a1a2e;border-radius:7px;color:#e8e8ff;font-size:12px;outline:none;font-family:'Inter',sans-serif;transition:border-color .2s}
+.vb-select:focus{border-color:#8b5cf6}
+
+/* ── Status page ── */
+.vb-status-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px}
+.vb-status-card{background:#080810;border:1px solid #1a1a2e;border-radius:10px;padding:16px 20px}
+.vb-status-card-label{color:#50507a;font-size:10px;text-transform:uppercase;letter-spacing:.8px;font-family:'Inter',sans-serif}
+.vb-status-card-value{font-size:20px;font-weight:700;color:#e8e8ff;margin:6px 0 3px;font-family:'Rajdhani','Inter',sans-serif}
+.vb-status-card-sub{font-size:11px;color:#9090c0;font-family:'Inter',sans-serif}
+
+/* ── Empty/loading ── */
+.vb-empty{text-align:center;padding:50px 20px;color:#50507a;font-family:'Inter',sans-serif}
+.vb-empty-icon{font-size:36px;margin-bottom:10px}
+.vb-empty-text{font-size:13px}
+.vb-loading{text-align:center;padding:36px;color:#50507a;font-size:12px;font-family:'Inter',sans-serif}
+.vb-spinner{display:inline-block;width:18px;height:18px;border-radius:50%;border:2px solid #1a1a2e;border-top-color:#8b5cf6;animation:vbspin .7s linear infinite;margin-right:7px;vertical-align:middle}
+@keyframes vbspin{to{transform:rotate(360deg)}}
+.vb-page{display:none}.vb-page.vb-page-active{display:block}
+
+/* ── URL config bar ── */
+#vb-url-config{
+  display:flex;align-items:center;gap:8px;padding:8px 20px;
+  background:#0d0d1a;border-bottom:1px solid #1a1a2e;flex-shrink:0;
+}
+#vb-url-config label{font-size:11px;color:#50507a;font-family:'Inter',sans-serif;white-space:nowrap}
+#vb-url-input{
+  flex:1;max-width:360px;padding:5px 10px;background:#080810;
+  border:1px solid #1a1a2e;border-radius:6px;color:#a78bfa;font-size:12px;
+  font-family:'JetBrains Mono',monospace;outline:none;transition:border-color .2s;
+}
+#vb-url-input:focus{border-color:#8b5cf6}
+#vb-url-set-btn{
+  padding:5px 12px;background:#8b5cf6;border:none;border-radius:6px;
+  color:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;
+}
+#vb-url-set-btn:hover{background:#6d28d9}
+#vb-url-status{font-size:11px;color:#50507a;font-family:'Inter',sans-serif}
+</style>
+
+<div id="verify-overlay">
+  <!-- Top chrome bar -->
+  <div id="vb-topbar">
+    <div class="vb-brand">
+      <span style="font-size:16px">🛡️</span>
       <div>
-        <div style="font-size:13px;font-weight:700;color:#a78bfa;letter-spacing:.5px">VERIFY BOT DASHBOARD</div>
-        <div style="font-size:11px;color:#50507a" id="vb-overlay-url">Loading…</div>
+        <div class="vb-brand-name">VERIFY BOT DASHBOARD</div>
+        <div class="vb-brand-sub" id="vb-connected-url">Not connected</div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:10px">
-      <button onclick="reloadVerifyFrame()" style="
-        padding:6px 14px;background:transparent;border:1px solid #1a1a2e;
-        border-radius:6px;color:#9090c0;font-size:12px;cursor:pointer;
-        transition:all .15s;
-      " onmouseover="this.style.borderColor='#8b5cf6';this.style.color='#a78bfa'"
-         onmouseout="this.style.borderColor='#1a1a2e';this.style.color='#9090c0'">
-        🔄 Reload
-      </button>
-      <button onclick="openVerifyExternal()" style="
-        padding:6px 14px;background:transparent;border:1px solid #1a1a2e;
-        border-radius:6px;color:#9090c0;font-size:12px;cursor:pointer;
-        transition:all .15s;
-      " onmouseover="this.style.borderColor='#8b5cf6';this.style.color='#a78bfa'"
-         onmouseout="this.style.borderColor='#1a1a2e';this.style.color='#9090c0'">
-        ↗ Open in Tab
-      </button>
-      <button onclick="closeVerifyOverlay()" style="
-        padding:6px 14px;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3);
-        border-radius:6px;color:#a78bfa;font-size:12px;cursor:pointer;font-weight:600;
-        transition:all .15s;
-      " onmouseover="this.style.background='rgba(139,92,246,.25)'"
-         onmouseout="this.style.background='rgba(139,92,246,.12)'">
-        ✕ Close
-      </button>
+    <div class="vb-topbar-btns">
+      <button class="vb-btn-sm" onclick="vbRefreshAll()">🔄 Refresh</button>
+      <button class="vb-btn-sm" onclick="vbOpenExternal()">↗ Open in Tab</button>
+      <button class="vb-btn-close" onclick="closeVerifyOverlay()">✕ Close</button>
     </div>
   </div>
-  <!-- iframe -->
-  <iframe
-    id="verify-iframe"
-    src="about:blank"
-    style="flex:1;border:none;width:100%;background:#000;"
-    allow="same-origin"
-  ></iframe>
-  <!-- fallback message if iframe blocked -->
-  <div id="verify-fallback" style="display:none;position:absolute;inset:0;top:53px;
-    display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;
-    background:#000;
-  ">
-    <div style="font-size:32px">⚠️</div>
-    <div style="font-size:14px;color:#9090c0;text-align:center;max-width:400px;line-height:1.7">
-      The verify bot dashboard couldn't be embedded.<br/>
-      This usually means it's not running or blocks iframes.<br/>
-      <span style="color:#a78bfa;font-size:12px" id="verify-fallback-url"></span>
-    </div>
-    <button onclick="openVerifyExternal()" style="
-      padding:10px 24px;background:#8b5cf6;border:none;border-radius:8px;
-      color:#fff;font-size:13px;font-weight:600;cursor:pointer;
-    ">Open in New Tab ↗</button>
+
+  <!-- URL config bar (always visible) -->
+  <div id="vb-url-config">
+    <label for="vb-url-input">Bot URL:</label>
+    <input id="vb-url-input" type="text" value="http://localhost:3000" placeholder="https://yourproject.wispbyte.com"/>
+    <button id="vb-url-set-btn" onclick="vbSetURL()">Connect</button>
+    <span id="vb-url-status">Enter your WispByte URL and click Connect</span>
   </div>
-</div>
+
+  <!-- Login screen -->
+  <div id="vb-login">
+    <div class="vb-login-left">
+      <div class="vb-login-logo">VERIFYBOT</div>
+      <div class="vb-login-subtitle">Verification Dashboard</div>
+      <div class="vb-login-feature">
+        <div class="vb-login-feature-icon">🔐</div>
+        <div class="vb-login-feature-text"><strong>OAuth2 Browser Flow</strong>Full step-by-step verification logging</div>
+      </div>
+      <div class="vb-login-feature">
+        <div class="vb-login-feature-icon">🛡️</div>
+        <div class="vb-login-feature-text"><strong>Risk Assessment</strong>Account age, avatar, flag analysis</div>
+      </div>
+      <div class="vb-login-feature">
+        <div class="vb-login-feature-icon">📊</div>
+        <div class="vb-login-feature-text"><strong>Live Stats</strong>Real-time verification counts per guild</div>
+      </div>
+      <div class="vb-login-feature">
+        <div class="vb-login-feature-icon">🌐</div>
+        <div class="vb-login-feature-text"><strong>IP &amp; UA Tracking</strong>Browser fingerprint and IP per verify</div>
+      </div>
+    </div>
+    <div class="vb-login-right">
+      <div class="vb-login-title">Sign In</div>
+      <div class="vb-login-sub">Enter your dashboard password to continue</div>
+      <label class="vb-form-label" for="vb-pw-input">Dashboard Password</label>
+      <input class="vb-form-input" type="password" id="vb-pw-input" placeholder="••••••••" autocomplete="current-password"/>
+      <button class="vb-login-submit" id="vb-login-btn" onclick="vbTryLogin()">Sign In</button>
+      <div class="vb-login-err" id="vb-login-err"></div>
+    </div>
+  </div>
+
+  <!-- App -->
+  <div id="vb-app">
+    <aside class="vb-sidebar">
+      <div class="vb-sidebar-brand">
+        <div class="vb-sidebar-brand-name">VERIFYBOT</div>
+        <div class="vb-sidebar-brand-sub">Dashboard v2</div>
+      </div>
+      <div class="vb-sidebar-section">Navigation</div>
+      <div class="vb-nav-item vb-active" data-vbpage="overview"><span class="vb-nav-icon">📊</span> Overview</div>
+      <div class="vb-nav-item" data-vbpage="logs"><span class="vb-nav-icon">📋</span> Verification Log</div>
+      <div class="vb-nav-item" data-vbpage="guilds"><span class="vb-nav-icon">🏠</span> Guilds</div>
+      <div class="vb-nav-item" data-vbpage="status"><span class="vb-nav-icon">⚡</span> Bot Status</div>
+      <div class="vb-sidebar-footer">
+        <div style="display:flex;align-items:center;margin-bottom:4px">
+          <span class="vb-status-dot" id="vb-bot-dot"></span>
+          <span class="vb-status-label" id="vb-bot-status-label">Loading…</span>
+        </div>
+        <button class="vb-logout-btn" onclick="vbDoLogout()"><span>🚪</span> Sign Out</button>
+      </div>
+    </aside>
+    <div class="vb-main">
+      <div class="vb-topbar-inner">
+        <div>
+          <div class="vb-page-title" id="vb-page-title">Overview</div>
+          <div class="vb-page-sub" id="vb-page-sub">Verification statistics and recent activity</div>
+        </div>
+        <button class="vb-refresh-btn" onclick="vbRefreshAll()"><span>🔄</span> Refresh</button>
+      </div>
+      <div class="vb-content">
+
+        <!-- OVERVIEW -->
+        <div class="vb-page vb-page-active" id="vb-page-overview">
+          <div class="vb-stats-row">
+            <div class="vb-stat" style="--vb-stat-color:#10b981">
+              <div class="vb-stat-icon">✅</div>
+              <div class="vb-stat-label">Total Verified</div>
+              <div class="vb-stat-value" id="vb-s-total">—</div>
+              <div class="vb-stat-sub" id="vb-s-total-sub">all time</div>
+            </div>
+            <div class="vb-stat" style="--vb-stat-color:#06b6d4">
+              <div class="vb-stat-icon">📅</div>
+              <div class="vb-stat-label">Verified Today</div>
+              <div class="vb-stat-value" id="vb-s-today">—</div>
+              <div class="vb-stat-sub" id="vb-s-today-sub">since midnight</div>
+            </div>
+            <div class="vb-stat" style="--vb-stat-color:#ef4444">
+              <div class="vb-stat-icon">⚠️</div>
+              <div class="vb-stat-label">Failed / Denied</div>
+              <div class="vb-stat-value" id="vb-s-failed">—</div>
+              <div class="vb-stat-sub">total attempts</div>
+            </div>
+            <div class="vb-stat" style="--vb-stat-color:#f59e0b">
+              <div class="vb-stat-icon">🔴</div>
+              <div class="vb-stat-label">High Risk</div>
+              <div class="vb-stat-value" id="vb-s-risk">—</div>
+              <div class="vb-stat-sub">flagged accounts</div>
+            </div>
+          </div>
+          <div class="vb-card">
+            <div class="vb-card-header">
+              <span class="vb-card-title">Recent Verifications</span>
+              <span class="vb-card-badge" id="vb-recent-badge">0 entries</span>
+            </div>
+            <div class="vb-table-wrap">
+              <table class="vb-table">
+                <thead><tr><th>User</th><th>Guild</th><th>Risk</th><th>IP</th><th>Age</th><th>Time</th><th>Status</th></tr></thead>
+                <tbody id="vb-recent-tbody"><tr><td colspan="7" class="vb-loading"><span class="vb-spinner"></span>Loading…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- LOGS -->
+        <div class="vb-page" id="vb-page-logs">
+          <div class="vb-card">
+            <div class="vb-card-header">
+              <span class="vb-card-title">Verification Log</span>
+              <span class="vb-card-badge" id="vb-logs-badge">—</span>
+            </div>
+            <div class="vb-filter-row">
+              <input class="vb-search" id="vb-log-search" type="search" placeholder="Search user, ID, guild…"/>
+              <select class="vb-select" id="vb-log-risk">
+                <option value="">All risk levels</option>
+                <option value="LOW">Low Risk</option>
+                <option value="MEDIUM">Medium Risk</option>
+                <option value="HIGH">High Risk</option>
+              </select>
+              <select class="vb-select" id="vb-log-status">
+                <option value="">All statuses</option>
+                <option value="true">Success</option>
+                <option value="false">Failed</option>
+              </select>
+            </div>
+            <div class="vb-table-wrap">
+              <table class="vb-table">
+                <thead><tr><th></th><th>User</th><th>Guild</th><th>Risk</th><th>IP</th><th>Age</th><th>Flags</th><th>Time</th><th>Status</th></tr></thead>
+                <tbody id="vb-logs-tbody"><tr><td colspan="9" class="vb-loading"><span class="vb-spinner"></span>Loading…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- GUILDS -->
+        <div class="vb-page" id="vb-page-guilds">
+          <div class="vb-card">
+            <div class="vb-card-header">
+              <span class="vb-card-title">Guild Statistics</span>
+              <span class="vb-card-badge" id="vb-guilds-badge">—</span>
+            </div>
+            <div class="vb-table-wrap">
+              <table class="vb-table">
+                <thead><tr><th>Guild</th><th>Guild ID</th><th>Total</th><th>Verified</th><th>Failed</th><th>Today</th><th>Rate</th></tr></thead>
+                <tbody id="vb-guilds-tbody"><tr><td colspan="7" class="vb-loading"><span class="vb-spinner"></span>Loading…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- STATUS -->
+        <div class="vb-page" id="vb-page-status">
+          <div class="vb-status-cards">
+            <div class="vb-status-card">
+              <div class="vb-status-card-label">Bot Status</div>
+              <div class="vb-status-card-value" id="vb-st-bot">Online</div>
+              <div class="vb-status-card-sub">Verification server running</div>
+            </div>
+            <div class="vb-status-card">
+              <div class="vb-status-card-label">Uptime</div>
+              <div class="vb-status-card-value" id="vb-st-uptime">—</div>
+              <div class="vb-status-card-sub" id="vb-st-started">Started —</div>
+            </div>
+            <div class="vb-status-card">
+              <div class="vb-status-card-label">Log Entries</div>
+              <div class="vb-status-card-value" id="vb-st-entries">—</div>
+              <div class="vb-status-card-sub">in-memory (last 500)</div>
+            </div>
+          </div>
+          <div class="vb-card">
+            <div class="vb-card-header">
+              <span class="vb-card-title">Recent Flow Activity</span>
+              <span class="vb-card-badge">Last 10 verifications</span>
+            </div>
+            <div class="vb-table-wrap">
+              <table class="vb-table">
+                <thead><tr><th>User</th><th>Flow Steps</th><th>User Agent</th><th>Time</th></tr></thead>
+                <tbody id="vb-flow-tbody"><tr><td colspan="4" class="vb-loading"><span class="vb-spinner"></span>Loading…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /vb-content -->
+    </div><!-- /vb-main -->
+  </div><!-- /vb-app -->
+</div><!-- /verify-overlay -->
 
 <script>
-// ── Verify Bot Overlay ─────────────────────────────────────────────────────
-function _getVerifyURL() {
-  return (window.VERIFY_BOT_URL || 'http://localhost:3000') + '/dashboard';
-}
+// ── Verify Bot Dashboard (inline, namespaced) ──────────────────────────────
 
-function openVerifyOverlay() {
-  const url = _getVerifyURL();
-  const overlay = document.getElementById('verify-overlay');
-  const iframe  = document.getElementById('verify-iframe');
-  const urlLabel = document.getElementById('vb-overlay-url');
-  // Update URL display
-  urlLabel.textContent = url;
-  document.getElementById('vb-url-display').textContent =
-    (window.VERIFY_BOT_URL || 'localhost:3000');
-  // Load iframe
-  iframe.src = url;
-  // Show overlay
-  overlay.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-  // Handle load error (X-Frame-Options / CSP)
-  iframe.onerror = showVerifyFallback;
-  iframe.onload = function() {
-    try {
-      // If we can access contentDocument it's same-origin and loaded fine
-      void iframe.contentDocument;
-    } catch(e) {
-      // Cross-origin — assume it loaded (can't detect X-Frame-Options block this way)
+(function() {
+  // ── State ──────────────────────────────────────────────────────────────
+  let VB_API  = localStorage.getItem('vb_api_url') || 'http://localhost:3000';
+  let VB_TOKEN = localStorage.getItem('vb_token') || '';
+  let vbStatsCache = null;
+  let vbLogsCache  = [];
+
+  // ── Helpers ────────────────────────────────────────────────────────────
+  function vbRelTime(ts) {
+    const d = Date.now() - ts, s = Math.floor(d/1000);
+    if (s < 60)    return s+'s ago';
+    if (s < 3600)  return Math.floor(s/60)+'m ago';
+    if (s < 86400) return Math.floor(s/3600)+'h ago';
+    return Math.floor(s/86400)+'d ago';
+  }
+  function vbFmtUptime(secs) {
+    const d=Math.floor(secs/86400),h=Math.floor((secs%86400)/3600),m=Math.floor((secs%3600)/60),s=secs%60;
+    if(d>0) return d+'d '+h+'h '+m+'m';
+    if(h>0) return h+'h '+m+'m '+s+'s';
+    return m+'m '+s+'s';
+  }
+  function vbFmtDate(ts) {
+    return new Date(ts).toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  }
+  function vbRiskBadge(r) {
+    r=(r||'').toUpperCase();
+    if(r.includes('HIGH'))   return '<span class="vb-badge vb-badge-r">🔴 HIGH</span>';
+    if(r.includes('MEDIUM')) return '<span class="vb-badge vb-badge-y">🟡 MED</span>';
+    return '<span class="vb-badge vb-badge-g">🟢 LOW</span>';
+  }
+  function vbStatusBadge(ok) {
+    return ok ? '<span class="vb-badge vb-badge-g">✓ OK</span>'
+              : '<span class="vb-badge vb-badge-r">✗ Fail</span>';
+  }
+  function vbEsc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function vbEmpty(n, msg='No records found') {
+    return '<tr><td colspan="'+n+'" class="vb-empty"><div class="vb-empty-icon">📭</div><div class="vb-empty-text">'+msg+'</div></td></tr>';
+  }
+
+  // ── API ────────────────────────────────────────────────────────────────
+  async function vbApiGet(ep) {
+    const r = await fetch(VB_API+ep, {headers:{'x-dash-token':VB_TOKEN}});
+    if (r.status===401) { vbDoLogout(); return null; }
+    return r.json();
+  }
+  async function vbApiPost(ep, body) {
+    const r = await fetch(VB_API+ep, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    return r.json();
+  }
+
+  // ── URL config ─────────────────────────────────────────────────────────
+  window.vbSetURL = function() {
+    const val = document.getElementById('vb-url-input').value.trim().replace(/\/+$/,'');
+    if (!val) return;
+    VB_API = val;
+    localStorage.setItem('vb_api_url', val);
+    document.getElementById('vb-connected-url').textContent = val;
+    document.getElementById('vb-url-status').textContent = 'Connecting…';
+    // If we have a cached token try to validate it
+    if (VB_TOKEN) {
+      vbApiGet('/dashboard/api/stats').then(r => {
+        if (r && r.success) {
+          document.getElementById('vb-url-status').textContent = '✅ Connected';
+          vbStatsCache = r.stats;
+          showVbApp();
+          vbLoadAll();
+        } else {
+          VB_TOKEN = ''; localStorage.removeItem('vb_token');
+          document.getElementById('vb-url-status').textContent = '⚡ Connected — please sign in';
+          showVbLogin();
+        }
+      }).catch(() => {
+        document.getElementById('vb-url-status').textContent = '❌ Cannot reach server';
+      });
+    } else {
+      document.getElementById('vb-url-status').textContent = '⚡ Connected — please sign in';
     }
   };
-}
 
-function closeVerifyOverlay() {
-  const overlay = document.getElementById('verify-overlay');
-  const iframe  = document.getElementById('verify-iframe');
-  overlay.style.display = 'none';
-  iframe.src = 'about:blank';
-  document.body.style.overflow = '';
-}
+  // ── Login ──────────────────────────────────────────────────────────────
+  window.vbTryLogin = async function() {
+    const pw  = document.getElementById('vb-pw-input').value.trim();
+    const btn = document.getElementById('vb-login-btn');
+    const err = document.getElementById('vb-login-err');
+    if (!pw) { vbShowErr('Please enter a password'); return; }
+    btn.disabled=true; btn.textContent='Signing in…';
+    err.className='vb-login-err';
+    try {
+      const data = await vbApiPost('/dashboard/api/login', {password: pw});
+      if (data.success) {
+        VB_TOKEN = data.token;
+        localStorage.setItem('vb_token', VB_TOKEN);
+        document.getElementById('vb-url-status').textContent = '✅ Connected & signed in';
+        showVbApp();
+        vbLoadAll();
+      } else {
+        vbShowErr(data.message || 'Invalid password');
+      }
+    } catch(e) {
+      vbShowErr('Could not reach the verify bot server. Check the URL above.');
+    }
+    btn.disabled=false; btn.textContent='Sign In';
+    function vbShowErr(m) { err.textContent=m; err.className='vb-login-err vb-show'; }
+  };
 
-function reloadVerifyFrame() {
-  const iframe = document.getElementById('verify-iframe');
-  iframe.src = _getVerifyURL();
-}
+  window.vbDoLogout = function() {
+    if (VB_TOKEN) fetch(VB_API+'/dashboard/api/logout',{method:'POST',headers:{'x-dash-token':VB_TOKEN}}).catch(()=>{});
+    VB_TOKEN='';
+    localStorage.removeItem('vb_token');
+    showVbLogin();
+  };
 
-function openVerifyExternal() {
-  window.open(_getVerifyURL(), '_blank');
-}
+  document.getElementById('vb-pw-input').addEventListener('keydown', e => {
+    if (e.key==='Enter') window.vbTryLogin();
+  });
 
-function showVerifyFallback() {
-  const fb = document.getElementById('verify-fallback');
-  document.getElementById('verify-fallback-url').textContent = _getVerifyURL();
-  fb.style.display = 'flex';
-}
-
-// Close overlay on Escape key
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    const overlay = document.getElementById('verify-overlay');
-    if (overlay && overlay.style.display !== 'none') closeVerifyOverlay();
+  // ── Show/hide ──────────────────────────────────────────────────────────
+  function showVbLogin() {
+    document.getElementById('vb-login').className='';
+    document.getElementById('vb-app').className='';
   }
-});
+  function showVbApp() {
+    document.getElementById('vb-login').className='vb-hidden';
+    document.getElementById('vb-app').className='vb-visible';
+  }
+
+  // ── Navigation ─────────────────────────────────────────────────────────
+  const VB_PAGE_META = {
+    overview: {title:'Overview',        sub:'Verification statistics and recent activity'},
+    logs:     {title:'Verification Log',sub:'Full log of all verification attempts'},
+    guilds:   {title:'Guilds',          sub:'Per-guild verification breakdown'},
+    status:   {title:'Bot Status',      sub:'Uptime, health, and browser flow activity'},
+  };
+  function vbShowPage(name) {
+    document.querySelectorAll('#vb-app .vb-page').forEach(p=>p.classList.remove('vb-page-active'));
+    document.querySelectorAll('.vb-nav-item').forEach(n=>n.classList.remove('vb-active'));
+    const pg = document.getElementById('vb-page-'+name);
+    if (pg) pg.classList.add('vb-page-active');
+    const ni = document.querySelector('.vb-nav-item[data-vbpage="'+name+'"]');
+    if (ni) ni.classList.add('vb-active');
+    const m = VB_PAGE_META[name]||{};
+    document.getElementById('vb-page-title').textContent = m.title||name;
+    document.getElementById('vb-page-sub').textContent = m.sub||'';
+    if (name==='logs')   vbRenderLogs();
+    if (name==='guilds') vbRenderGuilds();
+    if (name==='status') vbRenderStatus();
+  }
+  document.querySelectorAll('.vb-nav-item').forEach(n => {
+    n.addEventListener('click', () => vbShowPage(n.dataset.vbpage));
+  });
+
+  // Filters
+  document.getElementById('vb-log-search').addEventListener('input', vbRenderLogs);
+  document.getElementById('vb-log-risk').addEventListener('change', vbRenderLogs);
+  document.getElementById('vb-log-status').addEventListener('change', vbRenderLogs);
+
+  // ── Load ───────────────────────────────────────────────────────────────
+  async function vbLoadAll() {
+    const [s,l] = await Promise.all([
+      vbApiGet('/dashboard/api/stats'),
+      vbApiGet('/dashboard/api/logs?limit=200'),
+    ]);
+    if (s) { vbStatsCache=s.stats; vbApplyStats(); }
+    if (l) { vbLogsCache=l.logs; }
+    vbRenderRecent(); vbRenderLogs(); vbRenderGuilds(); vbRenderStatus();
+    const dot = document.getElementById('vb-bot-dot');
+    const lbl = document.getElementById('vb-bot-status-label');
+    if (s) { dot.className='vb-status-dot'; lbl.textContent='Server online'; }
+    else   { dot.className='vb-status-dot vb-offline'; lbl.textContent='Offline'; }
+  }
+
+  window.vbRefreshAll = function() { if(VB_TOKEN) vbLoadAll(); };
+
+  // ── Stats ──────────────────────────────────────────────────────────────
+  function vbApplyStats() {
+    if (!vbStatsCache) return;
+    const st = vbStatsCache;
+    document.getElementById('vb-s-total').textContent  = st.totalVerified??0;
+    document.getElementById('vb-s-today').textContent  = st.todayVerified??0;
+    document.getElementById('vb-s-failed').textContent = st.failedAttempts??0;
+    document.getElementById('vb-s-risk').textContent   = st.highRisk??0;
+    document.getElementById('vb-s-total-sub').textContent = (st.totalAttempts??0)+' total attempts';
+    document.getElementById('vb-s-today-sub').textContent = (st.todayAttempts??0)+' attempts today';
+  }
+
+  // ── Recent ─────────────────────────────────────────────────────────────
+  function vbRenderRecent() {
+    const tbody = document.getElementById('vb-recent-tbody');
+    const rows  = vbLogsCache.slice(0,20);
+    document.getElementById('vb-recent-badge').textContent = vbLogsCache.length+' entries';
+    if (!rows.length) { tbody.innerHTML=vbEmpty(7,'No verifications yet'); return; }
+    tbody.innerHTML = rows.map(e=>`
+      <tr>
+        <td><div class="vb-user-cell">
+          <img class="vb-avatar" src="${vbEsc(e.avatarUrl||'')}" onerror="this.style.visibility='hidden'" alt=""/>
+          <div><div class="vb-user-tag">${vbEsc(e.userTag)}</div><div class="vb-user-id">${vbEsc(e.userId)}</div></div>
+        </div></td>
+        <td>${vbEsc(e.guildName||e.guildId)}</td>
+        <td>${vbRiskBadge(e.riskLevel)}</td>
+        <td class="vb-mono">${vbEsc(e.ip||'—')}</td>
+        <td>${e.accountAgeDays!=null?e.accountAgeDays+'d':'—'}</td>
+        <td class="vb-mono">${vbRelTime(e.ts)}</td>
+        <td>${vbStatusBadge(e.success)}</td>
+      </tr>`).join('');
+  }
+
+  // ── Logs ───────────────────────────────────────────────────────────────
+  function vbRenderLogs() {
+    const tbody  = document.getElementById('vb-logs-tbody');
+    const search = document.getElementById('vb-log-search').value.toLowerCase();
+    const risk   = document.getElementById('vb-log-risk').value.toUpperCase();
+    const suc    = document.getElementById('vb-log-status').value;
+    let rows = vbLogsCache.filter(e=>{
+      if (search && !JSON.stringify(e).toLowerCase().includes(search)) return false;
+      if (risk && !(e.riskLevel||'').toUpperCase().includes(risk)) return false;
+      if (suc!=='' && String(e.success)!==suc) return false;
+      return true;
+    });
+    document.getElementById('vb-logs-badge').textContent = rows.length+' / '+vbLogsCache.length;
+    if (!rows.length) { tbody.innerHTML=vbEmpty(9,'No matching entries'); return; }
+    tbody.innerHTML = rows.map(e=>{
+      const hasSteps = e.flowSteps&&e.flowSteps.length>0;
+      const stepRows = hasSteps
+        ? e.flowSteps.map(s=>`<div class="vb-flow-step"><span class="vb-flow-time">${s.time?new Date(s.time).toLocaleTimeString():'—'}</span><span class="vb-flow-name">${vbEsc(s.step)}</span><span class="vb-flow-detail">${vbEsc(s.detail||'')}</span></div>`).join('')
+        : '<div style="color:#50507a;font-size:11px;padding:5px 0">No flow steps</div>';
+      const flagStr = (e.flags||[]).slice(0,3).map(f=>vbEsc(f)).join('<br>');
+      return `
+        <tr>
+          <td>${hasSteps?`<button class="vb-expand-btn" onclick="vbToggleFlow('${e.id}')">▶</button>`:''}</td>
+          <td><div class="vb-user-cell">
+            <img class="vb-avatar" src="${vbEsc(e.avatarUrl||'')}" onerror="this.style.visibility='hidden'" alt=""/>
+            <div><div class="vb-user-tag">${vbEsc(e.userTag)}</div><div class="vb-user-id">${vbEsc(e.userId)}</div></div>
+          </div></td>
+          <td>${vbEsc(e.guildName||e.guildId)}</td>
+          <td>${vbRiskBadge(e.riskLevel)}</td>
+          <td class="vb-mono">${vbEsc(e.ip||'—')}</td>
+          <td>${e.accountAgeDays!=null?e.accountAgeDays+'d':'—'}</td>
+          <td style="max-width:180px;white-space:normal;font-size:11px;color:#9090c0">${flagStr||'—'}</td>
+          <td class="vb-mono">${vbRelTime(e.ts)}</td>
+          <td>${vbStatusBadge(e.success)}</td>
+        </tr>
+        <tr class="vb-flow-row" id="vb-flow-${e.id}"><td colspan="9"><div class="vb-flow-wrap" id="vb-flow-wrap-${e.id}">${stepRows}</div></td></tr>`;
+    }).join('');
+  }
+
+  window.vbToggleFlow = function(id) {
+    const wrap = document.getElementById('vb-flow-wrap-'+id);
+    const btn  = wrap&&wrap.closest('.vb-flow-row').previousElementSibling.querySelector('.vb-expand-btn');
+    if (!wrap) return;
+    const open = wrap.classList.toggle('vb-open');
+    if (btn) btn.textContent = open?'▼':'▶';
+  };
+
+  // ── Guilds ─────────────────────────────────────────────────────────────
+  function vbRenderGuilds() {
+    if (!vbStatsCache) return;
+    const tbody  = document.getElementById('vb-guilds-tbody');
+    const guilds = (vbStatsCache.guilds||[]).sort((a,b)=>b.total-a.total);
+    document.getElementById('vb-guilds-badge').textContent = guilds.length+' guild'+(guilds.length!==1?'s':'');
+    if (!guilds.length) { tbody.innerHTML=vbEmpty(7,'No guild data yet'); return; }
+    tbody.innerHTML = guilds.map(g=>{
+      const rate = g.total>0?Math.round((g.success/g.total)*100):0;
+      return `<tr>
+        <td style="font-weight:600">${vbEsc(g.guildName)}</td>
+        <td class="vb-mono">${vbEsc(g.guildId)}</td>
+        <td>${g.total}</td>
+        <td><span class="vb-badge vb-badge-g">${g.success}</span></td>
+        <td>${g.failed>0?`<span class="vb-badge vb-badge-r">${g.failed}</span>`:'—'}</td>
+        <td>${g.today}</td>
+        <td><span class="vb-badge ${rate>=80?'vb-badge-g':rate>=50?'vb-badge-y':'vb-badge-r'}">${rate}%</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Status ─────────────────────────────────────────────────────────────
+  function vbRenderStatus() {
+    if (vbStatsCache) {
+      document.getElementById('vb-st-uptime').textContent  = vbFmtUptime(vbStatsCache.uptimeSecs||0);
+      document.getElementById('vb-st-started').textContent = 'Started '+vbFmtDate(vbStatsCache.startTime||Date.now());
+      document.getElementById('vb-st-entries').textContent = vbLogsCache.length;
+    }
+    const tbody = document.getElementById('vb-flow-tbody');
+    const rows  = vbLogsCache.slice(0,10);
+    if (!rows.length) { tbody.innerHTML=vbEmpty(4,'No activity yet'); return; }
+    tbody.innerHTML = rows.map(e=>{
+      const steps = (e.flowSteps||[]).map(s=>vbEsc(s.step)).join(' → ')||'—';
+      const ua = (e.userAgent||'—').slice(0,80);
+      return `<tr>
+        <td><div class="vb-user-cell">
+          <img class="vb-avatar" src="${vbEsc(e.avatarUrl||'')}" onerror="this.style.visibility='hidden'" alt=""/>
+          <div class="vb-user-tag">${vbEsc(e.userTag)}</div>
+        </div></td>
+        <td style="max-width:300px;white-space:normal;font-size:11px;color:#a78bfa">${steps}</td>
+        <td class="vb-mono" style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${vbEsc(ua)}</td>
+        <td class="vb-mono">${vbRelTime(e.ts)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Open/close overlay ─────────────────────────────────────────────────
+  window.openVerifyOverlay = function() {
+    const overlay = document.getElementById('verify-overlay');
+    overlay.classList.add('vb-open');
+    document.body.style.overflow = 'hidden';
+    // Restore saved URL
+    const saved = localStorage.getItem('vb_api_url') || 'http://localhost:3000';
+    document.getElementById('vb-url-input').value = saved;
+    VB_API = saved;
+    document.getElementById('vb-connected-url').textContent = saved;
+    document.getElementById('vb-url-display') && (document.getElementById('vb-url-display').textContent = saved);
+    // Try auto-login if token saved
+    if (VB_TOKEN) {
+      vbApiGet('/dashboard/api/stats').then(r=>{
+        if (r&&r.success) {
+          document.getElementById('vb-url-status').textContent='✅ Connected & signed in';
+          vbStatsCache=r.stats; showVbApp(); vbLoadAll();
+        } else {
+          VB_TOKEN=''; localStorage.removeItem('vb_token');
+          document.getElementById('vb-url-status').textContent='Session expired — sign in again';
+          showVbLogin();
+        }
+      }).catch(()=>{
+        document.getElementById('vb-url-status').textContent='❌ Cannot reach '+saved;
+        showVbLogin();
+      });
+    } else {
+      showVbLogin();
+    }
+  };
+
+  window.closeVerifyOverlay = function() {
+    document.getElementById('verify-overlay').classList.remove('vb-open');
+    document.body.style.overflow = '';
+  };
+
+  window.vbOpenExternal = function() {
+    window.open(VB_API+'/dashboard','_blank');
+  };
+
+  // ── Escape to close ────────────────────────────────────────────────────
+  document.addEventListener('keydown', function(e) {
+    if (e.key==='Escape' && document.getElementById('verify-overlay').classList.contains('vb-open'))
+      window.closeVerifyOverlay();
+  });
+
+  // ── Pre-fill URL input with saved value ───────────────────────────────
+  const saved = localStorage.getItem('vb_api_url');
+  if (saved) document.getElementById('vb-url-input').value = saved;
+
+})();
 </script>
 
 </body>
