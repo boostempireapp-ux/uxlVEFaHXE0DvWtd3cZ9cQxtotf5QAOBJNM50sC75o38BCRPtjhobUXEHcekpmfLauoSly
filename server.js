@@ -1673,38 +1673,108 @@ app.delete('/api/admin/detections', requireAdmin, async (req, res) => {
 
 // ── VERIFY BOT CONFIG (admin save/load + bot fetch) ──────────────────────────
 
-// GET /api/admin/bot-config  — returns saved embed/channel config
+// ── VERIFY BOT CONFIG ─────────────────────────────────────────────────────────
+
+// Helper: call Discord API with stored bot token
+async function discordAPI(path, storedToken) {
+  const r = await fetch(`https://discord.com/api/v10${path}`, {
+    headers: { Authorization: `Bot ${storedToken}`, 'Content-Type': 'application/json' }
+  });
+  if (!r.ok) throw new Error(`Discord API ${r.status}: ${await r.text()}`);
+  return r.json();
+}
+
+// GET /api/admin/bot-config
 app.get('/api/admin/bot-config', requireAdmin, async (req, res) => {
   try {
     const doc = await db.collection('botConfig').findOne({ _id: 'main' });
-    res.json({ success: true, config: doc ? doc.data : {} });
-  } catch (e) {
-    res.status(500).json({ success: false, message: e.message });
-  }
+    const cfg = doc ? { ...doc.data } : {};
+    // Never send the raw token to the client — send a masked indicator instead
+    if (cfg.botToken) { cfg.botTokenSet = true; delete cfg.botToken; }
+    else cfg.botTokenSet = false;
+    res.json({ success: true, config: cfg });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-// POST /api/admin/bot-config  — save embed/channel config from dashboard
+// POST /api/admin/bot-config
 app.post('/api/admin/bot-config', requireAdmin, async (req, res) => {
   try {
     const allowed = [
+      'botToken',
       'panelTitle','panelDescription','panelColor','panelImage','panelFooter',
       'dmTitle','dmDescription','dmColor',
-      'logChannelName','webhookUrl',
+      'logChannelName','logChannelId','verifyChannelName','verifyChannelId',
+      'webhookUrl','logFooter','logThumbnail',
       'verifiedRoleName','unverifiedRoleName'
     ];
-    const data = {};
-    for (const k of allowed) if (req.body[k] !== undefined) data[k] = req.body[k];
+    const doc = await db.collection('botConfig').findOne({ _id: 'main' });
+    const existing = doc ? doc.data : {};
+    const data = { ...existing };
+    for (const k of allowed) {
+      if (req.body[k] !== undefined) {
+        // Don't overwrite botToken with empty string (keep existing)
+        if (k === 'botToken' && req.body[k] === '') continue;
+        data[k] = req.body[k];
+      }
+    }
     data.updatedAt = new Date().toISOString();
     await db.collection('botConfig').replaceOne(
       { _id: 'main' },
       { _id: 'main', data },
       { upsert: true }
     );
-    auditLog(req.adminIP, 'BOT_CONFIG_SAVED', data);
+    const logData = { ...data }; if (logData.botToken) logData.botToken = '***';
+    auditLog(req.adminIP, 'BOT_CONFIG_SAVED', logData);
     res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ success: false, message: e.message });
-  }
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// GET /api/admin/discord/guilds  — list guilds the bot is in (uses stored token)
+app.get('/api/admin/discord/guilds', requireAdmin, async (req, res) => {
+  try {
+    const doc = await db.collection('botConfig').findOne({ _id: 'main' });
+    const token = doc?.data?.botToken;
+    if (!token) return res.json({ success: false, message: 'No bot token saved yet' });
+    const guilds = await discordAPI('/users/@me/guilds', token);
+    res.json({ success: true, guilds: guilds.map(g => ({ id: g.id, name: g.name, icon: g.icon })) });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// GET /api/admin/discord/guilds/:id/channels
+app.get('/api/admin/discord/guilds/:id/channels', requireAdmin, async (req, res) => {
+  try {
+    const doc = await db.collection('botConfig').findOne({ _id: 'main' });
+    const token = doc?.data?.botToken;
+    if (!token) return res.json({ success: false, message: 'No bot token saved yet' });
+    const channels = await discordAPI(`/guilds/${req.params.id}/channels`, token);
+    // Only text channels (type 0) and news (type 5)
+    const text = channels
+      .filter(c => c.type === 0 || c.type === 5)
+      .sort((a, b) => a.position - b.position)
+      .map(c => ({ id: c.id, name: c.name }));
+    res.json({ success: true, channels: text });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// GET /api/admin/discord/guilds/:id/webhooks
+app.get('/api/admin/discord/guilds/:id/webhooks', requireAdmin, async (req, res) => {
+  try {
+    const doc = await db.collection('botConfig').findOne({ _id: 'main' });
+    const token = doc?.data?.botToken;
+    if (!token) return res.json({ success: false, message: 'No bot token saved yet' });
+    const hooks = await discordAPI(`/guilds/${req.params.id}/webhooks`, token);
+    res.json({ success: true, webhooks: hooks.map(h => ({ id: h.id, name: h.name, url: `https://discord.com/api/webhooks/${h.id}/${h.token}`, channelId: h.channel_id })) });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// GET /api/admin/bot-status  — last known bot heartbeat
+app.get('/api/admin/bot-status', requireAdmin, async (req, res) => {
+  try {
+    const doc = await db.collection('botStatus').findOne({ _id: 'heartbeat' });
+    if (!doc) return res.json({ success: true, online: false, lastSeen: null });
+    const ageSecs = Math.floor((Date.now() - new Date(doc.ts).getTime()) / 1000);
+    res.json({ success: true, online: ageSecs < 90, ageSecs, ...doc });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 // ── DISCORD BOT API ───────────────────────────────────────────────────────────
@@ -1714,6 +1784,19 @@ function requireBot(req, res, next) {
     return res.status(401).json({ success: false, message: 'Invalid bot token' });
   next();
 }
+
+// POST /api/bot/heartbeat — bot sends this every 60s so dashboard can show real status
+app.post('/api/bot/heartbeat', requireBot, async (req, res) => {
+  try {
+    const { uptime, guildCount, guilds, verifyCount } = req.body;
+    await db.collection('botStatus').replaceOne(
+      { _id: 'heartbeat' },
+      { _id: 'heartbeat', ts: new Date().toISOString(), uptime: uptime||0, guildCount: guildCount||0, guilds: guilds||[], verifyCount: verifyCount||0 },
+      { upsert: true }
+    );
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
 
 // GET /api/bot/config — bot fetches its embed/channel config from here
 app.get('/api/bot/config', requireBot, async (req, res) => {
