@@ -4800,605 +4800,107 @@ function dllLogNext() { dllLogPage++; loadDLLLogs(); }
 </style>
 
 <div id="verify-overlay">
-  <!-- Top chrome bar -->
-  <div id="vb-topbar">
-    <div class="vb-brand">
-      <span style="font-size:16px">🛡️</span>
-      <div>
-        <div class="vb-brand-name">VERIFY BOT DASHBOARD</div>
-        <div class="vb-brand-sub" id="vb-connected-url">Not connected</div>
-      </div>
+  <!-- top chrome -->
+  <div id="vb-topbar" style="height:48px;background:#06070d;border-bottom:1px solid rgba(139,92,246,.18);display:flex;align-items:center;padding:0 16px;gap:14px;flex-shrink:0;z-index:10">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:15px">🛡️</span>
+      <span style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;color:#a78bfa;text-transform:uppercase">Verify Bot Dashboard</span>
+      <span id="vb-connected-url" style="font-size:10px;color:rgba(139,92,246,.45);font-family:'JetBrains Mono',monospace;margin-left:4px"></span>
     </div>
-    <div class="vb-topbar-btns">
-      <button class="vb-btn-sm" onclick="vbRefreshAll()">🔄 Refresh</button>
-      <button class="vb-btn-sm" onclick="vbOpenExternal()">↗ Open in Tab</button>
-      <button class="vb-btn-close" onclick="closeVerifyOverlay()">✕ Close</button>
-    </div>
-  </div>
-
-  <!-- URL config bar (hidden — URL is set via VERIFY_BOT_URL or localStorage) -->
-  <div id="vb-url-config" style="display:none">
-    <label for="vb-url-input">Bot URL:</label>
-    <input id="vb-url-input" type="text" value="" placeholder="https://yourproject.wispbyte.com"/>
-    <button id="vb-url-set-btn" onclick="vbSetURL()">Connect</button>
-    <span id="vb-url-status"></span>
-  </div>
-
-  <!-- Login screen -->
-  <div id="vb-login">
-    <div class="vb-login-left">
-      <div class="vb-login-logo">VERIFYBOT</div>
-      <div class="vb-login-subtitle">Verification Dashboard</div>
-      <div class="vb-login-feature">
-        <div class="vb-login-feature-icon">🔐</div>
-        <div class="vb-login-feature-text"><strong>OAuth2 Browser Flow</strong>Full step-by-step verification logging</div>
-      </div>
-      <div class="vb-login-feature">
-        <div class="vb-login-feature-icon">🛡️</div>
-        <div class="vb-login-feature-text"><strong>Risk Assessment</strong>Account age, avatar, flag analysis</div>
-      </div>
-      <div class="vb-login-feature">
-        <div class="vb-login-feature-icon">📊</div>
-        <div class="vb-login-feature-text"><strong>Live Stats</strong>Real-time verification counts per guild</div>
-      </div>
-      <div class="vb-login-feature">
-        <div class="vb-login-feature-icon">🌐</div>
-        <div class="vb-login-feature-text"><strong>IP &amp; UA Tracking</strong>Browser fingerprint and IP per verify</div>
-      </div>
-    </div>
-    <div class="vb-login-right">
-      <div class="vb-login-title">Sign In</div>
-      <div class="vb-login-sub">Enter your dashboard password to continue</div>
-      <label class="vb-form-label" for="vb-pw-input">Dashboard Password</label>
-      <input class="vb-form-input" type="password" id="vb-pw-input" placeholder="••••••••" autocomplete="current-password"/>
-      <button class="vb-login-submit" id="vb-login-btn" onclick="vbTryLogin()">Sign In</button>
-      <div class="vb-login-err" id="vb-login-err"></div>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <span id="vb-iframe-status" style="font-size:11px;color:#6b7280"></span>
+      <button onclick="document.getElementById('vb-dash-iframe').src=document.getElementById('vb-dash-iframe').src" style="background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.2);color:#a78bfa;border-radius:7px;padding:5px 12px;font-size:11px;cursor:pointer">↻ Refresh</button>
+      <button onclick="window.open(document.getElementById('vb-dash-iframe').src,'_blank')" style="background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.2);color:#a78bfa;border-radius:7px;padding:5px 12px;font-size:11px;cursor:pointer">↗ Open in Tab</button>
+      <button onclick="window.closeVerifyOverlay()" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.18);color:#f87171;border-radius:7px;padding:5px 12px;font-size:11px;cursor:pointer">✕ Close</button>
     </div>
   </div>
-
-  <!-- App -->
-  <div id="vb-app">
-    <aside class="vb-sidebar">
-      <div class="vb-sidebar-brand">
-        <div class="vb-sidebar-brand-name">VERIFYBOT</div>
-        <div class="vb-sidebar-brand-sub">Dashboard v2</div>
-      </div>
-      <div class="vb-sidebar-section">Navigation</div>
-      <div class="vb-nav-item vb-active" data-vbpage="overview"><span class="vb-nav-icon">📊</span> Overview</div>
-      <div class="vb-nav-item" data-vbpage="logs"><span class="vb-nav-icon">📋</span> Verification Log</div>
-      <div class="vb-nav-item" data-vbpage="guilds"><span class="vb-nav-icon">🏠</span> Guilds</div>
-      <div class="vb-nav-item" data-vbpage="status"><span class="vb-nav-icon">⚡</span> Bot Status</div>
-      <div class="vb-sidebar-footer">
-        <div style="display:flex;align-items:center;margin-bottom:4px">
-          <span class="vb-status-dot" id="vb-bot-dot"></span>
-          <span class="vb-status-label" id="vb-bot-status-label">Loading…</span>
-        </div>
-        <button class="vb-logout-btn" onclick="vbDoLogout()"><span>🚪</span> Sign Out</button>
-      </div>
-    </aside>
-    <div class="vb-main">
-      <div class="vb-topbar-inner">
-        <div>
-          <div class="vb-page-title" id="vb-page-title">Overview</div>
-          <div class="vb-page-sub" id="vb-page-sub">Verification statistics and recent activity</div>
-        </div>
-        <button class="vb-refresh-btn" onclick="vbRefreshAll()"><span>🔄</span> Refresh</button>
-      </div>
-      <div class="vb-content">
-
-        <!-- OVERVIEW -->
-        <div class="vb-page vb-page-active" id="vb-page-overview">
-          <div class="vb-stats-row">
-            <div class="vb-stat" style="--vb-stat-color:#10b981">
-              <div class="vb-stat-icon">✅</div>
-              <div class="vb-stat-label">Total Verified</div>
-              <div class="vb-stat-value" id="vb-s-total">—</div>
-              <div class="vb-stat-sub" id="vb-s-total-sub">all time</div>
-            </div>
-            <div class="vb-stat" style="--vb-stat-color:#06b6d4">
-              <div class="vb-stat-icon">📅</div>
-              <div class="vb-stat-label">Verified Today</div>
-              <div class="vb-stat-value" id="vb-s-today">—</div>
-              <div class="vb-stat-sub" id="vb-s-today-sub">since midnight</div>
-            </div>
-            <div class="vb-stat" style="--vb-stat-color:#ef4444">
-              <div class="vb-stat-icon">⚠️</div>
-              <div class="vb-stat-label">Failed / Denied</div>
-              <div class="vb-stat-value" id="vb-s-failed">—</div>
-              <div class="vb-stat-sub">total attempts</div>
-            </div>
-            <div class="vb-stat" style="--vb-stat-color:#f59e0b">
-              <div class="vb-stat-icon">🔴</div>
-              <div class="vb-stat-label">High Risk</div>
-              <div class="vb-stat-value" id="vb-s-risk">—</div>
-              <div class="vb-stat-sub">flagged accounts</div>
-            </div>
-          </div>
-          <div class="vb-card">
-            <div class="vb-card-header">
-              <span class="vb-card-title">Recent Verifications</span>
-              <span class="vb-card-badge" id="vb-recent-badge">0 entries</span>
-            </div>
-            <div class="vb-table-wrap">
-              <table class="vb-table">
-                <thead><tr><th>User</th><th>Guild</th><th>Risk</th><th>IP</th><th>Age</th><th>Time</th><th>Status</th></tr></thead>
-                <tbody id="vb-recent-tbody"><tr><td colspan="7" class="vb-loading"><span class="vb-spinner"></span>Loading…</td></tr></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- LOGS -->
-        <div class="vb-page" id="vb-page-logs">
-          <div class="vb-card">
-            <div class="vb-card-header">
-              <span class="vb-card-title">Verification Log</span>
-              <span class="vb-card-badge" id="vb-logs-badge">—</span>
-            </div>
-            <div class="vb-filter-row">
-              <input class="vb-search" id="vb-log-search" type="search" placeholder="Search user, ID, guild…"/>
-              <select class="vb-select" id="vb-log-risk">
-                <option value="">All risk levels</option>
-                <option value="LOW">Low Risk</option>
-                <option value="MEDIUM">Medium Risk</option>
-                <option value="HIGH">High Risk</option>
-              </select>
-              <select class="vb-select" id="vb-log-status">
-                <option value="">All statuses</option>
-                <option value="true">Success</option>
-                <option value="false">Failed</option>
-              </select>
-            </div>
-            <div class="vb-table-wrap">
-              <table class="vb-table">
-                <thead><tr><th></th><th>User</th><th>Guild</th><th>Risk</th><th>IP</th><th>Age</th><th>Flags</th><th>Time</th><th>Status</th></tr></thead>
-                <tbody id="vb-logs-tbody"><tr><td colspan="9" class="vb-loading"><span class="vb-spinner"></span>Loading…</td></tr></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- GUILDS -->
-        <div class="vb-page" id="vb-page-guilds">
-          <div class="vb-card">
-            <div class="vb-card-header">
-              <span class="vb-card-title">Guild Statistics</span>
-              <span class="vb-card-badge" id="vb-guilds-badge">—</span>
-            </div>
-            <div class="vb-table-wrap">
-              <table class="vb-table">
-                <thead><tr><th>Guild</th><th>Guild ID</th><th>Total</th><th>Verified</th><th>Failed</th><th>Today</th><th>Rate</th></tr></thead>
-                <tbody id="vb-guilds-tbody"><tr><td colspan="7" class="vb-loading"><span class="vb-spinner"></span>Loading…</td></tr></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- STATUS -->
-        <div class="vb-page" id="vb-page-status">
-          <div class="vb-status-cards">
-            <div class="vb-status-card">
-              <div class="vb-status-card-label">Bot Status</div>
-              <div class="vb-status-card-value" id="vb-st-bot">Online</div>
-              <div class="vb-status-card-sub">Verification server running</div>
-            </div>
-            <div class="vb-status-card">
-              <div class="vb-status-card-label">Uptime</div>
-              <div class="vb-status-card-value" id="vb-st-uptime">—</div>
-              <div class="vb-status-card-sub" id="vb-st-started">Started —</div>
-            </div>
-            <div class="vb-status-card">
-              <div class="vb-status-card-label">Log Entries</div>
-              <div class="vb-status-card-value" id="vb-st-entries">—</div>
-              <div class="vb-status-card-sub">in-memory (last 500)</div>
-            </div>
-          </div>
-          <div class="vb-card">
-            <div class="vb-card-header">
-              <span class="vb-card-title">Recent Flow Activity</span>
-              <span class="vb-card-badge">Last 10 verifications</span>
-            </div>
-            <div class="vb-table-wrap">
-              <table class="vb-table">
-                <thead><tr><th>User</th><th>Flow Steps</th><th>User Agent</th><th>Time</th></tr></thead>
-                <tbody id="vb-flow-tbody"><tr><td colspan="4" class="vb-loading"><span class="vb-spinner"></span>Loading…</td></tr></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-      </div><!-- /vb-content -->
-    </div><!-- /vb-main -->
-  </div><!-- /vb-app -->
+  <!-- iframe fills the rest -->
+  <iframe id="vb-dash-iframe" src="about:blank" style="flex:1;border:none;width:100%;background:#0b0d14" allowfullscreen></iframe>
 </div><!-- /verify-overlay -->
-
 <script>
-// ── Verify Bot Dashboard (inline, namespaced) ──────────────────────────────
+// ── Verify Bot Overlay (iframe-based) ─────────────────────────────────────
 
 (function() {
-  // ── State ──────────────────────────────────────────────────────────────
-  let VB_API  = (window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || '').replace(/\/+$/, '');
-  let VB_TOKEN = localStorage.getItem('vb_token') || '';
-  let vbStatsCache = null;
-  let vbLogsCache  = [];
+  // VB state
+  var VB_API   = (window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || '').replace(/\/+$/, '');
+  var VB_TOKEN = '';
 
-  // ── Helpers ────────────────────────────────────────────────────────────
-  function vbRelTime(ts) {
-    const d = Date.now() - ts, s = Math.floor(d/1000);
-    if (s < 60)    return s+'s ago';
-    if (s < 3600)  return Math.floor(s/60)+'m ago';
-    if (s < 86400) return Math.floor(s/3600)+'h ago';
-    return Math.floor(s/86400)+'d ago';
-  }
-  function vbFmtUptime(secs) {
-    const d=Math.floor(secs/86400),h=Math.floor((secs%86400)/3600),m=Math.floor((secs%3600)/60),s=secs%60;
-    if(d>0) return d+'d '+h+'h '+m+'m';
-    if(h>0) return h+'h '+m+'m '+s+'s';
-    return m+'m '+s+'s';
-  }
-  function vbFmtDate(ts) {
-    return new Date(ts).toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-  }
-  function vbRiskBadge(r) {
-    r=(r||'').toUpperCase();
-    if(r.includes('HIGH'))   return '<span class="vb-badge vb-badge-r">🔴 HIGH</span>';
-    if(r.includes('MEDIUM')) return '<span class="vb-badge vb-badge-y">🟡 MED</span>';
-    return '<span class="vb-badge vb-badge-g">🟢 LOW</span>';
-  }
-  function vbStatusBadge(ok) {
-    return ok ? '<span class="vb-badge vb-badge-g">✓ OK</span>'
-              : '<span class="vb-badge vb-badge-r">✗ Fail</span>';
-  }
-  function vbEsc(s) {
-    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-  function vbEmpty(n, msg='No records found') {
-    return '<tr><td colspan="'+n+'" class="vb-empty"><div class="vb-empty-icon">📭</div><div class="vb-empty-text">'+msg+'</div></td></tr>';
-  }
-
-  // ── API ────────────────────────────────────────────────────────────────
-  async function vbApiGet(ep) {
-    const r = await fetch(VB_API+ep, {headers:{'x-dash-token':VB_TOKEN}});
-    if (r.status===401) { vbDoLogout(); return null; }
-    return r.json();
-  }
-  async function vbApiPost(ep, body) {
-    const r = await fetch(VB_API+ep, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(body)
-    });
-    return r.json();
-  }
-
-  // ── URL config ─────────────────────────────────────────────────────────
-  window.vbSetURL = function() {
-    const val = document.getElementById('vb-url-input').value.trim().replace(/\/+$/,'');
-    if (!val) return;
-    VB_API = val;
-    localStorage.setItem('vb_api_url', val);
-    document.getElementById('vb-connected-url').textContent = val;
-    document.getElementById('vb-url-status').textContent = 'Connecting…';
-    // If we have a cached token try to validate it
-    if (VB_TOKEN) {
-      vbApiGet('/dashboard/api/stats').then(r => {
-        if (r && r.success) {
-          document.getElementById('vb-url-status').textContent = '✅ Connected';
-          vbStatsCache = r.stats;
-          showVbApp();
-          vbLoadAll();
-        } else {
-          VB_TOKEN = ''; localStorage.removeItem('vb_token');
-          document.getElementById('vb-url-status').textContent = '⚡ Connected — please sign in';
-          showVbLogin();
-        }
-      }).catch(() => {
-        document.getElementById('vb-url-status').textContent = '❌ Cannot reach server';
-      });
-    } else {
-      document.getElementById('vb-url-status').textContent = '⚡ Connected — please sign in';
-    }
-  };
-
-  // ── Login ──────────────────────────────────────────────────────────────
-  window.vbTryLogin = async function() {
-    const pw  = document.getElementById('vb-pw-input').value.trim();
-    const btn = document.getElementById('vb-login-btn');
-    const err = document.getElementById('vb-login-err');
-    if (!pw) { vbShowErr('Please enter a password'); return; }
-    btn.disabled=true; btn.textContent='Signing in…';
-    err.className='vb-login-err';
-    try {
-      const data = await vbApiPost('/dashboard/api/login', {password: pw});
-      if (data.success) {
-        VB_TOKEN = data.token;
-        localStorage.setItem('vb_token', VB_TOKEN);
-        document.getElementById('vb-url-status').textContent = '✅ Connected & signed in';
-        showVbApp();
-        vbLoadAll();
-      } else {
-        vbShowErr(data.message || 'Invalid password');
-      }
-    } catch(e) {
-      vbShowErr('Could not reach the verify bot server. Check the URL above.');
-    }
-    btn.disabled=false; btn.textContent='Sign In';
-    function vbShowErr(m) { err.textContent=m; err.className='vb-login-err vb-show'; }
-  };
-
-  window.vbDoLogout = function() {
-    if (VB_TOKEN) fetch(VB_API+'/dashboard/api/logout',{method:'POST',headers:{'x-dash-token':VB_TOKEN}}).catch(()=>{});
-    VB_TOKEN='';
-    localStorage.removeItem('vb_token');
-    // Close the overlay and return to the KeyAuth login on the VERIFY BOT tab
-    window.closeVerifyOverlay();
-  };
-
-  document.getElementById('vb-pw-input').addEventListener('keydown', e => {
-    if (e.key==='Enter') window.vbTryLogin();
-  });
-
-  // ── Show/hide ──────────────────────────────────────────────────────────
-  function showVbLogin() {
-    document.getElementById('vb-login').className='';
-    document.getElementById('vb-app').className='';
-  }
-  function showVbApp() {
-    document.getElementById('vb-login').className='vb-hidden';
-    document.getElementById('vb-app').className='vb-visible';
-  }
-
-  // ── Navigation ─────────────────────────────────────────────────────────
-  const VB_PAGE_META = {
-    overview: {title:'Overview',        sub:'Verification statistics and recent activity'},
-    logs:     {title:'Verification Log',sub:'Full log of all verification attempts'},
-    guilds:   {title:'Guilds',          sub:'Per-guild verification breakdown'},
-    status:   {title:'Bot Status',      sub:'Uptime, health, and browser flow activity'},
-  };
-  function vbShowPage(name) {
-    document.querySelectorAll('#vb-app .vb-page').forEach(p=>p.classList.remove('vb-page-active'));
-    document.querySelectorAll('.vb-nav-item').forEach(n=>n.classList.remove('vb-active'));
-    const pg = document.getElementById('vb-page-'+name);
-    if (pg) pg.classList.add('vb-page-active');
-    const ni = document.querySelector('.vb-nav-item[data-vbpage="'+name+'"]');
-    if (ni) ni.classList.add('vb-active');
-    const m = VB_PAGE_META[name]||{};
-    document.getElementById('vb-page-title').textContent = m.title||name;
-    document.getElementById('vb-page-sub').textContent = m.sub||'';
-    if (name==='logs')   vbRenderLogs();
-    if (name==='guilds') vbRenderGuilds();
-    if (name==='status') vbRenderStatus();
-  }
-  document.querySelectorAll('.vb-nav-item').forEach(n => {
-    n.addEventListener('click', () => vbShowPage(n.dataset.vbpage));
-  });
-
-  // Filters
-  document.getElementById('vb-log-search').addEventListener('input', vbRenderLogs);
-  document.getElementById('vb-log-risk').addEventListener('change', vbRenderLogs);
-  document.getElementById('vb-log-status').addEventListener('change', vbRenderLogs);
-
-  // ── Load ───────────────────────────────────────────────────────────────
-  async function vbLoadAll() {
-    const [s,l] = await Promise.all([
-      vbApiGet('/dashboard/api/stats'),
-      vbApiGet('/dashboard/api/logs?limit=200'),
-    ]);
-    if (s) { vbStatsCache=s.stats; vbApplyStats(); }
-    if (l) { vbLogsCache=l.logs; }
-    vbRenderRecent(); vbRenderLogs(); vbRenderGuilds(); vbRenderStatus();
-    const dot = document.getElementById('vb-bot-dot');
-    const lbl = document.getElementById('vb-bot-status-label');
-    if (s) { dot.className='vb-status-dot'; lbl.textContent='Server online'; }
-    else   { dot.className='vb-status-dot vb-offline'; lbl.textContent='Offline'; }
-  }
-
-  window.vbRefreshAll = function() { if(VB_TOKEN) vbLoadAll(); };
-
-  // ── Stats ──────────────────────────────────────────────────────────────
-  function vbApplyStats() {
-    if (!vbStatsCache) return;
-    const st = vbStatsCache;
-    document.getElementById('vb-s-total').textContent  = st.totalVerified??0;
-    document.getElementById('vb-s-today').textContent  = st.todayVerified??0;
-    document.getElementById('vb-s-failed').textContent = st.failedAttempts??0;
-    document.getElementById('vb-s-risk').textContent   = st.highRisk??0;
-    document.getElementById('vb-s-total-sub').textContent = (st.totalAttempts??0)+' total attempts';
-    document.getElementById('vb-s-today-sub').textContent = (st.todayAttempts??0)+' attempts today';
-  }
-
-  // ── Recent ─────────────────────────────────────────────────────────────
-  function vbRenderRecent() {
-    const tbody = document.getElementById('vb-recent-tbody');
-    const rows  = vbLogsCache.slice(0,20);
-    document.getElementById('vb-recent-badge').textContent = vbLogsCache.length+' entries';
-    if (!rows.length) { tbody.innerHTML=vbEmpty(7,'No verifications yet'); return; }
-    tbody.innerHTML = rows.map(e=>`
-      <tr>
-        <td><div class="vb-user-cell">
-          <img class="vb-avatar" src="${vbEsc(e.avatarUrl||'')}" onerror="this.style.visibility='hidden'" alt=""/>
-          <div><div class="vb-user-tag">${vbEsc(e.userTag)}</div><div class="vb-user-id">${vbEsc(e.userId)}</div></div>
-        </div></td>
-        <td>${vbEsc(e.guildName||e.guildId)}</td>
-        <td>${vbRiskBadge(e.riskLevel)}</td>
-        <td class="vb-mono">${vbEsc(e.ip||'—')}</td>
-        <td>${e.accountAgeDays!=null?e.accountAgeDays+'d':'—'}</td>
-        <td class="vb-mono">${vbRelTime(e.ts)}</td>
-        <td>${vbStatusBadge(e.success)}</td>
-      </tr>`).join('');
-  }
-
-  // ── Logs ───────────────────────────────────────────────────────────────
-  function vbRenderLogs() {
-    const tbody  = document.getElementById('vb-logs-tbody');
-    const search = document.getElementById('vb-log-search').value.toLowerCase();
-    const risk   = document.getElementById('vb-log-risk').value.toUpperCase();
-    const suc    = document.getElementById('vb-log-status').value;
-    let rows = vbLogsCache.filter(e=>{
-      if (search && !JSON.stringify(e).toLowerCase().includes(search)) return false;
-      if (risk && !(e.riskLevel||'').toUpperCase().includes(risk)) return false;
-      if (suc!=='' && String(e.success)!==suc) return false;
-      return true;
-    });
-    document.getElementById('vb-logs-badge').textContent = rows.length+' / '+vbLogsCache.length;
-    if (!rows.length) { tbody.innerHTML=vbEmpty(9,'No matching entries'); return; }
-    tbody.innerHTML = rows.map(e=>{
-      const hasSteps = e.flowSteps&&e.flowSteps.length>0;
-      const stepRows = hasSteps
-        ? e.flowSteps.map(s=>`<div class="vb-flow-step"><span class="vb-flow-time">${s.time?new Date(s.time).toLocaleTimeString():'—'}</span><span class="vb-flow-name">${vbEsc(s.step)}</span><span class="vb-flow-detail">${vbEsc(s.detail||'')}</span></div>`).join('')
-        : '<div style="color:#50507a;font-size:11px;padding:5px 0">No flow steps</div>';
-      const flagStr = (e.flags||[]).slice(0,3).map(f=>vbEsc(f)).join('<br>');
-      return `
-        <tr>
-          <td>${hasSteps?`<button class="vb-expand-btn" onclick="vbToggleFlow('${e.id}')">▶</button>`:''}</td>
-          <td><div class="vb-user-cell">
-            <img class="vb-avatar" src="${vbEsc(e.avatarUrl||'')}" onerror="this.style.visibility='hidden'" alt=""/>
-            <div><div class="vb-user-tag">${vbEsc(e.userTag)}</div><div class="vb-user-id">${vbEsc(e.userId)}</div></div>
-          </div></td>
-          <td>${vbEsc(e.guildName||e.guildId)}</td>
-          <td>${vbRiskBadge(e.riskLevel)}</td>
-          <td class="vb-mono">${vbEsc(e.ip||'—')}</td>
-          <td>${e.accountAgeDays!=null?e.accountAgeDays+'d':'—'}</td>
-          <td style="max-width:180px;white-space:normal;font-size:11px;color:#9090c0">${flagStr||'—'}</td>
-          <td class="vb-mono">${vbRelTime(e.ts)}</td>
-          <td>${vbStatusBadge(e.success)}</td>
-        </tr>
-        <tr class="vb-flow-row" id="vb-flow-${e.id}"><td colspan="9"><div class="vb-flow-wrap" id="vb-flow-wrap-${e.id}">${stepRows}</div></td></tr>`;
-    }).join('');
-  }
-
-  window.vbToggleFlow = function(id) {
-    const wrap = document.getElementById('vb-flow-wrap-'+id);
-    const btn  = wrap&&wrap.closest('.vb-flow-row').previousElementSibling.querySelector('.vb-expand-btn');
-    if (!wrap) return;
-    const open = wrap.classList.toggle('vb-open');
-    if (btn) btn.textContent = open?'▼':'▶';
-  };
-
-  // ── Guilds ─────────────────────────────────────────────────────────────
-  function vbRenderGuilds() {
-    if (!vbStatsCache) return;
-    const tbody  = document.getElementById('vb-guilds-tbody');
-    const guilds = (vbStatsCache.guilds||[]).sort((a,b)=>b.total-a.total);
-    document.getElementById('vb-guilds-badge').textContent = guilds.length+' guild'+(guilds.length!==1?'s':'');
-    if (!guilds.length) { tbody.innerHTML=vbEmpty(7,'No guild data yet'); return; }
-    tbody.innerHTML = guilds.map(g=>{
-      const rate = g.total>0?Math.round((g.success/g.total)*100):0;
-      return `<tr>
-        <td style="font-weight:600">${vbEsc(g.guildName)}</td>
-        <td class="vb-mono">${vbEsc(g.guildId)}</td>
-        <td>${g.total}</td>
-        <td><span class="vb-badge vb-badge-g">${g.success}</span></td>
-        <td>${g.failed>0?`<span class="vb-badge vb-badge-r">${g.failed}</span>`:'—'}</td>
-        <td>${g.today}</td>
-        <td><span class="vb-badge ${rate>=80?'vb-badge-g':rate>=50?'vb-badge-y':'vb-badge-r'}">${rate}%</span></td>
-      </tr>`;
-    }).join('');
-  }
-
-  // ── Status ─────────────────────────────────────────────────────────────
-  function vbRenderStatus() {
-    if (vbStatsCache) {
-      document.getElementById('vb-st-uptime').textContent  = vbFmtUptime(vbStatsCache.uptimeSecs||0);
-      document.getElementById('vb-st-started').textContent = 'Started '+vbFmtDate(vbStatsCache.startTime||Date.now());
-      document.getElementById('vb-st-entries').textContent = vbLogsCache.length;
-    }
-    const tbody = document.getElementById('vb-flow-tbody');
-    const rows  = vbLogsCache.slice(0,10);
-    if (!rows.length) { tbody.innerHTML=vbEmpty(4,'No activity yet'); return; }
-    tbody.innerHTML = rows.map(e=>{
-      const steps = (e.flowSteps||[]).map(s=>vbEsc(s.step)).join(' → ')||'—';
-      const ua = (e.userAgent||'—').slice(0,80);
-      return `<tr>
-        <td><div class="vb-user-cell">
-          <img class="vb-avatar" src="${vbEsc(e.avatarUrl||'')}" onerror="this.style.visibility='hidden'" alt=""/>
-          <div class="vb-user-tag">${vbEsc(e.userTag)}</div>
-        </div></td>
-        <td style="max-width:300px;white-space:normal;font-size:11px;color:#a78bfa">${steps}</td>
-        <td class="vb-mono" style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${vbEsc(ua)}</td>
-        <td class="vb-mono">${vbRelTime(e.ts)}</td>
-      </tr>`;
-    }).join('');
-  }
-
-  // ── Open/close overlay ─────────────────────────────────────────────────
-  window.openVerifyOverlay = function() {
-    const overlay = document.getElementById('verify-overlay');
-    overlay.classList.add('vb-open');
-    document.body.style.overflow = 'hidden';
-    VB_API = (window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || '').replace(/\/+$/, '');
-    if (!VB_API) { alert('Set your WispByte bot URL in the VERIFY BOT login tab first.'); return; }
-    document.getElementById('vb-connected-url').textContent = VB_API;
-    document.getElementById('vb-url-input').value = VB_API;
-    // Re-read token from localStorage in case it was just saved
-    const tok = localStorage.getItem('vb_token') || VB_TOKEN;
-    if (tok) {
-      VB_TOKEN = tok;
-      vbApiGet('/dashboard/api/stats').then(r=>{
-        if (r&&r.success) {
-          vbStatsCache=r.stats; showVbApp(); vbLoadAll();
-        } else {
-          VB_TOKEN=''; localStorage.removeItem('vb_token');
-          showVbLogin();
-        }
-      }).catch(()=>{ showVbLogin(); });
-    } else {
-      showVbLogin();
-    }
-  };
-
-  // Called by doVerifyLogin after a fresh login — token already valid, skip API check
+  // ── Open overlay with iframe ─────────────────────────────────────────────
   window.openVerifyOverlayAuthed = function(token) {
-    VB_TOKEN = token;
     VB_API   = (window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || '').replace(/\/+$/, '');
-    const overlay = document.getElementById('verify-overlay');
+    VB_TOKEN = token || localStorage.getItem('vb_token') || '';
+    if (!VB_API) { alert('No WispByte bot URL set. Enter it in the VERIFY BOT login tab.'); return; }
+    if (!VB_TOKEN) { alert('No session token. Please log in again.'); return; }
+
+    // Build iframe URL — pass token as hash so it never hits server logs
+    var iframeUrl = VB_API + '/dashboard#tk=' + encodeURIComponent(VB_TOKEN);
+    var iframe = document.getElementById('vb-dash-iframe');
+    iframe.src = iframeUrl;
+
+    // Show overlay
+    var overlay = document.getElementById('verify-overlay');
     overlay.classList.add('vb-open');
     document.body.style.overflow = 'hidden';
-    document.getElementById('vb-connected-url').textContent = VB_API;
-    document.getElementById('vb-url-input').value = VB_API;
-    showVbApp();
-    vbLoadAll();
+
+    // Update chrome labels
+    var urlLabel = document.getElementById('vb-connected-url');
+    if (urlLabel) urlLabel.textContent = VB_API;
+    var statusEl = document.getElementById('vb-iframe-status');
+    if (statusEl) statusEl.textContent = 'Loading…';
+    iframe.onload = function() { if (statusEl) statusEl.textContent = ''; };
+  };
+
+  window.openVerifyOverlay = function() {
+    VB_API = (window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || '').replace(/\/+$/, '');
+    if (!VB_API) { alert('No WispByte bot URL set. Enter it in the VERIFY BOT login tab.'); return; }
+    var tok = localStorage.getItem('vb_token') || '';
+    if (!tok) {
+      // No token — redirect to login tab
+      if (typeof switchLoginTab === 'function') switchLoginTab('verify');
+      return;
+    }
+    window.openVerifyOverlayAuthed(tok);
   };
 
   window.closeVerifyOverlay = function() {
-    // Sign the session out on the bot server (best-effort)
+    // Sign out on bot server (best-effort)
     if (VB_TOKEN && VB_API) {
       fetch(VB_API + '/dashboard/api/logout', {
-        method: 'POST',
-        headers: { 'x-dash-token': VB_TOKEN }
-      }).catch(() => {});
+        method: 'POST', headers: { 'x-dash-token': VB_TOKEN }
+      }).catch(function(){});
     }
-    // Clear local token state
     VB_TOKEN = '';
     localStorage.removeItem('vb_token');
-    // Close overlay
+
+    // Blank iframe so it stops loading
+    var iframe = document.getElementById('vb-dash-iframe');
+    if (iframe) iframe.src = 'about:blank';
+
+    // Hide overlay
     document.getElementById('verify-overlay').classList.remove('vb-open');
     document.body.style.overflow = '';
-    // Land back on the VERIFY BOT login tab, not ADMIN
+
+    // Return to VERIFY BOT login tab
     if (typeof switchLoginTab === 'function') switchLoginTab('verify');
-    // Clear the password field so they have to re-enter it
-    const lvInput = document.getElementById('lv');
-    if (lvInput) lvInput.value = '';
+    var lv = document.getElementById('lv');
+    if (lv) lv.value = '';
   };
 
-  window.vbOpenExternal = function() {
-    window.open(VB_API+'/dashboard','_blank');
-  };
+  // vbDoLogout called by old code paths — just delegate
+  window.vbDoLogout = function() { window.closeVerifyOverlay(); };
 
-  // ── Escape to close ────────────────────────────────────────────────────
+  // Escape key
   document.addEventListener('keydown', function(e) {
-    if (e.key==='Escape' && document.getElementById('verify-overlay').classList.contains('vb-open'))
+    if (e.key === 'Escape' && document.getElementById('verify-overlay').classList.contains('vb-open')) {
       window.closeVerifyOverlay();
+    }
   });
 
-  // ── Pre-fill URL input (always same-server origin) ───────────────────
-  // Pre-fill URL from storage or hardcoded config
+  // Pre-fill URL input from storage
   (function() {
-    const saved = window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || '';
-    if (saved) {
-      document.getElementById('vb-url-input').value = saved;
-      const lvUrl = document.getElementById('lv-url');
-      if (lvUrl && !lvUrl.value) lvUrl.value = saved;
-    }
+    var saved = window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || '';
+    var inp = document.getElementById('lv-url');
+    if (saved && inp && !inp.value) inp.value = saved;
   })();
 
 })();
