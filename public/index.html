@@ -738,6 +738,10 @@ tbody td{padding:9px 13px;vertical-align:middle;}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
         Settings
       </div>
+      <div class="nav-item" data-page="bot-config" onclick="go('bot-config')" style="color:#a78bfa">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+        Verify Bot Config
+      </div>
     </nav>
 
     <!-- RESELLER NAV (shown when reseller logs in) -->
@@ -1721,6 +1725,68 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
     </div>
 
     <!-- ══ AUDIT LOG PAGE ══ -->
+    <!-- ══ BOT CONFIG PAGE ══ -->
+    <div class="page" id="page-bot-config">
+      <div class="ph" style="margin-bottom:18px">
+        <div>
+          <div class="pt">Verify Bot <span style="color:#a78bfa">Config</span></div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">Edit embeds, images, and log channel — bot picks up changes within 5 minutes</div>
+        </div>
+        <div class="pa" style="gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="loadBotConfig()">↻ Reload</button>
+          <button class="btn btn-primary btn-sm" onclick="saveBotConfig()">💾 Save Changes</button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+        <!-- Panel Embed -->
+        <div class="card" style="padding:20px">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--p3);text-transform:uppercase;margin-bottom:14px">📌 Verify Panel Embed <span style="font-size:10px;color:var(--text3);font-weight:400;letter-spacing:0">(posted by /setup-verify &amp; on join)</span></div>
+          <div class="lfield"><label class="lfield-label">Title</label><input class="inp" id="bc-panelTitle" placeholder="🔐 Server Verification"/></div>
+          <div class="lfield"><label class="lfield-label">Description <span style="font-size:10px;color:var(--text3)">use {guild} for server name</span></label><textarea class="inp" id="bc-panelDescription" rows="5" style="resize:vertical;font-size:12px;font-family:inherit" placeholder="Welcome! Click Verify below…"></textarea></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="lfield"><label class="lfield-label">Embed Color <span style="font-size:10px;color:var(--text3)">(hex, e.g. 0x5865f2)</span></label><input class="inp" id="bc-panelColor" placeholder="0x5865f2"/></div>
+            <div class="lfield"><label class="lfield-label">Footer Text</label><input class="inp" id="bc-panelFooter" placeholder="Link expires in 10 minutes"/></div>
+          </div>
+          <div class="lfield"><label class="lfield-label">Image URL <span style="font-size:10px;color:var(--text3)">(shown below description)</span></label><input class="inp" id="bc-panelImage" placeholder="https://i.imgur.com/yourimage.png"/></div>
+          <div id="bc-panelImage-preview" style="margin-top:8px;display:none"><img id="bc-panelImg" style="max-width:100%;max-height:120px;border-radius:8px;border:1px solid var(--border)" /></div>
+        </div>
+
+        <!-- DM Embed -->
+        <div class="card" style="padding:20px">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--p3);text-transform:uppercase;margin-bottom:14px">📩 Success DM Embed <span style="font-size:10px;color:var(--text3);font-weight:400;letter-spacing:0">(sent to user after they verify)</span></div>
+          <div class="lfield"><label class="lfield-label">Title</label><input class="inp" id="bc-dmTitle" placeholder="✅ You're Verified!"/></div>
+          <div class="lfield"><label class="lfield-label">Description <span style="font-size:10px;color:var(--text3)">use {guild} for server name</span></label><textarea class="inp" id="bc-dmDescription" rows="5" style="resize:vertical;font-size:12px;font-family:inherit" placeholder="Welcome to {guild}! Your role has been assigned…"></textarea></div>
+          <div class="lfield"><label class="lfield-label">Embed Color <span style="font-size:10px;color:var(--text3)">(hex, e.g. 0x57f287)</span></label><input class="inp" id="bc-dmColor" placeholder="0x57f287"/></div>
+        </div>
+
+        <!-- Log Settings -->
+        <div class="card" style="padding:20px">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--p3);text-transform:uppercase;margin-bottom:14px">📋 Log Settings</div>
+          <div class="lfield"><label class="lfield-label">Log Channel Name <span style="font-size:10px;color:var(--text3)">(no #, e.g. verify-log)</span></label><input class="inp" id="bc-logChannelName" placeholder="verify-log"/></div>
+          <div class="lfield"><label class="lfield-label">Discord Webhook URL <span style="font-size:10px;color:var(--text3)">(overrides log channel if set)</span></label><input class="inp" id="bc-webhookUrl" placeholder="https://discord.com/api/webhooks/…"/></div>
+          <div class="lfield"><label class="lfield-label">Log Embed Footer Text</label><input class="inp" id="bc-logFooter" placeholder="{guild} • VaultCord-style Verification"/></div>
+          <div class="lfield"><label class="lfield-label">Log Thumbnail URL <span style="font-size:10px;color:var(--text3)">(leave blank = user avatar)</span></label><input class="inp" id="bc-logThumbnail" placeholder="https://…"/></div>
+        </div>
+
+        <!-- Role Settings -->
+        <div class="card" style="padding:20px">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--p3);text-transform:uppercase;margin-bottom:14px">🛡️ Role Names</div>
+          <div class="lfield"><label class="lfield-label">Verified Role Name</label><input class="inp" id="bc-verifiedRoleName" placeholder="Verified"/></div>
+          <div class="lfield"><label class="lfield-label">Unverified Role Name</label><input class="inp" id="bc-unverifiedRoleName" placeholder="Unverified"/></div>
+          <div style="margin-top:14px;padding:12px;background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:8px;font-size:11px;color:var(--text3);line-height:1.7">
+            ℹ️ The bot fetches this config every <strong style="color:var(--text2)">5 minutes</strong>.<br>
+            After saving, changes apply on the next poll cycle — no restart needed.<br>
+            Leave any field blank to keep the bot's built-in default.
+          </div>
+          <div id="bc-save-status" style="margin-top:12px;font-size:12px;display:none"></div>
+        </div>
+
+      </div>
+    </div>
+    <!-- ══ END BOT CONFIG PAGE ══ -->
+
     <div class="page" id="page-audit">
       <div class="ph" style="margin-bottom:18px">
         <div>
@@ -2959,6 +3025,71 @@ async function saveCountryAllowlist(){
   if(r.success) toast(r.message||'Saved','success');
   else toast(r.message||'Error','error');
 }
+
+// ── BOT CONFIG ─────────────────────────────────────────────────────────────────
+
+const BC_FIELDS = ['panelTitle','panelDescription','panelColor','panelImage','panelFooter',
+                   'dmTitle','dmDescription','dmColor',
+                   'logChannelName','webhookUrl','logFooter','logThumbnail',
+                   'verifiedRoleName','unverifiedRoleName'];
+
+async function loadBotConfig() {
+  try {
+    const r = await api('/api/admin/bot-config');
+    if (!r.success) return;
+    const c = r.config || {};
+    BC_FIELDS.forEach(k => {
+      const el = document.getElementById('bc-' + k);
+      if (el) el.value = c[k] || '';
+    });
+    // Show image preview if panelImage is set
+    const img = c.panelImage;
+    const preview = document.getElementById('bc-panelImage-preview');
+    const imgEl   = document.getElementById('bc-panelImg');
+    if (img && preview && imgEl) { imgEl.src = img; preview.style.display = 'block'; }
+  } catch(e) { showToast('Failed to load bot config: ' + e.message, 'error'); }
+}
+
+async function saveBotConfig() {
+  const body = {};
+  BC_FIELDS.forEach(k => {
+    const el = document.getElementById('bc-' + k);
+    if (el) body[k] = el.value.trim();
+  });
+  try {
+    const r = await api('/api/admin/bot-config', { method:'POST', body: JSON.stringify(body) });
+    const st = document.getElementById('bc-save-status');
+    if (r.success) {
+      showToast('Bot config saved — bot will pick up changes within 5 minutes ✅', 'success');
+      if (st) { st.style.display='block'; st.style.color='#57f287'; st.textContent='✅ Saved! Bot updates on its next poll cycle (≤5 min).'; }
+      // Update image preview
+      const img = body.panelImage;
+      const preview = document.getElementById('bc-panelImage-preview');
+      const imgEl   = document.getElementById('bc-panelImg');
+      if (preview && imgEl) { if (img) { imgEl.src=img; preview.style.display='block'; } else { preview.style.display='none'; } }
+    } else {
+      showToast(r.message || 'Save failed', 'error');
+      if (st) { st.style.display='block'; st.style.color='#ed4245'; st.textContent='❌ ' + (r.message||'Save failed'); }
+    }
+  } catch(e) { showToast('Save error: ' + e.message, 'error'); }
+}
+
+// Trigger load when bot-config page is navigated to
+const _origGo = window.go;
+window.go = function(page) {
+  _origGo(page);
+  if (page === 'bot-config') loadBotConfig();
+};
+
+// Also preview image URL as you type
+document.addEventListener('input', function(e) {
+  if (e.target && e.target.id === 'bc-panelImage') {
+    const val = e.target.value.trim();
+    const preview = document.getElementById('bc-panelImage-preview');
+    const imgEl   = document.getElementById('bc-panelImg');
+    if (preview && imgEl) { if (val) { imgEl.src=val; preview.style.display='block'; } else { preview.style.display='none'; } }
+  }
+});
 
 // ── AUDIT LOG ─────────────────────────────────────────────────────────────────
 async function loadAudit(){
