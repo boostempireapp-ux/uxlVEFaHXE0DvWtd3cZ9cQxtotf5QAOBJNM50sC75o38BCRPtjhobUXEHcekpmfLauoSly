@@ -4871,7 +4871,8 @@ function dllLogNext() { dllLogPage++; loadDLLLogs(); }
     if (VB_TOKEN) fetch(VB_API+'/dashboard/api/logout',{method:'POST',headers:{'x-dash-token':VB_TOKEN}}).catch(()=>{});
     VB_TOKEN='';
     localStorage.removeItem('vb_token');
-    showVbLogin();
+    // Close the overlay and return to the KeyAuth login on the VERIFY BOT tab
+    window.closeVerifyOverlay();
   };
 
   document.getElementById('vb-pw-input').addEventListener('keydown', e => {
