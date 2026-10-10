@@ -633,25 +633,21 @@ tbody td{padding:9px 13px;vertical-align:middle;}
         </div>
       </div>
 
-      <!-- Verify Bot form — WispByte URL + password -->
+      <!-- Verify Bot form — password only (URL comes from Bot Config) -->
       <div id="login-verify-form" style="display:none">
-        <div class="lfield">
-          <label class="lfield-label">WispByte Bot URL</label>
-          <input class="inp" type="text" id="lv-url" placeholder="https://yourbot.wispbyte.com" onkeydown="if(event.key==='Enter')document.getElementById('lv').focus()"/>
-          <div style="font-size:10px;color:var(--text3);margin-top:4px">Your verify bot's WispByte URL — no trailing slash</div>
-        </div>
         <div class="lfield">
           <label class="lfield-label">Dashboard Password</label>
           <div class="inp-pw-wrap">
             <input class="inp" type="password" id="lv" placeholder="••••••••" onkeydown="if(event.key==='Enter')doVerifyLogin()"/>
             <button class="inp-eye" type="button" onclick="togglePw('lv',this)" tabindex="-1">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
           </div>
+          <div style="font-size:10px;color:var(--text3);margin-top:5px">Same password set in <strong style="color:var(--text2)">Verify Bot Config → Dashboard Password</strong></div>
         </div>
         <button class="btn-login" onclick="doVerifyLogin()">Sign in to Verify Dashboard</button>
-        <div class="login-foot">
-          <span style="font-size:11px;color:var(--text3)">Set <code style="font-size:10px;background:rgba(139,92,246,0.1);padding:1px 5px;border-radius:4px">DASHBOARD_PASSWORD</code> in WispByte env vars</span>
+        <div id="lv-hint" style="margin-top:10px;padding:10px 12px;background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:8px;font-size:11px;color:var(--text3);display:none">
+          ⚙️ No WispByte URL saved yet — log in as <strong style="color:var(--text)">Admin</strong> first and go to <strong style="color:var(--text)">Verify Bot Config</strong> to set the bot URL and password.
         </div>
       </div>
 
@@ -1754,6 +1750,21 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
         <div class="card" style="padding:20px">
           <div style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--p3);text-transform:uppercase;margin-bottom:14px">🔑 Bot Connection</div>
           <div class="lfield">
+            <label class="lfield-label">WispByte Bot URL <span style="font-size:10px;color:var(--text3)">(no trailing slash)</span></label>
+            <input class="inp" type="text" id="bc-verifyBotUrl" placeholder="https://yourbot.wispbyte.com"/>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px">This is the URL used for the VERIFY BOT login — must be your WispByte URL</div>
+          </div>
+          <div class="lfield">
+            <label class="lfield-label">Dashboard Password <span style="font-size:10px;color:var(--text3)">(used to log into VERIFY BOT tab)</span></label>
+            <div class="inp-pw-wrap">
+              <input class="inp" type="password" id="bc-dashboardPassword" placeholder="Set a strong password"/>
+              <button class="inp-eye" type="button" onclick="togglePw('bc-dashboardPassword',this)" tabindex="-1">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div style="font-size:10px;color:var(--text3);margin-top:4px">Must match <code style="font-size:10px;background:rgba(139,92,246,.1);padding:1px 5px;border-radius:3px">DASHBOARD_PASSWORD</code> set on WispByte</div>
+          </div>
+          <div class="lfield">
             <label class="lfield-label">Bot Token <span style="font-size:10px;color:var(--text3)">(stored securely — never shown again)</span></label>
             <div class="inp-pw-wrap">
               <input class="inp" type="password" id="bc-botToken" placeholder="Enter new token to update — leave blank to keep existing"/>
@@ -2483,27 +2494,35 @@ window.VERIFY_BOT_URL = '';
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function doVerifyLogin() {
-  const urlRaw = (document.getElementById('lv-url').value || '').trim().replace(/\/+$/, '');
-  const botUrl = urlRaw || window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || '';
-  const pw     = document.getElementById('lv').value.trim();
-  const err    = document.getElementById('lerr');
-  if (!botUrl) { err.textContent = 'Enter your WispByte bot URL first'; return; }
-  if (!pw)     { err.textContent = 'Enter your dashboard password'; return; }
+  const pw   = document.getElementById('lv').value.trim();
+  const err  = document.getElementById('lerr');
+  const hint = document.getElementById('lv-hint');
+  if (!pw) { err.textContent = 'Enter your dashboard password'; return; }
   err.textContent = '';
-  // Remember the URL so next visit is pre-filled
-  localStorage.setItem('vb_api_url', botUrl);
-  document.getElementById('vb-url-input').value = botUrl;
+  if (hint) hint.style.display = 'none';
   try {
-    const r = await fetch(botUrl + '/dashboard/api/login', {
+    const r = await fetch('/api/verify-dash-login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: pw })
     });
     const d = await r.json();
-    if (!d.success) { err.textContent = d.message || 'Invalid password'; return; }
+    if (!d.success) {
+      if (d.message && d.message.includes('WispByte bot URL')) {
+        err.textContent = '';
+        if (hint) hint.style.display = 'block';
+      } else {
+        err.textContent = d.message || 'Incorrect password';
+      }
+      return;
+    }
+    if (d.botUrl) {
+      localStorage.setItem('vb_api_url', d.botUrl);
+      window.VERIFY_BOT_URL = d.botUrl;
+    }
     localStorage.setItem('vb_token', d.token);
     window.openVerifyOverlayAuthed(d.token);
-  } catch(e) { err.textContent = 'Could not reach bot — check the URL and make sure it\'s running'; }
+  } catch(e) { err.textContent = 'Server error — please try again'; }
 }
 
 let TOKEN='', RTOKEN='', RDATA=null, allKeys=[], allLogs=[], allApps=[], allResellers=[], rAllKeys=[], rAllLogs=[], logTimer=null, loginMode='admin';
@@ -3074,10 +3093,13 @@ async function saveCountryAllowlist(){
 
 // ── BOT CONFIG ─────────────────────────────────────────────────────────────────
 
-const BC_TEXT_FIELDS = ['panelTitle','panelDescription','panelColor','panelImage','panelFooter',
-                        'dmTitle','dmDescription','dmColor',
-                        'logChannelName','verifyChannelName','webhookUrl','logFooter','logThumbnail',
-                        'verifiedRoleName','unverifiedRoleName'];
+const BC_TEXT_FIELDS = [
+  'verifyBotUrl','dashboardPassword',
+  'panelTitle','panelDescription','panelColor','panelImage','panelFooter',
+  'dmTitle','dmDescription','dmColor',
+  'logChannelName','verifyChannelName','webhookUrl','logFooter','logThumbnail',
+  'verifiedRoleName','unverifiedRoleName'
+];
 
 function bcPreviewImg(val) {
   const preview = document.getElementById('bc-panelImage-preview');
@@ -3190,9 +3212,12 @@ async function saveBotConfig() {
     const el = document.getElementById('bc-' + k);
     if (el) body[k] = el.value.trim();
   });
-  // Include bot token only if user typed something
+  // Include bot token only if user typed something new (keep existing otherwise)
   const tokenEl = document.getElementById('bc-botToken');
   if (tokenEl && tokenEl.value.trim()) body.botToken = tokenEl.value.trim();
+  // Include dashboard password only if user typed something
+  const dpEl = document.getElementById('bc-dashboardPassword');
+  if (dpEl && dpEl.value.trim()) body.dashboardPassword = dpEl.value.trim();
 
   try {
     const r = await api('/api/admin/bot-config', { method:'POST', body: JSON.stringify(body) });
