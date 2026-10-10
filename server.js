@@ -1671,6 +1671,42 @@ app.delete('/api/admin/detections', requireAdmin, async (req, res) => {
   res.json({ success: true, deleted: result.deletedCount });
 });
 
+// ── VERIFY BOT CONFIG (admin save/load + bot fetch) ──────────────────────────
+
+// GET /api/admin/bot-config  — returns saved embed/channel config
+app.get('/api/admin/bot-config', requireAdmin, async (req, res) => {
+  try {
+    const doc = await db.collection('botConfig').findOne({ _id: 'main' });
+    res.json({ success: true, config: doc ? doc.data : {} });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// POST /api/admin/bot-config  — save embed/channel config from dashboard
+app.post('/api/admin/bot-config', requireAdmin, async (req, res) => {
+  try {
+    const allowed = [
+      'panelTitle','panelDescription','panelColor','panelImage','panelFooter',
+      'dmTitle','dmDescription','dmColor',
+      'logChannelName','webhookUrl',
+      'verifiedRoleName','unverifiedRoleName'
+    ];
+    const data = {};
+    for (const k of allowed) if (req.body[k] !== undefined) data[k] = req.body[k];
+    data.updatedAt = new Date().toISOString();
+    await db.collection('botConfig').replaceOne(
+      { _id: 'main' },
+      { _id: 'main', data },
+      { upsert: true }
+    );
+    auditLog(req.adminIP, 'BOT_CONFIG_SAVED', data);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 // ── DISCORD BOT API ───────────────────────────────────────────────────────────
 function requireBot(req, res, next) {
   const token = req.headers['x-bot-token'];
@@ -1678,6 +1714,16 @@ function requireBot(req, res, next) {
     return res.status(401).json({ success: false, message: 'Invalid bot token' });
   next();
 }
+
+// GET /api/bot/config — bot fetches its embed/channel config from here
+app.get('/api/bot/config', requireBot, async (req, res) => {
+  try {
+    const doc = await db.collection('botConfig').findOne({ _id: 'main' });
+    res.json({ success: true, config: doc ? doc.data : {} });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
 
 app.get('/api/bot/stats', requireBot, async (req, res) => {
   const hr = new Date(Date.now() - 3600000).toISOString();
