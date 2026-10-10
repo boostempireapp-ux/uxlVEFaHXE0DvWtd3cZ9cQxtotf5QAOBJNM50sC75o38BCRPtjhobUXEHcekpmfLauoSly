@@ -1673,6 +1673,45 @@ app.delete('/api/admin/detections', requireAdmin, async (req, res) => {
 
 // ── VERIFY BOT CONFIG (admin save/load + bot fetch) ──────────────────────────
 
+// POST /api/verify-dash-login — dashboard login that proxies to the WispByte bot
+// No auth required — uses stored dashboardPassword to verify, then proxies to bot
+app.post('/api/verify-dash-login', async (req, res) => {
+  try {
+    const { password } = req.body || {};
+    if (!password) return res.status(400).json({ success: false, message: 'Password required' });
+
+    const doc = await db.collection('botConfig').findOne({ _id: 'main' });
+    const cfg  = doc?.data || {};
+
+    // Check against stored dashboard password
+    const storedPw  = cfg.dashboardPassword || process.env.DASHBOARD_PASSWORD || '';
+    const botUrl    = (cfg.verifyBotUrl || '').replace(/\/+$/, '');
+
+    if (!storedPw) return res.status(500).json({ success: false, message: 'No dashboard password configured — set it in Verify Bot Config' });
+    if (password !== storedPw) return res.status(401).json({ success: false, message: 'Incorrect password' });
+    if (!botUrl)  return res.status(400).json({ success: false, message: 'No WispByte bot URL saved — add it in Verify Bot Config first' });
+
+    // Proxy login to the actual WispByte bot
+    let token;
+    try {
+      const br = await fetch(botUrl + '/dashboard/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+      const bd = await br.json();
+      if (!bd.success) return res.status(401).json({ success: false, message: 'Bot rejected credentials — check DASHBOARD_PASSWORD on WispByte' });
+      token = bd.token;
+    } catch (e) {
+      return res.status(502).json({ success: false, message: 'Could not reach WispByte bot — is it running? URL: ' + botUrl });
+    }
+
+    res.json({ success: true, token, botUrl });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 // ── VERIFY BOT CONFIG ─────────────────────────────────────────────────────────
 
 // Helper: call Discord API with stored bot token
@@ -1700,7 +1739,7 @@ app.get('/api/admin/bot-config', requireAdmin, async (req, res) => {
 app.post('/api/admin/bot-config', requireAdmin, async (req, res) => {
   try {
     const allowed = [
-      'botToken',
+      'botToken', 'verifyBotUrl', 'dashboardPassword',
       'panelTitle','panelDescription','panelColor','panelImage','panelFooter',
       'dmTitle','dmDescription','dmColor',
       'logChannelName','logChannelId','verifyChannelName','verifyChannelId',
