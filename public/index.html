@@ -5017,7 +5017,7 @@ function dllLogNext() { dllLogPage++; loadDLLLogs(); }
 
 (function() {
   // ── State ──────────────────────────────────────────────────────────────
-  let VB_API  = window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || window.location.origin;
+  let VB_API  = (window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || '').replace(/\/+$/, '');
   let VB_TOKEN = localStorage.getItem('vb_token') || '';
   let vbStatsCache = null;
   let vbLogsCache  = [];
@@ -5325,7 +5325,8 @@ function dllLogNext() { dllLogPage++; loadDLLLogs(); }
     const overlay = document.getElementById('verify-overlay');
     overlay.classList.add('vb-open');
     document.body.style.overflow = 'hidden';
-    VB_API = (window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || window.location.origin).replace(/\/+$/, '');
+    VB_API = (window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || '').replace(/\/+$/, '');
+    if (!VB_API) { alert('Set your WispByte bot URL in the VERIFY BOT login tab first.'); return; }
     document.getElementById('vb-connected-url').textContent = VB_API;
     document.getElementById('vb-url-input').value = VB_API;
     // Re-read token from localStorage in case it was just saved
@@ -5348,8 +5349,7 @@ function dllLogNext() { dllLogPage++; loadDLLLogs(); }
   // Called by doVerifyLogin after a fresh login — token already valid, skip API check
   window.openVerifyOverlayAuthed = function(token) {
     VB_TOKEN = token;
-    VB_API   = window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || window.location.origin;
-    VB_API   = VB_API.replace(/\/+$/, '');
+    VB_API   = (window.VERIFY_BOT_URL || localStorage.getItem('vb_api_url') || '').replace(/\/+$/, '');
     const overlay = document.getElementById('verify-overlay');
     overlay.classList.add('vb-open');
     document.body.style.overflow = 'hidden';
