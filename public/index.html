@@ -1726,11 +1726,11 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
 
     <!-- ══ AUDIT LOG PAGE ══ -->
     <!-- ══ BOT CONFIG PAGE ══ -->
-    <div class="page" id="page-bot-config">
+    <div class="page" id="page-bot-config" style="display:none">
       <div class="ph" style="margin-bottom:18px">
         <div>
           <div class="pt">Verify Bot <span style="color:#a78bfa">Config</span></div>
-          <div style="font-size:11px;color:var(--text3);margin-top:3px">Edit embeds, images, and log channel — bot picks up changes within 5 minutes</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">Connect your bot, pick channels from dropdowns, edit embeds — bot picks up all changes within 5 minutes</div>
         </div>
         <div class="pa" style="gap:8px">
           <button class="btn btn-ghost btn-sm" onclick="loadBotConfig()">↻ Reload</button>
@@ -1738,49 +1738,95 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
         </div>
       </div>
 
+      <!-- Bot Status Banner -->
+      <div id="bc-status-banner" style="margin-bottom:16px;padding:12px 16px;border-radius:10px;border:1px solid rgba(139,92,246,0.2);background:rgba(139,92,246,0.06);display:flex;align-items:center;gap:14px">
+        <div id="bc-status-dot" style="width:10px;height:10px;border-radius:50%;background:#4b5563;flex-shrink:0"></div>
+        <div>
+          <div id="bc-status-text" style="font-size:12px;font-weight:600;color:var(--text2)">Bot Status: checking…</div>
+          <div id="bc-status-sub" style="font-size:11px;color:var(--text3);margin-top:2px"></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="bcLoadStatus()">↻ Check</button>
+      </div>
+
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+        <!-- Connection -->
+        <div class="card" style="padding:20px">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--p3);text-transform:uppercase;margin-bottom:14px">🔑 Bot Connection</div>
+          <div class="lfield">
+            <label class="lfield-label">Bot Token <span style="font-size:10px;color:var(--text3)">(stored securely — never shown again)</span></label>
+            <div class="inp-pw-wrap">
+              <input class="inp" type="password" id="bc-botToken" placeholder="Enter new token to update — leave blank to keep existing"/>
+              <button class="inp-eye" type="button" onclick="togglePw('bc-botToken',this)" tabindex="-1">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div id="bc-token-status" style="font-size:11px;margin-top:5px;color:var(--text3)"></div>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:4px" onclick="bcLoadGuilds()">🔄 Load Guilds from Discord</button>
+
+          <div style="margin-top:16px">
+            <div style="font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Select Server</div>
+            <select class="sel-filter" id="bc-guildSel" style="width:100%;font-size:12px" onchange="bcGuildChanged()">
+              <option value="">— select a guild —</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Channel & Webhook Selectors -->
+        <div class="card" style="padding:20px">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--p3);text-transform:uppercase;margin-bottom:14px">📡 Channels &amp; Webhooks</div>
+          <div class="lfield">
+            <label class="lfield-label">Log Channel <span style="font-size:10px;color:var(--text3)">(where verify logs are posted)</span></label>
+            <select class="sel-filter" id="bc-logChannelSel" style="width:100%;font-size:12px" onchange="bcChannelPicked('log',this)">
+              <option value="">— load guilds first —</option>
+            </select>
+            <input class="inp" id="bc-logChannelName" style="margin-top:6px;font-size:11px" placeholder="or type channel name manually"/>
+          </div>
+          <div class="lfield">
+            <label class="lfield-label">Verify Channel <span style="font-size:10px;color:var(--text3)">(fallback if user DMs are closed)</span></label>
+            <select class="sel-filter" id="bc-verifyChannelSel" style="width:100%;font-size:12px" onchange="bcChannelPicked('verify',this)">
+              <option value="">— load guilds first —</option>
+            </select>
+            <input class="inp" id="bc-verifyChannelName" style="margin-top:6px;font-size:11px" placeholder="or type channel name manually"/>
+          </div>
+          <div class="lfield">
+            <label class="lfield-label">Log Webhook <span style="font-size:10px;color:var(--text3)">(overrides log channel — faster &amp; more reliable)</span></label>
+            <select class="sel-filter" id="bc-webhookSel" style="width:100%;font-size:12px" onchange="bcWebhookPicked(this)">
+              <option value="">— load guilds first —</option>
+            </select>
+            <input class="inp" id="bc-webhookUrl" style="margin-top:6px;font-size:11px" placeholder="or paste webhook URL manually"/>
+          </div>
+        </div>
 
         <!-- Panel Embed -->
         <div class="card" style="padding:20px">
-          <div style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--p3);text-transform:uppercase;margin-bottom:14px">📌 Verify Panel Embed <span style="font-size:10px;color:var(--text3);font-weight:400;letter-spacing:0">(posted by /setup-verify &amp; on join)</span></div>
+          <div style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--p3);text-transform:uppercase;margin-bottom:14px">📌 Verify Panel Embed</div>
           <div class="lfield"><label class="lfield-label">Title</label><input class="inp" id="bc-panelTitle" placeholder="🔐 Server Verification"/></div>
-          <div class="lfield"><label class="lfield-label">Description <span style="font-size:10px;color:var(--text3)">use {guild} for server name</span></label><textarea class="inp" id="bc-panelDescription" rows="5" style="resize:vertical;font-size:12px;font-family:inherit" placeholder="Welcome! Click Verify below…"></textarea></div>
+          <div class="lfield"><label class="lfield-label">Description <span style="font-size:10px;color:var(--text3)">use {guild} for server name</span></label><textarea class="inp" id="bc-panelDescription" rows="4" style="resize:vertical;font-size:12px;font-family:inherit" placeholder="Welcome! Click Verify below…"></textarea></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <div class="lfield"><label class="lfield-label">Embed Color <span style="font-size:10px;color:var(--text3)">(hex, e.g. 0x5865f2)</span></label><input class="inp" id="bc-panelColor" placeholder="0x5865f2"/></div>
-            <div class="lfield"><label class="lfield-label">Footer Text</label><input class="inp" id="bc-panelFooter" placeholder="Link expires in 10 minutes"/></div>
+            <div class="lfield"><label class="lfield-label">Color <span style="font-size:10px;color:var(--text3)">(hex)</span></label><input class="inp" id="bc-panelColor" placeholder="0x5865f2"/></div>
+            <div class="lfield"><label class="lfield-label">Footer</label><input class="inp" id="bc-panelFooter" placeholder="Link expires in 10 minutes"/></div>
           </div>
-          <div class="lfield"><label class="lfield-label">Image URL <span style="font-size:10px;color:var(--text3)">(shown below description)</span></label><input class="inp" id="bc-panelImage" placeholder="https://i.imgur.com/yourimage.png"/></div>
-          <div id="bc-panelImage-preview" style="margin-top:8px;display:none"><img id="bc-panelImg" style="max-width:100%;max-height:120px;border-radius:8px;border:1px solid var(--border)" /></div>
+          <div class="lfield"><label class="lfield-label">Image URL</label><input class="inp" id="bc-panelImage" placeholder="https://…" oninput="bcPreviewImg(this.value)"/></div>
+          <div id="bc-panelImage-preview" style="margin-top:6px;display:none"><img id="bc-panelImg" style="max-width:100%;max-height:100px;border-radius:8px;border:1px solid var(--border)"/></div>
         </div>
 
-        <!-- DM Embed -->
-        <div class="card" style="padding:20px">
-          <div style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--p3);text-transform:uppercase;margin-bottom:14px">📩 Success DM Embed <span style="font-size:10px;color:var(--text3);font-weight:400;letter-spacing:0">(sent to user after they verify)</span></div>
-          <div class="lfield"><label class="lfield-label">Title</label><input class="inp" id="bc-dmTitle" placeholder="✅ You're Verified!"/></div>
-          <div class="lfield"><label class="lfield-label">Description <span style="font-size:10px;color:var(--text3)">use {guild} for server name</span></label><textarea class="inp" id="bc-dmDescription" rows="5" style="resize:vertical;font-size:12px;font-family:inherit" placeholder="Welcome to {guild}! Your role has been assigned…"></textarea></div>
-          <div class="lfield"><label class="lfield-label">Embed Color <span style="font-size:10px;color:var(--text3)">(hex, e.g. 0x57f287)</span></label><input class="inp" id="bc-dmColor" placeholder="0x57f287"/></div>
-        </div>
-
-        <!-- Log Settings -->
-        <div class="card" style="padding:20px">
-          <div style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--p3);text-transform:uppercase;margin-bottom:14px">📋 Log Settings</div>
-          <div class="lfield"><label class="lfield-label">Log Channel Name <span style="font-size:10px;color:var(--text3)">(no #, e.g. verify-log)</span></label><input class="inp" id="bc-logChannelName" placeholder="verify-log"/></div>
-          <div class="lfield"><label class="lfield-label">Discord Webhook URL <span style="font-size:10px;color:var(--text3)">(overrides log channel if set)</span></label><input class="inp" id="bc-webhookUrl" placeholder="https://discord.com/api/webhooks/…"/></div>
-          <div class="lfield"><label class="lfield-label">Log Embed Footer Text</label><input class="inp" id="bc-logFooter" placeholder="{guild} • VaultCord-style Verification"/></div>
-          <div class="lfield"><label class="lfield-label">Log Thumbnail URL <span style="font-size:10px;color:var(--text3)">(leave blank = user avatar)</span></label><input class="inp" id="bc-logThumbnail" placeholder="https://…"/></div>
-        </div>
-
-        <!-- Role Settings -->
-        <div class="card" style="padding:20px">
-          <div style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--p3);text-transform:uppercase;margin-bottom:14px">🛡️ Role Names</div>
-          <div class="lfield"><label class="lfield-label">Verified Role Name</label><input class="inp" id="bc-verifiedRoleName" placeholder="Verified"/></div>
-          <div class="lfield"><label class="lfield-label">Unverified Role Name</label><input class="inp" id="bc-unverifiedRoleName" placeholder="Unverified"/></div>
-          <div style="margin-top:14px;padding:12px;background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.15);border-radius:8px;font-size:11px;color:var(--text3);line-height:1.7">
-            ℹ️ The bot fetches this config every <strong style="color:var(--text2)">5 minutes</strong>.<br>
-            After saving, changes apply on the next poll cycle — no restart needed.<br>
-            Leave any field blank to keep the bot's built-in default.
+        <!-- DM + Role -->
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="card" style="padding:20px">
+            <div style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--p3);text-transform:uppercase;margin-bottom:14px">📩 Success DM Embed</div>
+            <div class="lfield"><label class="lfield-label">Title</label><input class="inp" id="bc-dmTitle" placeholder="✅ You're Verified!"/></div>
+            <div class="lfield"><label class="lfield-label">Description</label><textarea class="inp" id="bc-dmDescription" rows="3" style="resize:vertical;font-size:12px;font-family:inherit" placeholder="Welcome to {guild}!…"></textarea></div>
+            <div class="lfield"><label class="lfield-label">Color</label><input class="inp" id="bc-dmColor" placeholder="0x57f287"/></div>
           </div>
-          <div id="bc-save-status" style="margin-top:12px;font-size:12px;display:none"></div>
+          <div class="card" style="padding:20px">
+            <div style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--p3);text-transform:uppercase;margin-bottom:14px">🛡️ Roles &amp; Log</div>
+            <div class="lfield"><label class="lfield-label">Verified Role Name</label><input class="inp" id="bc-verifiedRoleName" placeholder="Verified"/></div>
+            <div class="lfield"><label class="lfield-label">Unverified Role Name</label><input class="inp" id="bc-unverifiedRoleName" placeholder="Unverified"/></div>
+            <div class="lfield"><label class="lfield-label">Log Footer Text</label><input class="inp" id="bc-logFooter" placeholder="{guild} • Verification"/></div>
+            <div id="bc-save-status" style="margin-top:10px;font-size:12px;display:none"></div>
+          </div>
         </div>
 
       </div>
@@ -3028,68 +3074,149 @@ async function saveCountryAllowlist(){
 
 // ── BOT CONFIG ─────────────────────────────────────────────────────────────────
 
-const BC_FIELDS = ['panelTitle','panelDescription','panelColor','panelImage','panelFooter',
-                   'dmTitle','dmDescription','dmColor',
-                   'logChannelName','webhookUrl','logFooter','logThumbnail',
-                   'verifiedRoleName','unverifiedRoleName'];
+const BC_TEXT_FIELDS = ['panelTitle','panelDescription','panelColor','panelImage','panelFooter',
+                        'dmTitle','dmDescription','dmColor',
+                        'logChannelName','verifyChannelName','webhookUrl','logFooter','logThumbnail',
+                        'verifiedRoleName','unverifiedRoleName'];
+
+function bcPreviewImg(val) {
+  const preview = document.getElementById('bc-panelImage-preview');
+  const imgEl   = document.getElementById('bc-panelImg');
+  if (!preview || !imgEl) return;
+  if (val) { imgEl.src = val; preview.style.display = 'block'; }
+  else      { preview.style.display = 'none'; }
+}
+
+async function bcLoadStatus() {
+  try {
+    const r = await api('/api/admin/bot-status');
+    const dot  = document.getElementById('bc-status-dot');
+    const txt  = document.getElementById('bc-status-text');
+    const sub  = document.getElementById('bc-status-sub');
+    if (r.online) {
+      dot.style.background = '#57f287';
+      const up = r.uptime||0;
+      const h=Math.floor(up/3600), m=Math.floor((up%3600)/60), s=up%60;
+      txt.textContent = `Bot Status: Online — ${r.guildCount||0} guild(s) connected`;
+      sub.textContent = `Uptime: ${h}h ${m}m ${s}s  •  Last heartbeat: ${r.ageSecs}s ago  •  Total verified: ${r.verifyCount||0}`;
+    } else {
+      dot.style.background = '#ed4245';
+      txt.textContent = 'Bot Status: Offline (no heartbeat received)';
+      sub.textContent = r.lastSeen ? `Last seen: ${new Date(r.lastSeen||r.ts).toLocaleString()}` : 'Make sure KEYAUTH_API_URL + BOT_SECRET are set on WispByte';
+    }
+  } catch(e) {
+    document.getElementById('bc-status-text').textContent = 'Could not fetch bot status';
+  }
+}
+
+async function bcLoadGuilds() {
+  const sel = document.getElementById('bc-guildSel');
+  sel.innerHTML = '<option value="">Loading…</option>';
+  try {
+    const r = await api('/api/admin/discord/guilds');
+    if (!r.success) { sel.innerHTML = '<option value="">'+( r.message||'No token saved')+' </option>'; showToast(r.message||'Save a bot token first', 'error'); return; }
+    sel.innerHTML = '<option value="">— select a guild —</option>' +
+      r.guilds.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+    showToast(`Loaded ${r.guilds.length} guild(s) ✅`, 'success');
+    // Load channels for first guild if only one
+    if (r.guilds.length === 1) { sel.value = r.guilds[0].id; bcGuildChanged(); }
+  } catch(e) { sel.innerHTML = '<option value="">Error: ' + e.message + '</option>'; }
+}
+
+async function bcGuildChanged() {
+  const guildId = document.getElementById('bc-guildSel').value;
+  if (!guildId) return;
+  // Load channels
+  const logSel    = document.getElementById('bc-logChannelSel');
+  const verifySel = document.getElementById('bc-verifyChannelSel');
+  const hookSel   = document.getElementById('bc-webhookSel');
+  logSel.innerHTML = verifySel.innerHTML = '<option value="">Loading channels…</option>';
+  hookSel.innerHTML = '<option value="">Loading webhooks…</option>';
+  try {
+    const [cr, hr] = await Promise.all([
+      api('/api/admin/discord/guilds/'+guildId+'/channels'),
+      api('/api/admin/discord/guilds/'+guildId+'/webhooks'),
+    ]);
+    const chOpts = cr.success
+      ? '<option value="">— pick a channel —</option>' + cr.channels.map(c=>`<option value="${c.name}" data-id="${c.id}">#${c.name}</option>`).join('')
+      : '<option value="">'+( cr.message||'Error')+' </option>';
+    logSel.innerHTML = chOpts;
+    verifySel.innerHTML = chOpts;
+    // Restore saved selections
+    const saved = window._bcSavedConfig || {};
+    if (saved.logChannelName)    { [...logSel.options].forEach(o=>{ if(o.value===saved.logChannelName) logSel.value=o.value; }); }
+    if (saved.verifyChannelName) { [...verifySel.options].forEach(o=>{ if(o.value===saved.verifyChannelName) verifySel.value=o.value; }); }
+    hookSel.innerHTML = hr.success
+      ? '<option value="">— none (use channel) —</option>' + hr.webhooks.map(h=>`<option value="${h.url}">${h.name} (#${hr.webhooks.find?h.channelId:h.channelId})</option>`).join('')
+      : '<option value="">'+( hr.message||'Error')+' </option>';
+    if (hr.success && saved.webhookUrl) {
+      [...hookSel.options].forEach(o=>{ if(o.value===saved.webhookUrl) hookSel.value=o.value; });
+    }
+  } catch(e) {
+    logSel.innerHTML = verifySel.innerHTML = hookSel.innerHTML = '<option value="">Error: '+e.message+'</option>';
+  }
+}
+
+function bcChannelPicked(type, sel) {
+  const inp = document.getElementById(type==='log' ? 'bc-logChannelName' : 'bc-verifyChannelName');
+  if (inp && sel.value) inp.value = sel.value;
+}
+
+function bcWebhookPicked(sel) {
+  const inp = document.getElementById('bc-webhookUrl');
+  if (inp && sel.value) inp.value = sel.value;
+}
 
 async function loadBotConfig() {
+  bcLoadStatus();
   try {
     const r = await api('/api/admin/bot-config');
     if (!r.success) return;
     const c = r.config || {};
-    BC_FIELDS.forEach(k => {
+    window._bcSavedConfig = c;
+    BC_TEXT_FIELDS.forEach(k => {
       const el = document.getElementById('bc-' + k);
       if (el) el.value = c[k] || '';
     });
-    // Show image preview if panelImage is set
-    const img = c.panelImage;
-    const preview = document.getElementById('bc-panelImage-preview');
-    const imgEl   = document.getElementById('bc-panelImg');
-    if (img && preview && imgEl) { imgEl.src = img; preview.style.display = 'block'; }
+    const ts = document.getElementById('bc-token-status');
+    if (ts) ts.textContent = c.botTokenSet ? '✅ Bot token saved' : '⚠️ No bot token saved yet — enter one above';
+    if (c.panelImage) bcPreviewImg(c.panelImage);
   } catch(e) { showToast('Failed to load bot config: ' + e.message, 'error'); }
 }
 
 async function saveBotConfig() {
   const body = {};
-  BC_FIELDS.forEach(k => {
+  BC_TEXT_FIELDS.forEach(k => {
     const el = document.getElementById('bc-' + k);
     if (el) body[k] = el.value.trim();
   });
+  // Include bot token only if user typed something
+  const tokenEl = document.getElementById('bc-botToken');
+  if (tokenEl && tokenEl.value.trim()) body.botToken = tokenEl.value.trim();
+
   try {
     const r = await api('/api/admin/bot-config', { method:'POST', body: JSON.stringify(body) });
     const st = document.getElementById('bc-save-status');
     if (r.success) {
-      showToast('Bot config saved — bot will pick up changes within 5 minutes ✅', 'success');
-      if (st) { st.style.display='block'; st.style.color='#57f287'; st.textContent='✅ Saved! Bot updates on its next poll cycle (≤5 min).'; }
-      // Update image preview
-      const img = body.panelImage;
-      const preview = document.getElementById('bc-panelImage-preview');
-      const imgEl   = document.getElementById('bc-panelImg');
-      if (preview && imgEl) { if (img) { imgEl.src=img; preview.style.display='block'; } else { preview.style.display='none'; } }
+      showToast('Bot config saved ✅ — bot picks up changes within 5 minutes', 'success');
+      if (st) { st.style.display='block'; st.style.color='#57f287'; st.textContent='✅ Saved — bot updates on next poll (≤5 min)'; }
+      if (tokenEl) tokenEl.value = '';
+      const ts = document.getElementById('bc-token-status');
+      if (ts && body.botToken) ts.textContent = '✅ Bot token saved';
+      if (body.panelImage) bcPreviewImg(body.panelImage);
     } else {
       showToast(r.message || 'Save failed', 'error');
-      if (st) { st.style.display='block'; st.style.color='#ed4245'; st.textContent='❌ ' + (r.message||'Save failed'); }
+      if (st) { st.style.display='block'; st.style.color='#ed4245'; st.textContent='❌ '+(r.message||'Save failed'); }
     }
   } catch(e) { showToast('Save error: ' + e.message, 'error'); }
 }
 
-// Trigger load when bot-config page is navigated to
+// Intercept go() to load bot config when navigating to that page
 const _origGo = window.go;
 window.go = function(page) {
   _origGo(page);
   if (page === 'bot-config') loadBotConfig();
 };
-
-// Also preview image URL as you type
-document.addEventListener('input', function(e) {
-  if (e.target && e.target.id === 'bc-panelImage') {
-    const val = e.target.value.trim();
-    const preview = document.getElementById('bc-panelImage-preview');
-    const imgEl   = document.getElementById('bc-panelImg');
-    if (preview && imgEl) { if (val) { imgEl.src=val; preview.style.display='block'; } else { preview.style.display='none'; } }
-  }
-});
 
 // ── AUDIT LOG ─────────────────────────────────────────────────────────────────
 async function loadAudit(){
