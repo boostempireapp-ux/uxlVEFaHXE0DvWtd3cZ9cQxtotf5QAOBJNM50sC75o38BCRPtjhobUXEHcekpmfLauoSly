@@ -1683,11 +1683,11 @@ app.post('/api/verify-dash-login', async (req, res) => {
     const doc = await db.collection('botConfig').findOne({ _id: 'main' });
     const cfg  = doc?.data || {};
 
-    // Check against stored dashboard password
-    const storedPw  = cfg.dashboardPassword || process.env.DASHBOARD_PASSWORD || '';
-    const botUrl    = (cfg.verifyBotUrl || '').replace(/\/+$/, '');
+    // Check against stored password OR env var fallback
+    const storedPw = cfg.dashboardPassword || process.env.DASHBOARD_PASSWORD || '';
+    const botUrl   = (cfg.verifyBotUrl    || process.env.VERIFY_BASE_URL || '').replace(/\/+$/, '');
 
-    if (!storedPw) return res.status(500).json({ success: false, message: 'No dashboard password configured — set it in Verify Bot Config' });
+    if (!storedPw) return res.status(500).json({ success: false, message: 'No dashboard password set — add DASHBOARD_PASSWORD to your server env vars, or set it in Verify Bot Config' });
     if (password !== storedPw) return res.status(401).json({ success: false, message: 'Incorrect password' });
     if (!botUrl)  return res.status(400).json({ success: false, message: 'No WispByte bot URL saved — add it in Verify Bot Config first' });
 
@@ -1751,8 +1751,8 @@ app.post('/api/admin/bot-config', requireAdmin, async (req, res) => {
     const data = { ...existing };
     for (const k of allowed) {
       if (req.body[k] !== undefined) {
-        // Don't overwrite botToken with empty string (keep existing)
-        if (k === 'botToken' && req.body[k] === '') continue;
+        // Don't overwrite sensitive fields with empty string — keep existing value
+        if ((k === 'botToken' || k === 'dashboardPassword') && req.body[k] === '') continue;
         data[k] = req.body[k];
       }
     }
