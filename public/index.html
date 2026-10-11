@@ -1722,7 +1722,7 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
 
     <!-- ══ AUDIT LOG PAGE ══ -->
     <!-- ══ BOT CONFIG PAGE ══ -->
-    <div class="page" id="page-bot-config" style="display:none">
+    <div class="page" id="page-bot-config">
       <div class="ph" style="margin-bottom:18px">
         <div>
           <div class="pt">Verify Bot <span style="color:#a78bfa">Config</span></div>
@@ -2582,7 +2582,7 @@ function go(page){
   const el=document.getElementById('page-'+page);
   if(el) el.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>{if(n.dataset.page===page)n.classList.add('active');});
-  const pageActions={dashboard:loadDashboard,apps:loadApps,keys:loadKeys,logs:loadLogs,blocks:loadBlocks,resellers:loadResellers,'hwid-mismatches':loadHwidMismatches,detections:loadDetections,'r-dashboard':loadResellerDashboard,'r-keys':loadResellerKeys,'r-generate':loadResellerGeneratePage,'r-logs':loadResellerLogs,'r-blocks':loadResellerBlocks,'r-dll':loadResellerDLL,'r-apps':loadResellerMyApps,'dll-logs':loadDLLLogs,audit:loadAudit,settings:()=>{load2FAStatus();loadCountryAllowlist();},generate:loadApps};
+  const pageActions={dashboard:loadDashboard,apps:loadApps,keys:loadKeys,logs:loadLogs,blocks:loadBlocks,resellers:loadResellers,'hwid-mismatches':loadHwidMismatches,detections:loadDetections,'r-dashboard':loadResellerDashboard,'r-keys':loadResellerKeys,'r-generate':loadResellerGeneratePage,'r-logs':loadResellerLogs,'r-blocks':loadResellerBlocks,'r-dll':loadResellerDLL,'r-apps':loadResellerMyApps,'dll-logs':loadDLLLogs,audit:loadAudit,settings:()=>{load2FAStatus();loadCountryAllowlist();},'bot-config':loadBotConfig,generate:loadApps};
   if(pageActions[page]) pageActions[page]();
 }
 
@@ -3235,13 +3235,6 @@ async function saveBotConfig() {
     }
   } catch(e) { showToast('Save error: ' + e.message, 'error'); }
 }
-
-// Intercept go() to load bot config when navigating to that page
-const _origGo = window.go;
-window.go = function(page) {
-  _origGo(page);
-  if (page === 'bot-config') loadBotConfig();
-};
 
 // ── AUDIT LOG ─────────────────────────────────────────────────────────────────
 async function loadAudit(){
