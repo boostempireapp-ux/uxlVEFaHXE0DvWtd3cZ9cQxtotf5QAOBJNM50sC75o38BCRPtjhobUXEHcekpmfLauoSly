@@ -3524,33 +3524,99 @@ function agCopy(blockId){
   navigator.clipboard.writeText(el.innerText).then(()=>toast('Copied!'));
 }
 function apiGuideCopyAll(){
-  // collect all code blocks + headings into a plain-text guide
   const page = document.getElementById('page-api-guide');
   if(!page){ toast('Page not found'); return; }
-  let out = '=== BoostEmpire KeyAuth — API Integration Guide ===\n\n';
-  out += 'Base URL: ' + ((document.getElementById('ag-server-url')||{}).value||'https://yourapp.railway.app') + '\n\n';
-  page.querySelectorAll('.card-title').forEach(h=>{
-    out += '\n── ' + h.innerText.trim() + ' ──\n';
-  });
-  page.querySelectorAll('.code').forEach(cb=>{
-    out += '\n' + cb.innerText.trim() + '\n';
-  });
-  navigator.clipboard.writeText(out).then(()=>toast('Full guide copied!'));
+  // Re-use the same rich formatter as the download function
+  const origClick = HTMLAnchorElement.prototype.click;
+  let captured = '';
+  // Temporarily hijack Blob + anchor to capture text instead
+  const origBlob = window.Blob;
+  window.Blob = function(parts, opts){ captured = parts[0]; return new origBlob(parts, opts); };
+  apiGuideDownload();
+  window.Blob = origBlob;
+  if(captured){
+    navigator.clipboard.writeText(captured).then(()=>toast('Full guide copied!'));
+  } else {
+    // fallback
+    let out = 'BoostEmpire KeyAuth — API Integration Guide\n\n';
+    out += 'Server: ' + ((document.getElementById('ag-server-url')||{}).value||'https://yourapp.railway.app') + '\n\n';
+    page.querySelectorAll('.card-title').forEach(h=>{ out += '\n── ' + h.innerText.trim() + ' ──\n'; });
+    page.querySelectorAll('[style*="border-radius:8px"][style*="padding:12px"]').forEach(e=>{ out += '\n' + e.innerText.trim() + '\n'; });
+    page.querySelectorAll('.code').forEach(cb=>{ out += '\n' + cb.innerText.trim() + '\n'; });
+    navigator.clipboard.writeText(out).then(()=>toast('Full guide copied!'));
+  }
 }
 function apiGuideDownload(){
   const page = document.getElementById('page-api-guide');
   if(!page){ toast('Page not found'); return; }
   const baseUrl = ((document.getElementById('ag-server-url')||{}).value||'https://yourapp.railway.app');
-  let out = '=== BoostEmpire KeyAuth — API Integration Guide ===\n';
-  out += 'Server: ' + baseUrl + '\n';
-  out += 'Generated: ' + new Date().toISOString() + '\n\n';
+  const sel = document.getElementById('ag-app-sel');
+  const opt = sel ? sel.options[sel.selectedIndex] : null;
+  const pubKey = (opt && opt.dataset.pub) ? opt.dataset.pub : 'YOUR_PUBLIC_KEY';
+  const appName = (opt && opt.value) ? (opt.textContent||'MyApp') : 'MyApp';
+
+  let out = '╔══════════════════════════════════════════════════════════════╗\n';
+  out += '║       BoostEmpire KeyAuth — API Integration Guide            ║\n';
+  out += '╚══════════════════════════════════════════════════════════════╝\n\n';
+  out += 'Server URL : ' + baseUrl + '\n';
+  out += 'Public Key : ' + pubKey + '\n';
+  out += 'App Name   : ' + appName + '\n';
+  out += 'Generated  : ' + new Date().toLocaleString() + '\n\n';
+  out += '━'.repeat(66) + '\n\n';
+
   page.querySelectorAll('.card').forEach(card=>{
+    // Section heading (card-title)
     const title = card.querySelector('.card-title');
-    if(title) out += '\n══ ' + title.innerText.trim() + ' ══\n\n';
-    card.querySelectorAll('.code').forEach(cb=>{
-      out += cb.innerText.trim() + '\n\n';
+    if(title){
+      out += '\n' + '═'.repeat(66) + '\n';
+      out += '  ' + title.innerText.trim() + '\n';
+      out += '═'.repeat(66) + '\n\n';
+    }
+
+    // Endpoint method + path line
+    const methodEl = card.querySelector('[style*="JetBrains Mono"][style*="font-weight:700"]');
+    const pathEl = card.querySelector('[style*="font-size:13px"]');
+    if(methodEl && pathEl){
+      out += '  [' + methodEl.innerText.trim() + ']  ' + pathEl.innerText.trim() + '\n\n';
+    }
+
+    // Explanation blocks (the highlighted callout divs)
+    card.querySelectorAll('[style*="border-radius:8px"][style*="padding:12px"]').forEach(exp=>{
+      const txt = exp.innerText.trim();
+      if(txt){
+        // Word-wrap at 64 chars
+        txt.split('\n').forEach(line=>{
+          if(!line.trim()) { out += '\n'; return; }
+          const words = line.split(' ');
+          let cur = '  ';
+          words.forEach(w=>{
+            if((cur + w).length > 66){ out += cur.trimEnd() + '\n'; cur = '  ' + w + ' '; }
+            else cur += w + ' ';
+          });
+          if(cur.trim()) out += cur.trimEnd() + '\n';
+        });
+        out += '\n';
+      }
     });
+
+    // Code blocks
+    card.querySelectorAll('.code').forEach(cb=>{
+      const code = cb.innerText.trim();
+      if(code){
+        out += '  ┌─ Code ' + '─'.repeat(57) + '\n';
+        code.split('\n').forEach(line=>{ out += '  │ ' + line + '\n'; });
+        out += '  └' + '─'.repeat(64) + '\n\n';
+      }
+    });
+
+    // Checklist step cards (no .code, just explanation text in padding:12px cards)
+    // already handled above by the explanation block walker
   });
+
+  out += '\n' + '═'.repeat(66) + '\n';
+  out += '  END OF GUIDE — BoostEmpire KeyAuth\n';
+  out += '═'.repeat(66) + '\n';
+
   const blob = new Blob([out], {type:'text/plain'});
   const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download='boostempire-api-guide.txt'; a.click();
