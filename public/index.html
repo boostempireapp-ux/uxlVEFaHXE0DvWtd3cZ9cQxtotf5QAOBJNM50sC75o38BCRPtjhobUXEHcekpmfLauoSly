@@ -7,12 +7,12 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 :root{
-  --bg:#000000;--bg2:#000000;--bg3:#000000;--bg4:#000000;
-  --border:rgba(139,92,246,0.1);--border2:rgba(139,92,246,0.22);
-  --glass:#000000;--glassh:rgba(139,92,246,0.06);
+  --bg:#08050f;--bg2:#0e0818;--bg3:#130c1e;--bg4:#1a1028;
+  --border:rgba(139,92,246,0.22);--border2:rgba(139,92,246,0.38);
+  --glass:rgba(139,92,246,0.07);--glassh:rgba(139,92,246,0.12);
   --p:#8b5cf6;--p2:#6d28d9;--p3:#a78bfa;--p4:#c4b5fd;--p5:#7c3aed;
   --pdim:rgba(139,92,246,0.12);--p2dim:rgba(109,40,217,0.12);
-  --text:#e8e8ff;--text2:#9090c0;--text3:#4a4a7a;
+  --text:#e8e8ff;--text2:#a0a0d0;--text3:#7070a8;
   --r:10px;--r2:14px;--sb:230px;
 --gold:#f59e0b;--golddim:rgba(245,158,11,0.12);
 }
@@ -31,7 +31,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 /* ── LOGIN SPLIT LAYOUT ─────────────────────────────────────── */
 #login-screen{position:fixed;inset:0;z-index:100;display:flex;background:#000;}
 .login-left{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  background:#000;position:relative;overflow:hidden;}
+  background:#08050f;position:relative;overflow:hidden;}
 .login-left::before{content:'';position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(ellipse 60% 50% at 50% 40%,rgba(139,92,246,0.07) 0%,transparent 70%);}
 .ll-flame{margin-bottom:28px;filter:drop-shadow(0 0 24px rgba(139,92,246,0.55));}
@@ -50,7 +50,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 
 /* right panel */
 .login-right{width:480px;min-width:380px;display:flex;align-items:center;justify-content:center;
-  background:#000000;border-left:1px solid rgba(139,92,246,0.1);}
+  background:#0a0614;border-left:1px solid rgba(139,92,246,0.2);}
 .login-box{width:100%;max-width:340px;padding:0 10px;}
 .login-box h2{font-family:'Inter',sans-serif;font-size:24px;font-weight:700;color:var(--text);
   margin-bottom:28px;letter-spacing:-.3px;}
@@ -115,7 +115,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 /* LAYOUT */
 #app{display:none;height:100vh;position:relative;z-index:1;}
 #app.on{display:flex;}
-.sidebar{width:var(--sb);min-width:var(--sb);height:100vh;background:#000000;
+.sidebar{width:var(--sb);min-width:var(--sb);height:100vh;background:#08050f;
   border-right:1px solid var(--border);display:flex;flex-direction:column;position:relative;z-index:10;}
 .sidebar::after{content:'';position:absolute;top:0;right:-1px;bottom:0;width:1px;
   background:linear-gradient(180deg,transparent 0%,var(--p) 50%,transparent 100%);opacity:0.22;}
@@ -132,7 +132,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   box-shadow:0 0 5px var(--p);animation:blink 2s infinite;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 .nav{flex:1;overflow-y:auto;padding:8px 0;}
-.nav-sec{padding:14px 16px 5px;font-size:9px;font-weight:700;letter-spacing:2px;color:var(--text3);text-transform:uppercase;}
+.nav-sec{padding:14px 16px 5px;font-size:9px;font-weight:700;letter-spacing:2px;color:#6060a0;text-transform:uppercase;}
 .nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;
   color:var(--text3);cursor:pointer;font-size:12px;font-weight:500;
   transition:all .12s;border-left:2px solid transparent;}
@@ -155,13 +155,13 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 .page.active{display:block;}
 @keyframes fi{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 .ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px;}
-.pt{font-family:'Rajdhani',sans-serif;font-size:25px;font-weight:700;}
+.pt{font-family:'Rajdhani',sans-serif;font-size:25px;font-weight:700;color:#e9d5ff;}
 .pt span{color:var(--p3);}
 .pa{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 
 /* STATS */
 .stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;margin-bottom:22px;}
-.stat{background:#000000;border:1px solid var(--border);border-radius:var(--r2);
+.stat{background:#0e0818;border:1px solid var(--border);border-radius:var(--r2);
   padding:18px 16px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s;}
 .stat:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(139,92,246,0.09);}
 .stat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
@@ -179,7 +179,7 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 .stat-icon{position:absolute;top:12px;right:12px;font-size:16px;opacity:0.3;}
 
 /* CARD */
-.card{background:#000000;border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:16px;}
+.card{background:#0e0818;border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:16px;}
 .card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .card-title{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;
   color:var(--p3);text-transform:uppercase;display:flex;align-items:center;gap:7px;}
@@ -188,11 +188,11 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 .tbl-wrap{overflow-x:auto;}
 table{width:100%;border-collapse:collapse;font-size:12px;}
 thead th{padding:9px 13px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
-  color:var(--text3);background:var(--bg3);border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;}
-tbody tr{border-bottom:1px solid rgba(139,92,246,0.04);transition:background .1s;}
+  color:#a78bfa;background:#130c1e;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;}
+tbody tr{border-bottom:1px solid rgba(139,92,246,0.12);transition:background .1s;}
 tbody tr:last-child{border-bottom:none;}
-tbody tr:hover{background:rgba(139,92,246,0.04);}
-tbody td{padding:9px 13px;vertical-align:middle;}
+tbody tr:hover{background:rgba(139,92,246,0.09);}
+tbody td{padding:9px 13px;vertical-align:middle;color:var(--text);}
 
 /* BADGES */
 .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;
@@ -221,7 +221,7 @@ tbody td{padding:9px 13px;vertical-align:middle;}
 .mono{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3);}
 
 /* API KEY BOX */
-.apikey-box{background:#000;border:1px solid var(--border2);border-radius:var(--r);
+.apikey-box{background:#0a0614;border:1px solid var(--border2);border-radius:var(--r);
   padding:10px 14px;display:flex;align-items:center;gap:8px;margin-bottom:8px;}
 .apikey-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);min-width:58px;}
 .apikey-val{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--p3);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -273,7 +273,7 @@ tbody td{padding:9px 13px;vertical-align:middle;}
 .fg{display:flex;flex-direction:column;gap:6px;}
 .fg label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);}
 .fg input{padding:11px 13px;background:rgba(139,92,246,0.05);border:1px solid var(--border2);
-  border-radius:var(--r);color:var(--text);font-family:'Inter',sans-serif;font-size:12px;outline:none;transition:all .15s;}
+  border-radius:var(--r);color:#e9d5ff;font-family:'Inter',sans-serif;font-size:12px;outline:none;transition:all .15s;background:#0e0818;}
 .fg input:focus{border-color:var(--p);background:rgba(139,92,246,0.08);box-shadow:0 0 0 2px rgba(139,92,246,0.12);}
 
 /* TOPBAR */
@@ -306,7 +306,7 @@ tbody td{padding:9px 13px;vertical-align:middle;}
 .dd-sep{height:1px;background:var(--border);margin:3px 0;}
 
 /* CODE BLOCKS */
-.code{background:#000;border:1px solid var(--border);border-radius:var(--r);
+.code{background:#0a0614;border:1px solid var(--border);border-radius:var(--r);
   padding:16px;font-family:'JetBrains Mono',monospace;font-size:11.5px;
   color:#c9d1d9;line-height:1.75;overflow-x:auto;white-space:pre;margin-bottom:12px;}
 .code .cm{color:#484f58}.code .cs{color:#a5d6ff}.code .ck{color:#ff7b72}
@@ -329,7 +329,7 @@ tbody td{padding:9px 13px;vertical-align:middle;}
   box-shadow:0 0 6px var(--p);animation:blink 1.5s infinite;}
 
 /* GEN OUTPUT */
-.gen-out{background:#000;border:1px solid rgba(139,92,246,0.2);border-radius:var(--r);
+.gen-out{background:#0a0614;border:1px solid rgba(139,92,246,0.25);border-radius:var(--r);
   padding:14px;font-family:'JetBrains Mono',monospace;font-size:11px;
   color:var(--p3);line-height:2;max-height:200px;overflow-y:auto;display:none;white-space:pre-wrap;margin-top:12px;}
 
@@ -2249,20 +2249,20 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
 
       <!-- Stats row -->
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px" id="detect-stats-row">
-        <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:4px">
-          <div style="font-size:11px;color:var(--text3);letter-spacing:.6px;text-transform:uppercase">Total Events</div>
-          <div style="font-size:26px;font-weight:700;color:var(--text)" id="ds-total">—</div>
+        <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:4px;background:#130c1e;border-color:rgba(139,92,246,0.28)">
+          <div style="font-size:11px;color:#a78bfa;letter-spacing:.6px;text-transform:uppercase;font-weight:600">Total Events</div>
+          <div style="font-size:26px;font-weight:700;color:#e9d5ff" id="ds-total">—</div>
         </div>
-        <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:4px">
-          <div style="font-size:11px;color:var(--text3);letter-spacing:.6px;text-transform:uppercase">BSODs Triggered</div>
+        <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:4px;background:#1a0a0a;border-color:rgba(248,113,113,0.3)">
+          <div style="font-size:11px;color:#fca5a5;letter-spacing:.6px;text-transform:uppercase;font-weight:600">BSODs Triggered</div>
           <div style="font-size:26px;font-weight:700;color:#f87171" id="ds-bsod">—</div>
         </div>
-        <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:4px">
-          <div style="font-size:11px;color:var(--text3);letter-spacing:.6px;text-transform:uppercase">Closed by User</div>
+        <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:4px;background:#0a1a0e;border-color:rgba(74,222,128,0.25)">
+          <div style="font-size:11px;color:#86efac;letter-spacing:.6px;text-transform:uppercase;font-weight:600">Closed by User</div>
           <div style="font-size:26px;font-weight:700;color:#4ade80" id="ds-closed">—</div>
         </div>
-        <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:4px">
-          <div style="font-size:11px;color:var(--text3);letter-spacing:.6px;text-transform:uppercase">Unique IPs</div>
+        <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:4px;background:#0a0f1a;border-color:rgba(96,165,250,0.25)">
+          <div style="font-size:11px;color:#93c5fd;letter-spacing:.6px;text-transform:uppercase;font-weight:600">Unique IPs</div>
           <div style="font-size:26px;font-weight:700;color:#60a5fa" id="ds-ips">—</div>
         </div>
       </div>
@@ -2358,34 +2358,34 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
 <!-- MODAL: DLL HOSTING -->
 <div class="modal-bg" id="modal-dll">
   <div class="modal">
-    <div class="modal-title">🟣 DLL Hosting — <span id="dll-modal-appname"></span></div>
-    <div style="background:#1a0a2e;border:1px solid #7c3aed44;border-radius:var(--r);padding:12px 14px;font-size:12px;color:#c084fc;margin-bottom:16px">
-      Upload your DLL to <strong>catbox.moe</strong> or <strong>filegarden.com</strong> (or another supported host), paste the direct link below.
-      Clients download via <strong>your server</strong> — the raw URL is never exposed to end users.
+    <div class="modal-title" style="font-size:17px;font-weight:800;color:#e9d5ff;margin-bottom:14px">🟣 DLL Hosting — <span id="dll-modal-appname" style="color:#c084fc"></span></div>
+    <div style="background:rgba(124,58,237,0.15);border:1px solid rgba(167,139,250,0.35);border-radius:var(--r);padding:13px 15px;font-size:12.5px;color:#ddd6fe;margin-bottom:18px;line-height:1.6">
+      Upload your DLL to <strong style="color:#fff">catbox.moe</strong> or <strong style="color:#fff">filegarden.com</strong> (or another supported host), paste the direct link below.
+      Clients download via <strong style="color:#fff">your server</strong> — the raw URL is never exposed to end users.
     </div>
-    <div class="fg" style="margin-bottom:8px">
-      <label>Current DLL</label>
-      <div id="dll-current-display" style="padding:8px 12px;background:#0d0518;border:1px solid #7c3aed33;border-radius:var(--r);font-size:11px;font-family:'JetBrains Mono',monospace;color:#a855f7;word-break:break-all;min-height:34px"></div>
+    <div class="fg" style="margin-bottom:14px">
+      <label style="font-size:11.5px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:.6px">Current DLL</label>
+      <div id="dll-current-display" style="padding:10px 13px;background:#0d0518;border:1px solid rgba(167,139,250,0.3);border-radius:var(--r);font-size:12px;font-family:'JetBrains Mono',monospace;color:#c084fc;word-break:break-all;min-height:36px;line-height:1.5"></div>
     </div>
-    <div class="fg" style="margin-bottom:10px">
-      <label>Host</label>
-      <select class="inp" id="dll-host-select" onchange="onDllHostChange()" style="cursor:pointer">
-        <option value="catbox">🐱 catbox.moe</option>
-        <option value="filegarden">🌿 filegarden.com</option>
-        <option value="other">🔗 Other (Discord CDN, GitHub Raw, jsDelivr…)</option>
+    <div class="fg" style="margin-bottom:14px">
+      <label style="font-size:11.5px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:.6px">Host</label>
+      <select class="inp" id="dll-host-select" onchange="onDllHostChange()" style="cursor:pointer;font-size:13.5px;color:#e9d5ff;background:#1a0a2e;border-color:rgba(167,139,250,0.35);padding:9px 12px">
+        <option value="catbox">🐱  catbox.moe</option>
+        <option value="filegarden">🌿  filegarden.com</option>
+        <option value="other">🔗  Other (Discord CDN, GitHub Raw, jsDelivr…)</option>
       </select>
     </div>
-    <div class="fg">
-      <label>New DLL URL</label>
-      <input class="inp" id="dll-url-input" placeholder="https://files.catbox.moe/xxxxxx.dll"/>
-      <div style="font-size:10px;color:var(--text3);margin-top:5px" id="dll-host-hint">Upload to catbox.moe, paste the direct .dll link above.</div>
+    <div class="fg" style="margin-bottom:4px">
+      <label style="font-size:11.5px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:.6px">New DLL URL</label>
+      <input class="inp" id="dll-url-input" placeholder="https://files.catbox.moe/xxxxxx.dll" style="font-size:13px;color:#e9d5ff;background:#0d0518;border-color:rgba(167,139,250,0.35);padding:9px 12px"/>
+      <div style="font-size:11.5px;color:#a78bfa;margin-top:7px;font-weight:500" id="dll-host-hint">Upload to catbox.moe, paste the direct .dll link above.</div>
     </div>
-    <div style="background:#000;border-radius:var(--r);padding:10px 13px;margin-top:12px;font-size:11px;color:var(--text3)">
-      <div style="color:#c084fc;font-weight:600;margin-bottom:6px">🔗 Developer Integration (after /api/auth succeeds):</div>
-      <div id="dll-code-snippet" style="font-family:'JetBrains Mono',monospace;color:#e9d5ff;word-break:break-all"></div>
-      <div style="margin-top:5px;color:var(--text3)">Server proxies the file — no raw URL leaks to the client.</div>
+    <div style="background:#0d0518;border:1px solid rgba(167,139,250,0.2);border-radius:var(--r);padding:12px 14px;margin-top:14px;font-size:11.5px">
+      <div style="color:#c084fc;font-weight:700;margin-bottom:7px;font-size:12px">🔗 Developer Integration (after /api/auth succeeds):</div>
+      <div id="dll-code-snippet" style="font-family:'JetBrains Mono',monospace;color:#e9d5ff;word-break:break-all;font-size:12px;line-height:1.6"></div>
+      <div style="margin-top:7px;color:#94a3b8;font-size:11.5px">Server proxies the file — no raw URL leaks to the client.</div>
     </div>
-    <div id="dll-modal-result" style="margin-top:10px"></div>
+    <div id="dll-modal-result" style="margin-top:12px"></div>
     <div class="modal-actions">
       <button class="btn btn-danger btn-sm" onclick="clearDll()">Remove DLL</button>
       <button class="btn btn-ghost" onclick="closeModal('modal-dll')">Cancel</button>
@@ -2397,34 +2397,34 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
 <!-- MODAL: RESELLER DLL HOSTING -->
 <div class="modal-bg" id="modal-r-dll">
   <div class="modal">
-    <div class="modal-title">🟣 DLL Hosting — <span id="r-dll-modal-appname"></span></div>
-    <div style="background:#1a0a2e;border:1px solid #7c3aed44;border-radius:var(--r);padding:12px 14px;font-size:12px;color:#c084fc;margin-bottom:16px">
-      Upload your DLL to <strong>catbox.moe</strong> or <strong>filegarden.com</strong> (or another supported host), paste the direct link below.
-      Clients download via <strong>your server</strong> — the raw URL is never exposed to end users.
+    <div class="modal-title" style="font-size:17px;font-weight:800;color:#e9d5ff;margin-bottom:14px">🟣 DLL Hosting — <span id="r-dll-modal-appname" style="color:#c084fc"></span></div>
+    <div style="background:rgba(124,58,237,0.15);border:1px solid rgba(167,139,250,0.35);border-radius:var(--r);padding:13px 15px;font-size:12.5px;color:#ddd6fe;margin-bottom:18px;line-height:1.6">
+      Upload your DLL to <strong style="color:#fff">catbox.moe</strong> or <strong style="color:#fff">filegarden.com</strong> (or another supported host), paste the direct link below.
+      Clients download via <strong style="color:#fff">your server</strong> — the raw URL is never exposed to end users.
     </div>
-    <div class="fg" style="margin-bottom:8px">
-      <label>Current DLL</label>
-      <div id="r-dll-current-display" style="padding:8px 12px;background:#0d0518;border:1px solid #7c3aed33;border-radius:var(--r);font-size:11px;font-family:'JetBrains Mono',monospace;color:#a855f7;word-break:break-all;min-height:34px"></div>
+    <div class="fg" style="margin-bottom:14px">
+      <label style="font-size:11.5px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:.6px">Current DLL</label>
+      <div id="r-dll-current-display" style="padding:10px 13px;background:#0d0518;border:1px solid rgba(167,139,250,0.3);border-radius:var(--r);font-size:12px;font-family:'JetBrains Mono',monospace;color:#c084fc;word-break:break-all;min-height:36px;line-height:1.5"></div>
     </div>
-    <div class="fg" style="margin-bottom:10px">
-      <label>Host</label>
-      <select class="inp" id="r-dll-host-select" onchange="onRDllHostChange()" style="cursor:pointer">
-        <option value="catbox">🐱 catbox.moe</option>
-        <option value="filegarden">🌿 filegarden.com</option>
-        <option value="other">🔗 Other (Discord CDN, GitHub Raw, jsDelivr…)</option>
+    <div class="fg" style="margin-bottom:14px">
+      <label style="font-size:11.5px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:.6px">Host</label>
+      <select class="inp" id="r-dll-host-select" onchange="onRDllHostChange()" style="cursor:pointer;font-size:13.5px;color:#e9d5ff;background:#1a0a2e;border-color:rgba(167,139,250,0.35);padding:9px 12px">
+        <option value="catbox">🐱  catbox.moe</option>
+        <option value="filegarden">🌿  filegarden.com</option>
+        <option value="other">🔗  Other (Discord CDN, GitHub Raw, jsDelivr…)</option>
       </select>
     </div>
-    <div class="fg">
-      <label>New DLL URL</label>
-      <input class="inp" id="r-dll-url-input" placeholder="https://files.catbox.moe/xxxxxx.dll"/>
-      <div style="font-size:10px;color:var(--text3);margin-top:5px" id="r-dll-host-hint">Upload to catbox.moe, paste the direct .dll link above.</div>
+    <div class="fg" style="margin-bottom:4px">
+      <label style="font-size:11.5px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:.6px">New DLL URL</label>
+      <input class="inp" id="r-dll-url-input" placeholder="https://files.catbox.moe/xxxxxx.dll" style="font-size:13px;color:#e9d5ff;background:#0d0518;border-color:rgba(167,139,250,0.35);padding:9px 12px"/>
+      <div style="font-size:11.5px;color:#a78bfa;margin-top:7px;font-weight:500" id="r-dll-host-hint">Upload to catbox.moe, paste the direct .dll link above.</div>
     </div>
-    <div style="background:#000;border-radius:var(--r);padding:10px 13px;margin-top:12px;font-size:11px;color:var(--text3)">
-      <div style="color:#c084fc;font-weight:600;margin-bottom:6px">🔗 Developer Integration (after /api/auth succeeds):</div>
-      <div id="r-dll-code-snippet" style="font-family:'JetBrains Mono',monospace;color:#e9d5ff;word-break:break-all"></div>
-      <div style="margin-top:5px;color:var(--text3)">Server proxies the file — no raw URL leaks to the client.</div>
+    <div style="background:#0d0518;border:1px solid rgba(167,139,250,0.2);border-radius:var(--r);padding:12px 14px;margin-top:14px;font-size:11.5px">
+      <div style="color:#c084fc;font-weight:700;margin-bottom:7px;font-size:12px">🔗 Developer Integration (after /api/auth succeeds):</div>
+      <div id="r-dll-code-snippet" style="font-family:'JetBrains Mono',monospace;color:#e9d5ff;word-break:break-all;font-size:12px;line-height:1.6"></div>
+      <div style="margin-top:7px;color:#94a3b8;font-size:11.5px">Server proxies the file — no raw URL leaks to the client.</div>
     </div>
-    <div id="r-dll-modal-result" style="margin-top:10px"></div>
+    <div id="r-dll-modal-result" style="margin-top:12px"></div>
     <div class="modal-actions">
       <button class="btn btn-danger btn-sm" onclick="rClearDll()">Remove DLL</button>
       <button class="btn btn-ghost" onclick="closeModal('modal-r-dll')">Cancel</button>
