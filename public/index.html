@@ -2360,17 +2360,25 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
   <div class="modal">
     <div class="modal-title">🟣 DLL Hosting — <span id="dll-modal-appname"></span></div>
     <div style="background:#1a0a2e;border:1px solid #7c3aed44;border-radius:var(--r);padding:12px 14px;font-size:12px;color:#c084fc;margin-bottom:16px">
-      Upload your DLL to <strong>catbox.moe</strong>, <strong>filegarden.com</strong> (or another supported host), paste the direct link below.
+      Upload your DLL to <strong>catbox.moe</strong> or <strong>filegarden.com</strong> (or another supported host), paste the direct link below.
       Clients download via <strong>your server</strong> — the raw URL is never exposed to end users.
     </div>
     <div class="fg" style="margin-bottom:8px">
       <label>Current DLL</label>
       <div id="dll-current-display" style="padding:8px 12px;background:#0d0518;border:1px solid #7c3aed33;border-radius:var(--r);font-size:11px;font-family:'JetBrains Mono',monospace;color:#a855f7;word-break:break-all;min-height:34px"></div>
     </div>
+    <div class="fg" style="margin-bottom:10px">
+      <label>Host</label>
+      <select class="inp" id="dll-host-select" onchange="onDllHostChange()" style="cursor:pointer">
+        <option value="catbox">🐱 catbox.moe</option>
+        <option value="filegarden">🌿 filegarden.com</option>
+        <option value="other">🔗 Other (Discord CDN, GitHub Raw, jsDelivr…)</option>
+      </select>
+    </div>
     <div class="fg">
       <label>New DLL URL</label>
-      <input class="inp" id="dll-url-input" placeholder="https://files.catbox.moe/xxxxxx.dll or https://cdn.filegarden.com/..."/>
-      <div style="font-size:10px;color:var(--text3);margin-top:5px">✅ Supported: catbox.moe · filegarden.com · Discord CDN · GitHub Raw · jsDelivr · Google Drive · Dropbox</div>
+      <input class="inp" id="dll-url-input" placeholder="https://files.catbox.moe/xxxxxx.dll"/>
+      <div style="font-size:10px;color:var(--text3);margin-top:5px" id="dll-host-hint">Upload to catbox.moe, paste the direct .dll link above.</div>
     </div>
     <div style="background:#000;border-radius:var(--r);padding:10px 13px;margin-top:12px;font-size:11px;color:var(--text3)">
       <div style="color:#c084fc;font-weight:600;margin-bottom:6px">🔗 Developer Integration (after /api/auth succeeds):</div>
@@ -2391,17 +2399,25 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
   <div class="modal">
     <div class="modal-title">🟣 DLL Hosting — <span id="r-dll-modal-appname"></span></div>
     <div style="background:#1a0a2e;border:1px solid #7c3aed44;border-radius:var(--r);padding:12px 14px;font-size:12px;color:#c084fc;margin-bottom:16px">
-      Upload your DLL to <strong>catbox.moe</strong>, <strong>filegarden.com</strong> (or another supported host), paste the direct link below.
+      Upload your DLL to <strong>catbox.moe</strong> or <strong>filegarden.com</strong> (or another supported host), paste the direct link below.
       Clients download via <strong>your server</strong> — the raw URL is never exposed to end users.
     </div>
     <div class="fg" style="margin-bottom:8px">
       <label>Current DLL</label>
       <div id="r-dll-current-display" style="padding:8px 12px;background:#0d0518;border:1px solid #7c3aed33;border-radius:var(--r);font-size:11px;font-family:'JetBrains Mono',monospace;color:#a855f7;word-break:break-all;min-height:34px"></div>
     </div>
+    <div class="fg" style="margin-bottom:10px">
+      <label>Host</label>
+      <select class="inp" id="r-dll-host-select" onchange="onRDllHostChange()" style="cursor:pointer">
+        <option value="catbox">🐱 catbox.moe</option>
+        <option value="filegarden">🌿 filegarden.com</option>
+        <option value="other">🔗 Other (Discord CDN, GitHub Raw, jsDelivr…)</option>
+      </select>
+    </div>
     <div class="fg">
       <label>New DLL URL</label>
-      <input class="inp" id="r-dll-url-input" placeholder="https://files.catbox.moe/xxxxxx.dll or https://cdn.filegarden.com/..."/>
-      <div style="font-size:10px;color:var(--text3);margin-top:5px">✅ Supported: catbox.moe · filegarden.com · Discord CDN · GitHub Raw · jsDelivr · Google Drive · Dropbox</div>
+      <input class="inp" id="r-dll-url-input" placeholder="https://files.catbox.moe/xxxxxx.dll"/>
+      <div style="font-size:10px;color:var(--text3);margin-top:5px" id="r-dll-host-hint">Upload to catbox.moe, paste the direct .dll link above.</div>
     </div>
     <div style="background:#000;border-radius:var(--r);padding:10px 13px;margin-top:12px;font-size:11px;color:var(--text3)">
       <div style="color:#c084fc;font-weight:600;margin-bottom:6px">🔗 Developer Integration (after /api/auth succeeds):</div>
@@ -3605,7 +3621,8 @@ const PERMS=[
   {key:'resetHWID',label:'Reset HWID',desc:'Reset HWID lock'},
   {key:'deleteKeys',label:'Delete Keys',desc:'Remove keys'},
   {key:'viewStats',label:'View Stats',desc:'Dashboard stats'},
-  {key:'canUseCatboxHosting',label:'DLL Hosting (Catbox / File Garden)',desc:'Upload & manage DLLs via Catbox or File Garden'},
+  {key:'canUseCatboxHosting',label:'DLL Hosting — Catbox',desc:'Upload & manage DLLs via catbox.moe'},
+  {key:'canUseFileGardenHosting',label:'DLL Hosting — File Garden',desc:'Upload & manage DLLs via filegarden.com'},
 ];
 function renderPermGrid(cid,ex={}){
   document.getElementById(cid).innerHTML=PERMS.map(p=>`<div class="perm-item ${ex[p.key]?'on':''}" id="pi-${cid}-${p.key}"><div class="perm-label">${p.label}<small>${p.desc}</small></div><div class="toggle ${ex[p.key]?'on':''}" id="pt-${cid}-${p.key}" onclick="togglePerm('${cid}','${p.key}')"></div></div>`).join('');
@@ -4128,6 +4145,44 @@ setInterval(async () => {
 // ── DLL HOSTING ───────────────────────────────────────────────────────────────
 let _dllAppId = null;
 
+const DLL_HOST_HINTS = {
+  catbox:     { hint: 'Upload to catbox.moe, paste the direct .dll link above.', ph: 'https://files.catbox.moe/xxxxxx.dll' },
+  filegarden: { hint: 'Upload to filegarden.com, paste the CDN link above.', ph: 'https://cdn.filegarden.com/xxxxxx.dll' },
+  other:      { hint: '✅ Supported: Discord CDN · GitHub Raw · jsDelivr · Google Drive · Dropbox', ph: 'https://...' },
+};
+
+function onDllHostChange() {
+  const v = document.getElementById('dll-host-select').value;
+  const d = DLL_HOST_HINTS[v] || DLL_HOST_HINTS.other;
+  document.getElementById('dll-host-hint').textContent = d.hint;
+  document.getElementById('dll-url-input').placeholder = d.ph;
+}
+
+function onRDllHostChange() {
+  const v = document.getElementById('r-dll-host-select').value;
+  const d = DLL_HOST_HINTS[v] || DLL_HOST_HINTS.other;
+  document.getElementById('r-dll-host-hint').textContent = d.hint;
+  document.getElementById('r-dll-url-input').placeholder = d.ph;
+}
+
+// Auto-detect host from a URL and update the dropdown
+function _syncHostDropdown(url, selectId, hintId, inputId) {
+  if (!url) return;
+  let host = 'other';
+  try {
+    const h = new URL(url).hostname;
+    if (h === 'files.catbox.moe' || h.endsWith('.catbox.moe')) host = 'catbox';
+    else if (h === 'filegarden.com' || h.endsWith('.filegarden.com')) host = 'filegarden';
+  } catch(e) {}
+  const sel = document.getElementById(selectId);
+  if (sel) sel.value = host;
+  const d = DLL_HOST_HINTS[host];
+  const hint = document.getElementById(hintId);
+  if (hint) hint.textContent = d.hint;
+  const inp = document.getElementById(inputId);
+  if (inp) inp.placeholder = d.ph;
+}
+
 function openDllModal(appId, appName, currentUrl, publicKey) {
   _dllAppId = appId;
   document.getElementById('dll-modal-appname').textContent = appName;
@@ -4138,6 +4193,8 @@ function openDllModal(appId, appName, currentUrl, publicKey) {
   display.style.color = currentUrl ? '#a855f7' : '#64748b';
   document.getElementById('dll-code-snippet').textContent =
     'GET /api/dll/' + publicKey + '?key=<license_key>&session_token=<token>';
+  // Sync dropdown to current URL so admin sees what host is already in use
+  _syncHostDropdown(currentUrl, 'dll-host-select', 'dll-host-hint', 'dll-url-input');
   document.getElementById('modal-dll').classList.add('open');
 }
 
@@ -4257,7 +4314,7 @@ async function loadResellerDLL() {
   } catch(e) { /* non-fatal — use existing RDATA */ }
 
   // Check permission — show a banner but still attempt to load apps so admin can see state
-  const hasCatboxPerm = RDATA && RDATA.permissions && RDATA.permissions.canUseCatboxHosting;
+  const hasCatboxPerm = RDATA && RDATA.permissions && (RDATA.permissions.canUseCatboxHosting || RDATA.permissions.canUseFileGardenHosting);
 
   let r;
   try {
@@ -4278,12 +4335,21 @@ async function loadResellerDLL() {
   }
 
   // Permission notice banner (shown when catbox hosting is off)
-  const permBanner = hasCatboxPerm ? '' : `
+  const hasCatboxOnly = RDATA && RDATA.permissions && RDATA.permissions.canUseCatboxHosting;
+  const hasFGOnly     = RDATA && RDATA.permissions && RDATA.permissions.canUseFileGardenHosting;
+  let permDetails = '';
+  if (hasCatboxOnly && hasFGOnly) permDetails = 'Catbox &amp; File Garden';
+  else if (hasCatboxOnly) permDetails = 'Catbox only';
+  else if (hasFGOnly) permDetails = 'File Garden only';
+  const permBanner = hasCatboxPerm ? `
+    <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.2);border-radius:12px;padding:10px 16px;margin-bottom:16px;font-size:12px;color:var(--text3)">
+      🟣 DLL hosting enabled — <strong style="color:#c084fc">${permDetails}</strong>
+    </div>` : `
     <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;gap:12px;align-items:center">
       <div style="font-size:22px">⚠️</div>
       <div>
         <div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:2px">DLL Hosting not enabled</div>
-        <div style="font-size:12px;color:var(--text3)">You can view DLL status for your apps, but uploading is disabled. Ask your admin to enable <strong style="color:var(--text2)">DLL Hosting (Catbox / File Garden)</strong> on your account.</div>
+        <div style="font-size:12px;color:var(--text3)">You can view DLL status for your apps, but uploading is disabled. Ask your admin to enable <strong style="color:var(--text2)">DLL Hosting (Catbox)</strong> or <strong style="color:var(--text2)">DLL Hosting (File Garden)</strong> on your account.</div>
       </div>
     </div>`;
 
@@ -4349,9 +4415,9 @@ async function loadResellerDLL() {
       <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
         <div class="fg" style="flex:1;min-width:260px;margin:0">
           <label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;display:block;margin-bottom:6px">
-            ${hasCatboxPerm ? '📤 Paste your Catbox or File Garden DLL link here' : '🔒 DLL URL (DLL hosting not enabled on your account)'}
+            ${hasCatboxPerm ? ('📤 Paste your ' + (hasCatboxOnly && hasFGOnly ? 'Catbox or File Garden' : hasCatboxOnly ? 'Catbox' : 'File Garden') + ' DLL link here') : '🔒 DLL URL (DLL hosting not enabled on your account)'}
           </label>
-          <input type="text" id="dll-url-${app._id}" value="${app.dllUrl||''}" placeholder="https://files.catbox.moe/xxxxxx.dll or https://cdn.filegarden.com/..." ${inputDisabled}
+          <input type="text" id="dll-url-${app._id}" value="${app.dllUrl||''}" placeholder="${hasCatboxOnly && !hasFGOnly ? 'https://files.catbox.moe/xxxxxx.dll' : hasFGOnly && !hasCatboxOnly ? 'https://cdn.filegarden.com/xxxxxx.dll' : 'https://files.catbox.moe/xxxxxx.dll or https://cdn.filegarden.com/...'}" ${inputDisabled}
             style="width:100%;background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none"
             onfocus="this.style.borderColor='rgba(139,92,246,0.5)'" onblur="this.style.borderColor='var(--border)'"/>
         </div>
@@ -4416,7 +4482,7 @@ async function loadResellerMyApps() {
     return;
   }
 
-  const hasDllPerm = !!(RDATA && RDATA.permissions && RDATA.permissions.canUseCatboxHosting);
+  const hasDllPerm = !!(RDATA && RDATA.permissions && (RDATA.permissions.canUseCatboxHosting || RDATA.permissions.canUseFileGardenHosting));
 
   // Build cards — use data-* attrs on DLL button to avoid quote-escaping issues
   wrap.innerHTML = r.apps.map(app => {
@@ -4494,6 +4560,22 @@ function openRDllModal(appId, appName, currentUrl, publicKey) {
   display.style.color = currentUrl ? '#a855f7' : 'var(--text3)';
   document.getElementById('r-dll-code-snippet').textContent =
     'GET /api/dll/' + publicKey + '?key=<license_key>&session_token=<token>';
+  // Sync dropdown to current URL so reseller sees what host is already in use
+  _syncHostDropdown(currentUrl, 'r-dll-host-select', 'r-dll-host-hint', 'r-dll-url-input');
+  // Filter dropdown options based on reseller permissions
+  const hasCatbox = RDATA && RDATA.permissions && RDATA.permissions.canUseCatboxHosting;
+  const hasFG = RDATA && RDATA.permissions && RDATA.permissions.canUseFileGardenHosting;
+  const sel = document.getElementById('r-dll-host-select');
+  if (sel) {
+    sel.options[0].disabled = !hasCatbox;   // catbox option
+    sel.options[1].disabled = !hasFG;       // filegarden option
+    // Auto-select the first allowed option if current selection is disabled
+    if (sel.options[sel.selectedIndex] && sel.options[sel.selectedIndex].disabled) {
+      for (let i = 0; i < sel.options.length; i++) {
+        if (!sel.options[i].disabled) { sel.selectedIndex = i; onRDllHostChange(); break; }
+      }
+    }
+  }
   document.getElementById('modal-r-dll').classList.add('open');
 }
 
