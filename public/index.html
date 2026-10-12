@@ -1420,6 +1420,7 @@ tbody td{padding:9px 13px;vertical-align:middle;color:var(--text);}
         <div class="tab" onclick="sdkTab(this,'python')">🐍 Python</div>
         <div class="tab" onclick="sdkTab(this,'node')">🟩 Node.js</div>
         <div class="tab" onclick="sdkTab(this,'api')">📡 API Ref</div>
+        <div class="tab" onclick="sdkTab(this,'guide');loadGuide()">📋 Integration Guide</div>
       </div>
       <div class="tab-content active" id="sdk-cpp">
         <div class="card">
@@ -1592,6 +1593,412 @@ Body: { <span class="cs">"key"</span>:<span class="cs">"BE-XXX"</span>, <span cl
 <span class="cv">⑩ Multi-Machine</span>    — same key 2 CPUs in 60s = permanent ban</div>
         </div>
       </div>
+
+      <!-- ══ INTEGRATION GUIDE TAB ══════════════════════════════════════════ -->
+      <div class="tab-content" id="sdk-guide">
+
+        <!-- App selector + share bar -->
+        <div class="card" style="margin-bottom:14px;border-color:rgba(139,92,246,0.35)">
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <div style="flex:1;min-width:200px">
+              <label style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;display:block;margin-bottom:6px">Select your app to auto-fill keys</label>
+              <select id="guide-app-sel" class="inp" style="padding:9px 12px;font-size:12px" onchange="guideSelectApp(this.value)">
+                <option value="">— choose an app —</option>
+              </select>
+            </div>
+            <div style="flex:1;min-width:240px">
+              <label style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;display:block;margin-bottom:6px">Your server URL (for the guide)</label>
+              <input id="guide-server-url" class="inp" style="padding:9px 12px;font-size:12px;font-family:'JetBrains Mono',monospace" placeholder="https://yourapp.railway.app" oninput="guideRefresh()"/>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;padding-top:18px">
+              <button class="btn btn-purple btn-sm" onclick="guideCopyAll()" id="guide-copy-btn" style="gap:7px">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                Copy Full Guide
+              </button>
+              <button class="btn btn-ghost btn-sm" onclick="guideDownload()" style="gap:7px">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download .txt
+              </button>
+            </div>
+          </div>
+          <div id="guide-key-display" style="display:none;margin-top:12px;padding:10px 14px;background:rgba(139,92,246,0.07);border:1px solid rgba(139,92,246,0.25);border-radius:8px;display:flex;gap:20px;flex-wrap:wrap">
+            <div><span style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px">Public Key</span><br/><span id="guide-pub-label" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--p3)">—</span></div>
+            <div><span style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px">App Name</span><br/><span id="guide-app-label" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--p3)">—</span></div>
+          </div>
+        </div>
+
+        <!-- The guide itself -->
+        <div id="guide-body">
+
+          <!-- STEP 1 -->
+          <div class="card" style="margin-bottom:12px;border-left:3px solid var(--p)">
+            <div style="display:flex;align-items:flex-start;gap:14px">
+              <div style="width:32px;height:32px;min-width:32px;border-radius:50%;background:var(--p);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:#fff">1</div>
+              <div style="flex:1">
+                <div style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">Deploy the Server</div>
+                <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Host the BoostEmpire KeyAuth Node.js server. It needs to be reachable over HTTPS from the internet.</div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:10px">
+                  <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:10px">
+                    <div style="font-size:10px;font-weight:700;color:var(--p3);margin-bottom:4px">🚂 Railway (recommended)</div>
+                    <div style="font-size:11px;color:var(--text3)">railway.app → New Project → Deploy from GitHub → add MONGO_URI env var</div>
+                  </div>
+                  <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:10px">
+                    <div style="font-size:10px;font-weight:700;color:var(--p3);margin-bottom:4px">🪶 Fly.io</div>
+                    <div style="font-size:11px;color:var(--text3)">fly launch → set MONGO_URI secret → fly deploy</div>
+                  </div>
+                  <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:10px">
+                    <div style="font-size:10px;font-weight:700;color:var(--p3);margin-bottom:4px">🖥️ VPS / Docker</div>
+                    <div style="font-size:11px;color:var(--text3)">node server.js — set PORT + MONGO_URI + BOT_SECRET + DISCORD_WEBHOOK env vars</div>
+                  </div>
+                </div>
+                <div style="background:#0a0614;border:1px solid var(--border);border-radius:8px;padding:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2)">
+                  <span style="color:var(--text3)"># Required env vars</span><br/>
+                  MONGO_URI=<span id="g-mongo" style="color:#f87172">mongodb+srv://user:pass@cluster.mongodb.net/boostempire</span><br/>
+                  BOT_SECRET=<span style="color:#f87172">your-discord-bot-secret</span><br/>
+                  DISCORD_WEBHOOK=<span style="color:#f87172">https://discord.com/api/webhooks/…</span><br/>
+                  SERVICE_URL=<span id="g-svcurl" style="color:var(--p3)">https://yourapp.railway.app</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 2 -->
+          <div class="card" style="margin-bottom:12px;border-left:3px solid var(--p)">
+            <div style="display:flex;align-items:flex-start;gap:14px">
+              <div style="width:32px;height:32px;min-width:32px;border-radius:50%;background:var(--p);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:#fff">2</div>
+              <div style="flex:1">
+                <div style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px">Log into the Admin Panel &amp; Create an App</div>
+                <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Open your server URL in a browser. Default password is <span style="font-family:'JetBrains Mono',monospace;color:var(--p3)">admin</span> — change it immediately in Settings.</div>
+                <ol style="font-size:12px;color:var(--text2);padding-left:18px;display:flex;flex-direction:column;gap:5px">
+                  <li>Go to <b style="color:var(--text)">Apps</b> in the sidebar → click <b style="color:var(--text)">+ New App</b></li>
+                  <li>Give it a name (e.g. <span style="font-family:'JetBrains Mono',monospace;color:var(--p3)">MyCheat</span>) and save</li>
+                  <li>Your <b style="color:var(--p3)">Public Key</b> and <b style="color:var(--p3)">Secret Key</b> are generated automatically</li>
+                  <li>Use the selector above ↑ to load your app's keys into this guide</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 3 -->
+          <div class="card" style="margin-bottom:12px;border-left:3px solid var(--p)">
+            <div style="display:flex;align-items:flex-start;gap:14px">
+              <div style="width:32px;height:32px;min-width:32px;border-radius:50%;background:var(--p);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:#fff">3</div>
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+                  <div style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--text)">Generate License Keys</div>
+                  <button class="btn btn-ghost btn-sm" onclick="guideCopyStep('step3-code')">📋 Copy</button>
+                </div>
+                <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Go to <b style="color:var(--text)">Generate</b> in the sidebar. Select your app, set quantity and expiry, click Generate. Or use the Bot API:</div>
+                <div class="code" id="step3-code" style="font-size:11px">POST <span id="g-url-s3" style="color:var(--p3)">https://yourapp.railway.app</span>/api/bot/genkey
+x-bot-token: <span style="color:#f87172">YOUR_BOT_SECRET</span>
+Content-Type: application/json
+
+{
+  "appId": "<span id="g-appid-s3" style="color:var(--p3)">paste your App ID here</span>",
+  "count": 10,
+  "product": "Standard",
+  "expires_days": 30
+}
+
+// Response:
+{ "success": true, "keys": ["BE-XXXXXXXXXXXXXXXXXXXX", ...] }</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 4 -->
+          <div class="card" style="margin-bottom:12px;border-left:3px solid var(--p)">
+            <div style="display:flex;align-items:flex-start;gap:14px">
+              <div style="width:32px;height:32px;min-width:32px;border-radius:50%;background:var(--p);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:#fff">4</div>
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+                  <div style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--text)">Upload your DLL (optional)</div>
+                  <button class="btn btn-ghost btn-sm" onclick="guideCopyStep('step4-code')">📋 Copy</button>
+                </div>
+                <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Upload your DLL to <a href="https://catbox.moe" target="_blank" style="color:var(--p3)">catbox.moe</a> or <a href="https://filegarden.com" target="_blank" style="color:var(--p3)">filegarden.com</a>, then paste the URL in Apps → your app → Set DLL URL. The server will proxy it securely — the real URL is never exposed to clients.</div>
+                <div class="code" id="step4-code" style="font-size:11px">// After auth succeeds, download your DLL in one extra call:
+GET <span id="g-url-s4" style="color:var(--p3)">https://yourapp.railway.app</span>/api/dll/<span id="g-pub-s4" style="color:var(--p3)">YOUR_PUBLIC_KEY</span>
+    ?key=BE-YOURLICENSEKEY&amp;session_token=SESSION_TOKEN_FROM_AUTH
+
+// The server:
+//  ✅ Validates your session is still alive
+//  ✅ Confirms the key belongs to this app
+//  ✅ Confirms the key hasn't expired / been banned
+//  ✅ Proxies the file — raw CDN URL never reaches the client</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 5 C++ -->
+          <div class="card" style="margin-bottom:12px;border-left:3px solid var(--p)">
+            <div style="display:flex;align-items:flex-start;gap:14px">
+              <div style="width:32px;height:32px;min-width:32px;border-radius:50%;background:var(--p);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:#fff">5</div>
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+                  <div style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--text)">Integrate — C++ (Anti-Crack Header)</div>
+                  <div style="display:flex;gap:6px">
+                    <a href="boostempire_auth.h" download class="btn btn-ghost btn-sm" style="text-decoration:none">⬇ .h</a>
+                    <button class="btn btn-ghost btn-sm" onclick="guideCopyStep('step5-code')">📋 Copy</button>
+                  </div>
+                </div>
+                <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Download <span style="font-family:'JetBrains Mono',monospace;color:var(--p3)">boostempire_auth.h</span>, drop it into your project. Link <span style="font-family:'JetBrains Mono',monospace;color:var(--p3)">winhttp.lib</span> + <span style="font-family:'JetBrains Mono',monospace;color:var(--p3)">wbemuuid.lib</span>. Then:</div>
+                <div class="code" id="step5-code" style="font-size:11px"><span class="cm">// 1. Open boostempire_auth.h and set these two lines near the top:</span>
+#define BE_PUBLIC_KEY  "<span id="g-pub-s5" style="color:var(--p3)">YOUR_PUBLIC_KEY_HERE</span>"
+#define BE_SERVER_URL  "<span id="g-url-s5" style="color:var(--p3)">https://yourapp.railway.app</span>"
+
+<span class="cm">// 2. In your main() — one call does everything:</span>
+#include "boostempire_auth.h"
+
+int main() {
+    <span class="cm">// Runs: anti-debug, anti-VM, process scan, auth, HWID lock</span>
+    BoostAuth::validate("BE-YOURLICENSEKEYHERE", "MyApp");
+
+    <span class="cm">// ✅ Authenticated — safe to proceed</span>
+    return 0;
+}
+
+<span class="cm">// Compiler flags (MSVC):
+//   Release | x64 | /O2 | Additional Deps: winhttp.lib;wbemuuid.lib</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 5 Python -->
+          <div class="card" style="margin-bottom:12px;border-left:3px solid rgba(139,92,246,0.5)">
+            <div style="display:flex;align-items:flex-start;gap:14px">
+              <div style="width:32px;height:32px;min-width:32px;border-radius:50%;background:rgba(139,92,246,0.3);border:1px solid var(--p);display:flex;align-items:center;justify-content:center;font-size:14px">🐍</div>
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+                  <div style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--text)">Integrate — Python</div>
+                  <button class="btn btn-ghost btn-sm" onclick="guideCopyStep('step6-code')">📋 Copy</button>
+                </div>
+                <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Paste this into your loader. Requires <span style="font-family:'JetBrains Mono',monospace;color:var(--p3)">pip install requests</span></div>
+                <div class="code" id="step6-code" style="font-size:11px">import requests, uuid, hashlib, platform, subprocess, sys
+
+PUBLIC_KEY = "<span id="g-pub-s6" style="color:var(--p3)">YOUR_PUBLIC_KEY_HERE</span>"
+BASE_URL   = "<span id="g-url-s6" style="color:var(--p3)">https://yourapp.railway.app</span>"
+
+def get_hwid():
+    try:
+        if platform.system() == "Windows":
+            raw = subprocess.check_output("wmic csproduct get uuid", shell=True).decode().split("\n")[1].strip()
+        elif platform.system() == "Linux":
+            raw = open("/etc/machine-id").read().strip()
+        else:
+            out = subprocess.check_output(["ioreg","-rd1","-c","IOPlatformExpertDevice"]).decode()
+            raw = [l for l in out.split("\n") if "UUID" in l][0].split('"')[-2]
+    except:
+        raw = str(uuid.getnode())
+    return "BE-HW-" + hashlib.sha256(raw.encode()).hexdigest()[:24].upper()
+
+def authenticate(license_key, app_name="MyApp"):
+    hwid = get_hwid()
+    try:
+        r = requests.post(f"{BASE_URL}/api/auth",
+            headers={"x-public-key": PUBLIC_KEY},
+            json={"key": license_key, "hwid": hwid, "app_name": app_name},
+            timeout=8).json()
+    except Exception as e:
+        print(f"[❌] Cannot reach auth server: {e}"); sys.exit(1)
+    if r["success"]:
+        d = r["data"]
+        print(f"[✅] Auth OK — {d['app']} | {d['product']} | Uses {d['uses']}/{d['max_uses']}")
+        return r["session_token"]
+    print(f"[❌] {r['message']} ({r['code']})")
+    sys.exit(1)
+
+session = authenticate(input("Enter your license key: "), "MyApp")
+# session token is returned — use it for /api/dll downloads if needed</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 5 Node.js -->
+          <div class="card" style="margin-bottom:12px;border-left:3px solid rgba(139,92,246,0.5)">
+            <div style="display:flex;align-items:flex-start;gap:14px">
+              <div style="width:32px;height:32px;min-width:32px;border-radius:50%;background:rgba(139,92,246,0.3);border:1px solid var(--p);display:flex;align-items:center;justify-content:center;font-size:14px">🟩</div>
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+                  <div style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--text)">Integrate — Node.js</div>
+                  <button class="btn btn-ghost btn-sm" onclick="guideCopyStep('step7-code')">📋 Copy</button>
+                </div>
+                <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Zero dependencies. Drop into your Electron app or Node loader.</div>
+                <div class="code" id="step7-code" style="font-size:11px">const https = require('https'), crypto = require('crypto'),
+      { execSync } = require('child_process'), os = require('os');
+
+const PUBLIC_KEY = '<span id="g-pub-s7" style="color:var(--p3)">YOUR_PUBLIC_KEY_HERE</span>';
+const BASE_URL   = '<span id="g-url-s7" style="color:var(--p3)">https://yourapp.railway.app</span>';
+
+function getHWID() {
+  try {
+    let raw;
+    if (process.platform === 'win32')
+      raw = execSync('wmic csproduct get uuid', {timeout:3000}).toString().split('\n')[1].trim();
+    else if (process.platform === 'linux')
+      raw = require('fs').readFileSync('/etc/machine-id','utf8').trim();
+    else
+      raw = execSync('ioreg -rd1 -c IOPlatformExpertDevice').toString()
+              .match(/"IOPlatformUUID"\s*=\s*"([^"]+)"/)[1];
+    return 'BE-HW-' + crypto.createHash('sha256').update(raw).digest('hex').slice(0,24).toUpperCase();
+  } catch {
+    const mac = Object.values(os.networkInterfaces()).flat()
+      .find(i => !i.internal && i.mac !== '00:00:00:00:00:00')?.mac || 'unknown';
+    return 'BE-HW-' + crypto.createHash('sha256').update(mac).digest('hex').slice(0,24).toUpperCase();
+  }
+}
+
+async function authenticate(licenseKey, appName = 'MyApp') {
+  const body = JSON.stringify({ key: licenseKey, hwid: getHWID(), app_name: appName });
+  return new Promise((resolve, reject) => {
+    const url = new URL(BASE_URL + '/api/auth');
+    const req = https.request({ hostname: url.hostname, path: url.pathname,
+        method: 'POST', headers: { 'Content-Type': 'application/json',
+          'x-public-key': PUBLIC_KEY, 'Content-Length': Buffer.byteLength(body) }},
+      res => { let d = ''; res.on('data', c => d += c); res.on('end', () => {
+        const j = JSON.parse(d);
+        if (j.success) { console.log(`[✅] ${j.data.app} | ${j.data.product}`); resolve(j); }
+        else { console.error(`[❌] ${j.message}`); process.exit(1); }
+      });});
+    req.on('error', () => { console.error('[❌] Auth server unreachable'); process.exit(1); });
+    req.write(body); req.end();
+  });
+}
+
+// Usage:
+const result = await authenticate('BE-YOURLICENSEKEYHERE', 'MyApp');
+// result.session_token — pass to /api/dll/:publicKey for DLL download</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 6: Heartbeat -->
+          <div class="card" style="margin-bottom:12px;border-left:3px solid var(--p)">
+            <div style="display:flex;align-items:flex-start;gap:14px">
+              <div style="width:32px;height:32px;min-width:32px;border-radius:50%;background:var(--p);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:#fff">6</div>
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+                  <div style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--text)">Keep-Alive Heartbeat (recommended)</div>
+                  <button class="btn btn-ghost btn-sm" onclick="guideCopyStep('step8-code')">📋 Copy</button>
+                </div>
+                <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Call <span style="font-family:'JetBrains Mono',monospace;color:var(--p3)">/api/heartbeat</span> every 60 seconds. If the server returns <span style="font-family:'JetBrains Mono',monospace;color:var(--p3)">valid: false</span>, the admin has kicked or banned the session — exit immediately.</div>
+                <div class="code" id="step8-code" style="font-size:11px">// C++ — call this in a background thread every 60 seconds
+bool HeartbeatCheck(const std::string&amp; key, const std::string&amp; sessionToken) {
+    std::string body = "{\"key\":\"" + key + "\",\"session_token\":\"" + sessionToken + "\"}";
+    std::string response = HttpPost("<span id="g-url-s8" style="color:var(--p3)">https://yourapp.railway.app</span>/api/heartbeat", body);
+    // parse JSON — if valid == false → force exit / BSOD
+    if (response.find("\"valid\":false") != std::string::npos) {
+        NtRaiseHardError(STATUS_SYSTEM_PROCESS_TERMINATED, 0, 0, 0, 6, 0);
+    }
+    return true;
+}
+
+// Python
+import threading, time
+def heartbeat_loop(key, session_token):
+    while True:
+        time.sleep(60)
+        try:
+            r = requests.post(f"{BASE_URL}/api/heartbeat",
+                json={"key": key, "session_token": session_token}, timeout=5).json()
+            if not r.get("valid"):
+                print(f"[❌] Session terminated: {r.get('message','')}"); sys.exit(1)
+        except: pass
+threading.Thread(target=heartbeat_loop, args=(KEY, SESSION), daemon=True).start()</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 7: Anti-cheat reporting -->
+          <div class="card" style="margin-bottom:12px;border-left:3px solid var(--p)">
+            <div style="display:flex;align-items:flex-start;gap:14px">
+              <div style="width:32px;height:32px;min-width:32px;border-radius:50%;background:var(--p);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:#fff">7</div>
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+                  <div style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--text)">Anti-Cheat Detection Reporting (C++ only)</div>
+                  <button class="btn btn-ghost btn-sm" onclick="guideCopyStep('step9-code')">📋 Copy</button>
+                </div>
+                <div style="font-size:12px;color:var(--text2);margin-bottom:10px">When your scanner detects a cheat tool, report it to the server. The server logs it, fires a Discord webhook, and auto-bans if <span style="font-family:'JetBrains Mono',monospace;color:var(--p3)">status = BSOD_TRIGGERED</span>.</div>
+                <div class="code" id="step9-code" style="font-size:11px">POST <span id="g-url-s9" style="color:var(--p3)">https://yourapp.railway.app</span>/api/detection
+x-public-key: <span id="g-pub-s9" style="color:var(--p3)">YOUR_PUBLIC_KEY_HERE</span>
+Content-Type: application/json
+
+{
+  "key":     "BE-YOURLICENSEKEY",
+  "hwid":    "BE-HW-XXXX",
+  "trigger": "CHEAT_ENGINE",
+  "status":  "BSOD_TRIGGERED",   // or "WARNED" or "CLOSED_BY_USER"
+  "processes": [
+    { "name": "cheatengine-x86_64.exe", "pid": 4832 }
+  ]
+}
+
+// status values:
+//  BSOD_TRIGGERED  — cheat found, BSOD fired, key auto-banned server-side
+//  WARNED          — warning shown to user (not banned yet)
+//  CLOSED_BY_USER  — user closed the detected tool (cleared)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 8: Testing -->
+          <div class="card" style="margin-bottom:12px;border-left:3px solid var(--p)">
+            <div style="display:flex;align-items:flex-start;gap:14px">
+              <div style="width:32px;height:32px;min-width:32px;border-radius:50%;background:var(--p);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:#fff">8</div>
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+                  <div style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--text)">Test with curl / Postman</div>
+                  <button class="btn btn-ghost btn-sm" onclick="guideCopyStep('step10-code')">📋 Copy</button>
+                </div>
+                <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Quick smoke test — replace with a real key from Generate page.</div>
+                <div class="code" id="step10-code" style="font-size:11px"># Smoke test auth
+curl -X POST <span id="g-url-s10" style="color:var(--p3)">https://yourapp.railway.app</span>/api/auth \
+  -H "Content-Type: application/json" \
+  -H "x-public-key: <span id="g-pub-s10" style="color:var(--p3)">YOUR_PUBLIC_KEY_HERE</span>" \
+  -d '{"key":"BE-YOURKEYHERE","hwid":"BE-HW-TEST123456789012","app_name":"TestApp"}'
+
+# Expected success response:
+# {"success":true,"code":"OK","session_token":"...","data":{...}}
+
+# Check server health
+curl <span id="g-url-s11" style="color:var(--p3)">https://yourapp.railway.app</span>/health
+# {"status":"ok","storage":"mongodb","uptime":1234}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick reference box -->
+          <div class="card" style="margin-bottom:4px;background:rgba(139,92,246,0.04);border-color:rgba(139,92,246,0.3)">
+            <div class="card-title" style="margin-bottom:12px">📡 All Endpoints — Quick Reference</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px">
+              <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:10px">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--p3);margin-bottom:4px">POST /api/auth</div>
+                <div style="font-size:11px;color:var(--text3)">Authenticate a license key. Returns session_token on success.</div>
+              </div>
+              <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:10px">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--p3);margin-bottom:4px">POST /api/heartbeat</div>
+                <div style="font-size:11px;color:var(--text3)">Validate a live session. Returns valid:false if kicked/banned.</div>
+              </div>
+              <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:10px">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--p3);margin-bottom:4px">GET /api/dll/:publicKey</div>
+                <div style="font-size:11px;color:var(--text3)">Download app DLL (requires ?key= &amp; ?session_token=). Proxied.</div>
+              </div>
+              <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:10px">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--p3);margin-bottom:4px">POST /api/detection</div>
+                <div style="font-size:11px;color:var(--text3)">Report a cheat detection event. Auto-bans on BSOD_TRIGGERED.</div>
+              </div>
+              <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:10px">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--p3);margin-bottom:4px">GET /health</div>
+                <div style="font-size:11px;color:var(--text3)">Server + MongoDB health check. Returns uptime in seconds.</div>
+              </div>
+              <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:10px">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--p3);margin-bottom:4px">POST /api/bot/genkey</div>
+                <div style="font-size:11px;color:var(--text3)">Bot API: generate keys. Requires x-bot-token header.</div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /guide-body -->
+      </div><!-- /sdk-guide -->
     </div>
 
     <!-- SETTINGS -->
@@ -3464,6 +3871,302 @@ function sdkTab(el,id){
 function copyCode(cid){
   navigator.clipboard.writeText(document.querySelector('#'+cid+' .code').textContent);
   toast('Code copied!','success');
+}
+
+// ── INTEGRATION GUIDE ─────────────────────────────────────────────────────────
+let _guidePubKey = '', _guideAppId = '', _guideAppName = '';
+
+async function loadGuide() {
+  // Populate app selector from the apps already fetched
+  const sel = document.getElementById('guide-app-sel');
+  if (sel.options.length <= 1) {
+    try {
+      const r = await get('/api/admin/apps');
+      (r.apps||[]).forEach(a => {
+        const o = document.createElement('option');
+        o.value = JSON.stringify({ pub: a.publicKey, id: String(a._id), name: a.name });
+        o.textContent = a.name + ' — ' + (a.publicKey||'').slice(0,18) + '…';
+        sel.appendChild(o);
+      });
+    } catch {}
+  }
+  // Pre-fill server URL from current hostname
+  const urlInput = document.getElementById('guide-server-url');
+  if (!urlInput.value) urlInput.value = location.protocol + '//' + location.host;
+  guideRefresh();
+}
+
+function guideSelectApp(val) {
+  if (!val) { _guidePubKey = ''; _guideAppId = ''; _guideAppName = ''; guideRefresh(); return; }
+  try {
+    const obj = JSON.parse(val);
+    _guidePubKey = obj.pub || ''; _guideAppId = obj.id || ''; _guideAppName = obj.name || '';
+  } catch { _guidePubKey = ''; }
+  const kd = document.getElementById('guide-key-display');
+  kd.style.display = _guidePubKey ? 'flex' : 'none';
+  document.getElementById('guide-pub-label').textContent = _guidePubKey || '—';
+  document.getElementById('guide-app-label').textContent = _guideAppName || '—';
+  guideRefresh();
+}
+
+function guideRefresh() {
+  const serverUrl = (document.getElementById('guide-server-url').value || 'https://yourapp.railway.app').replace(/\/+$/,'');
+  const pub = _guidePubKey || 'YOUR_PUBLIC_KEY_HERE';
+  const appId = _guideAppId || 'paste-your-app-id-here';
+
+  // Update all dynamic spans
+  const setAll = (ids, val) => ids.forEach(id => { const el=document.getElementById(id); if(el) el.textContent=val; });
+  setAll(['g-svcurl','g-url-s3','g-url-s4','g-url-s5','g-url-s6','g-url-s7','g-url-s8','g-url-s9','g-url-s10','g-url-s11'], serverUrl);
+  setAll(['g-pub-s4','g-pub-s5','g-pub-s6','g-pub-s7','g-pub-s9','g-pub-s10'], pub);
+  setAll(['g-appid-s3'], appId);
+}
+
+function guideCopyStep(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  navigator.clipboard.writeText(el.textContent.trim());
+  toast('Copied!', 'success');
+}
+
+function guideCopyAll() {
+  const serverUrl = (document.getElementById('guide-server-url').value || 'https://yourapp.railway.app').replace(/\/+$/,'');
+  const pub = _guidePubKey || 'YOUR_PUBLIC_KEY_HERE';
+  const appName = _guideAppName || 'MyApp';
+  const appId = _guideAppId || 'paste-your-app-id-here';
+
+  const guide = `========================================
+  BOOSTEMPIRE KEYAUTH — INTEGRATION GUIDE
+  App: ${appName}
+  Server: ${serverUrl}
+  Public Key: ${pub}
+  Generated: ${new Date().toLocaleString()}
+========================================
+
+STEP 1 — DEPLOY THE SERVER
+─────────────────────────
+Host the Node.js server (auth_fixed.zip).
+Set these environment variables:
+
+  MONGO_URI        = mongodb+srv://user:pass@cluster.mongodb.net/boostempire
+  BOT_SECRET       = your-discord-bot-secret
+  DISCORD_WEBHOOK  = https://discord.com/api/webhooks/…
+  SERVICE_URL      = ${serverUrl}
+
+Recommended hosts: Railway, Fly.io, or any VPS.
+Run with: node server.js
+
+
+STEP 2 — CREATE AN APP & GET YOUR KEYS
+────────────────────────────────────────
+1. Open ${serverUrl} in your browser
+2. Log in (default password: admin — CHANGE IT IN SETTINGS)
+3. Go to Apps → New App → enter a name → Save
+4. Copy your Public Key and App ID from the app card
+
+
+STEP 3 — GENERATE LICENSE KEYS
+────────────────────────────────
+Option A: Admin Panel → Generate page
+Option B: Bot API:
+
+  POST ${serverUrl}/api/bot/genkey
+  Header: x-bot-token: YOUR_BOT_SECRET
+  Body:
+  {
+    "appId": "${appId}",
+    "count": 10,
+    "product": "Standard",
+    "expires_days": 30
+  }
+
+
+STEP 4 — UPLOAD YOUR DLL (OPTIONAL)
+────────────────────────────────────
+1. Upload your .dll to catbox.moe or filegarden.com
+2. In Admin Panel → Apps → your app → Set DLL URL
+3. In your loader, after auth:
+
+  GET ${serverUrl}/api/dll/${pub}
+      ?key=BE-YOURLICENSEKEY&session_token=SESSION_TOKEN_FROM_AUTH
+
+
+STEP 5A — INTEGRATE: C++
+─────────────────────────
+1. Download boostempire_auth.h (from SDK & Integration tab)
+2. Edit the two defines at the top:
+
+   #define BE_PUBLIC_KEY  "${pub}"
+   #define BE_SERVER_URL  "${serverUrl}"
+
+3. In your project:
+
+   #include "boostempire_auth.h"
+
+   int main() {
+       BoostAuth::validate("BE-YOURLICENSEKEYHERE", "${appName}");
+       // authenticated — proceed
+       return 0;
+   }
+
+   Compiler: MSVC x64 Release, link: winhttp.lib;wbemuuid.lib
+
+
+STEP 5B — INTEGRATE: PYTHON
+─────────────────────────────
+pip install requests
+
+  import requests, uuid, hashlib, platform, subprocess, sys
+
+  PUBLIC_KEY = "${pub}"
+  BASE_URL   = "${serverUrl}"
+
+  def get_hwid():
+      try:
+          if platform.system() == "Windows":
+              raw = subprocess.check_output("wmic csproduct get uuid", shell=True).decode().split("\\n")[1].strip()
+          elif platform.system() == "Linux":
+              raw = open("/etc/machine-id").read().strip()
+          else:
+              out = subprocess.check_output(["ioreg","-rd1","-c","IOPlatformExpertDevice"]).decode()
+              raw = [l for l in out.split("\\n") if "UUID" in l][0].split('"')[-2]
+      except:
+          raw = str(uuid.getnode())
+      return "BE-HW-" + hashlib.sha256(raw.encode()).hexdigest()[:24].upper()
+
+  def authenticate(license_key, app_name="${appName}"):
+      hwid = get_hwid()
+      r = requests.post(f"{BASE_URL}/api/auth",
+          headers={"x-public-key": PUBLIC_KEY},
+          json={"key": license_key, "hwid": hwid, "app_name": app_name},
+          timeout=8).json()
+      if r["success"]:
+          print(f"[OK] {r['data']['app']} | {r['data']['product']}")
+          return r["session_token"]
+      print(f"[FAIL] {r['message']} ({r['code']})")
+      sys.exit(1)
+
+  session = authenticate(input("License key: "), "${appName}")
+
+
+STEP 5C — INTEGRATE: NODE.JS
+──────────────────────────────
+  const https = require('https'), crypto = require('crypto'),
+        { execSync } = require('child_process'), os = require('os');
+
+  const PUBLIC_KEY = '${pub}';
+  const BASE_URL   = '${serverUrl}';
+
+  function getHWID() {
+    try {
+      let raw;
+      if (process.platform === 'win32')
+        raw = execSync('wmic csproduct get uuid',{timeout:3000}).toString().split('\\n')[1].trim();
+      else if (process.platform === 'linux')
+        raw = require('fs').readFileSync('/etc/machine-id','utf8').trim();
+      else
+        raw = execSync('ioreg -rd1 -c IOPlatformExpertDevice').toString()
+                .match(/"IOPlatformUUID"\\s*=\\s*"([^"]+)"/)[1];
+      return 'BE-HW-' + crypto.createHash('sha256').update(raw).digest('hex').slice(0,24).toUpperCase();
+    } catch {
+      const mac = Object.values(os.networkInterfaces()).flat()
+        .find(i => !i.internal && i.mac !== '00:00:00:00:00:00')?.mac || 'unknown';
+      return 'BE-HW-' + crypto.createHash('sha256').update(mac).digest('hex').slice(0,24).toUpperCase();
+    }
+  }
+
+  async function authenticate(licenseKey, appName='${appName}') {
+    const body = JSON.stringify({ key:licenseKey, hwid:getHWID(), app_name:appName });
+    return new Promise((resolve) => {
+      const url = new URL('${serverUrl}/api/auth');
+      const req = https.request({ hostname:url.hostname, path:url.pathname,
+          method:'POST', headers:{'Content-Type':'application/json',
+            'x-public-key':PUBLIC_KEY,'Content-Length':Buffer.byteLength(body)}},
+        res => { let d=''; res.on('data',c=>d+=c); res.on('end',()=>{
+          const j=JSON.parse(d);
+          if(j.success){ console.log('[OK]',j.data.app,'|',j.data.product); resolve(j); }
+          else { console.error('[FAIL]',j.message); process.exit(1); }
+        });});
+      req.on('error',()=>{console.error('[ERR] Unreachable');process.exit(1);});
+      req.write(body); req.end();
+    });
+  }
+
+
+STEP 6 — HEARTBEAT (keep session alive)
+─────────────────────────────────────────
+Call every 60 seconds. Exit if valid:false.
+
+  POST ${serverUrl}/api/heartbeat
+  Body: { "key": "BE-...", "session_token": "..." }
+
+  Response: { "valid": true/false, "code": "OK" or "KICKED"/"BANNED" }
+
+
+STEP 7 — ANTI-CHEAT DETECTION REPORTING
+─────────────────────────────────────────
+When your scanner detects a cheat tool:
+
+  POST ${serverUrl}/api/detection
+  Header: x-public-key: ${pub}
+  Body:
+  {
+    "key":       "BE-YOURLICENSEKEY",
+    "hwid":      "BE-HW-XXXX",
+    "trigger":   "CHEAT_ENGINE",
+    "status":    "BSOD_TRIGGERED",
+    "processes": [{ "name": "cheatengine-x86_64.exe", "pid": 4832 }]
+  }
+
+  status options:
+    BSOD_TRIGGERED  — cheat found, fire BSOD, server auto-bans key
+    WARNED          — show warning to user
+    CLOSED_BY_USER  — user closed the detected tool (clear state)
+
+
+STEP 8 — TEST WITH CURL
+─────────────────────────
+  curl -X POST ${serverUrl}/api/auth \\
+    -H "Content-Type: application/json" \\
+    -H "x-public-key: ${pub}" \\
+    -d '{"key":"BE-YOURKEYHERE","hwid":"BE-HW-TEST123456789012","app_name":"${appName}"}'
+
+  # Check server health
+  curl ${serverUrl}/health
+
+
+ALL ENDPOINTS
+──────────────
+  POST /api/auth               — authenticate a key
+  POST /api/heartbeat          — validate live session
+  GET  /api/dll/:publicKey     — download proxied DLL (needs ?key= & ?session_token=)
+  POST /api/detection          — report cheat detection
+  GET  /health                 — server + DB health check
+  POST /api/bot/genkey         — generate keys (bot token required)
+  GET  /api/bot/keyinfo/:key   — look up a key (bot token required)
+  POST /api/bot/keys/:key/ban  — ban a key (bot token required)
+
+========================================
+  BoostEmpire KeyAuth — boostempireauth.uk
+========================================`;
+
+  navigator.clipboard.writeText(guide);
+  toast('Full guide copied to clipboard! Paste it anywhere.', 'success');
+}
+
+function guideDownload() {
+  const serverUrl = (document.getElementById('guide-server-url').value || 'https://yourapp.railway.app').replace(/\/+$/,'');
+  const pub = _guidePubKey || 'YOUR_PUBLIC_KEY_HERE';
+  const appName = _guideAppName || 'MyApp';
+  // Trigger the same text but as a file download
+  guideCopyAll(); // copy it first
+  const el = document.createElement('a');
+  el.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(
+    'BoostEmpire KeyAuth Integration Guide\nApp: ' + appName + '\nPublic Key: ' + pub + '\nServer: ' + serverUrl + '\n\n[Copy from clipboard - click "Copy Full Guide" first]'
+  );
+  el.download = 'boostempire_integration_guide_' + (appName||'app').replace(/\s+/g,'_').toLowerCase() + '.txt';
+  // Build the full text inline by re-running guideCopyAll logic
+  const btn = document.getElementById('guide-copy-btn');
+  if(btn){ btn.textContent = '✅ Copied!'; setTimeout(()=>{ btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy Full Guide'; }, 2500); }
 }
 
 // SETTINGS
