@@ -2087,7 +2087,15 @@ curl <span id="g-url-s11" style="color:var(--p3)">https://yourapp.railway.app</s
               </div>
               <button class="btn btn-ghost btn-sm" onclick="agCopy('ag-auth-code')">📋 Copy</button>
             </div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Rate limited · No admin token required · Returns a <code style="font-family:'JetBrains Mono',monospace;color:var(--p3)">session_token</code> on success</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Rate limited · No admin token required · Returns a <code style="font-family:'JetBrains Mono',monospace;color:var(--p3)">session_token</code> on success</div>
+
+            <div style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:8px;padding:12px 14px;margin-bottom:10px;font-size:11px;color:var(--text2);line-height:1.7">
+              <b style="color:#34d399">What this does:</b> This is the main gate. Your software calls this endpoint when the user enters their license key. The server checks if the key exists, isn't banned or expired, and matches the current machine's HWID. If everything passes, it returns a <code style="font-family:'JetBrains Mono',monospace;color:var(--p3)">session_token</code> — save that, you need it for heartbeat and DLL download.<br/><br/>
+              <b style="color:#34d399">x-public-key header:</b> This is your app's Public Key from the admin panel (Apps → your app → copy Public Key). It tells the server which app is making the request. Never share this publicly — keep it compiled into your loader.<br/><br/>
+              <b style="color:#34d399">hwid field:</b> A unique fingerprint of the user's machine (CPU ID + motherboard serial, hashed). This is what prevents key sharing — once a key is used on a machine it locks to that machine. Use the HWID generation code further down this guide.<br/><br/>
+              <b style="color:#34d399">On failure:</b> Always check the <code style="font-family:'JetBrains Mono',monospace;color:var(--p3)">code</code> field, not just <code style="font-family:'JetBrains Mono',monospace;color:var(--p3)">success</code>. Each code tells you exactly why it failed so you can show the right message to the user (e.g. "EXPIRED" → tell them to renew, "HWID_MISMATCH" → tell them to contact support for a reset).
+            </div>
+
             <div class="code" id="ag-auth-code" style="font-size:11px"><span style="color:var(--text3)">// ── REQUEST ───────────────────────────────────────────────────────</span>
 POST <span id="ag-url-auth" style="color:#34d399">https://yourapp.railway.app</span>/api/auth
 Content-Type: application/json
@@ -2148,7 +2156,15 @@ x-timestamp:  &lt;Date.now() in milliseconds&gt;
               </div>
               <button class="btn btn-ghost btn-sm" onclick="agCopy('ag-hb-code')">📋 Copy</button>
             </div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:8px">If <code style="font-family:'JetBrains Mono',monospace;color:#f87172">valid: false</code> is returned the admin has kicked/banned the session — exit your app immediately.</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:10px">If <code style="font-family:'JetBrains Mono',monospace;color:#f87172">valid: false</code> is returned the admin has kicked/banned the session — exit your app immediately.</div>
+
+            <div style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:8px;padding:12px 14px;margin-bottom:10px;font-size:11px;color:var(--text2);line-height:1.7">
+              <b style="color:#34d399">What this does:</b> Keeps the user's session alive on the server and lets you terminate them remotely in real time. Without heartbeat, a user who gets banned mid-session would stay running until they restart.<br/><br/>
+              <b style="color:#34d399">When to call it:</b> Start a background thread right after a successful <code style="font-family:'JetBrains Mono',monospace;color:var(--p3)">/api/auth</code> and call this every 60 seconds. Do not call it from your main thread — it must run in the background so it doesn't freeze your software.<br/><br/>
+              <b style="color:#34d399">What to do on valid: false:</b> Exit the software immediately — do not let execution continue. Use a hard exit like <code style="font-family:'JetBrains Mono',monospace;color:var(--p3)">ExitProcess(0)</code> in C++ or <code style="font-family:'JetBrains Mono',monospace;color:var(--p3)">sys.exit()</code> in Python. The <code style="font-family:'JetBrains Mono',monospace;color:var(--p3)">code</code> field tells you why (KICKED, BANNED, FROZEN, EXPIRED) so you can show the user an appropriate message before closing.<br/><br/>
+              <b style="color:#34d399">No public key header needed here</b> — the session_token already identifies the user and app. Just send the key + token in the body.
+            </div>
+
             <div class="code" id="ag-hb-code" style="font-size:11px"><span style="color:var(--text3)">// ── REQUEST ───────────────────────────────────────────────────────</span>
 POST <span id="ag-url-hb" style="color:#34d399">https://yourapp.railway.app</span>/api/heartbeat
 Content-Type: application/json
@@ -2206,7 +2222,15 @@ threading.Thread(target=heartbeat_loop, args=(KEY, SESSION, BASE_URL), daemon=Tr
               </div>
               <button class="btn btn-ghost btn-sm" onclick="agCopy('ag-dll-code')">📋 Copy</button>
             </div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Requires a valid <code style="font-family:'JetBrains Mono',monospace;color:var(--p3)">session_token</code> from a recent <code style="font-family:'JetBrains Mono',monospace;color:var(--p3)">/api/auth</code> call. The real CDN URL is never exposed.</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Requires a valid <code style="font-family:'JetBrains Mono',monospace;color:var(--p3)">session_token</code> from a recent <code style="font-family:'JetBrains Mono',monospace;color:var(--p3)">/api/auth</code> call. The real CDN URL is never exposed.</div>
+
+            <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.2);border-radius:8px;padding:12px 14px;margin-bottom:10px;font-size:11px;color:var(--text2);line-height:1.7">
+              <b style="color:var(--p3)">What this does:</b> Lets you serve your DLL/payload through your auth server instead of a raw download link. The user never sees the real file URL — it only downloads after the server confirms auth is valid. This means leaked links are useless without a valid session.<br/><br/>
+              <b style="color:var(--p3)">When to use it:</b> Only needed if you upload a DLL to your app in the admin panel (Apps → your app → upload DLL). If you're bundling the DLL inside your loader executable already, skip this endpoint entirely.<br/><br/>
+              <b style="color:var(--p3)">:publicKey in the URL:</b> Replace this with your actual Public Key — it's part of the URL path, not a header. The server uses it to look up which DLL to serve for that specific app.<br/><br/>
+              <b style="color:var(--p3)">Call it right after auth:</b> Use the <code style="font-family:'JetBrains Mono',monospace;color:var(--p3)">session_token</code> you got from <code style="font-family:'JetBrains Mono',monospace;color:var(--p3)">/api/auth</code>. The response is the raw binary file — write the bytes to disk or load them directly into memory for injection.
+            </div>
+
             <div class="code" id="ag-dll-code" style="font-size:11px"><span style="color:var(--text3)">// ── REQUEST ───────────────────────────────────────────────────────</span>
 GET <span id="ag-url-dll" style="color:#34d399">https://yourapp.railway.app</span>/api/dll/<span id="ag-pub-dll" style="color:var(--p3)">YOUR_PUBLIC_KEY</span>
     ?key=BE-YOURLICENSEKEYHERE
@@ -2251,7 +2275,18 @@ else:
               </div>
               <button class="btn btn-ghost btn-sm" onclick="agCopy('ag-det-code')">📋 Copy</button>
             </div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:8px">The server logs the detection, fires a Discord webhook, and auto-bans the key when <code style="font-family:'JetBrains Mono',monospace;color:#f87171">status = BSOD_TRIGGERED</code>.</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:10px">The server logs the detection, fires a Discord webhook, and auto-bans the key when <code style="font-family:'JetBrains Mono',monospace;color:#f87171">status = BSOD_TRIGGERED</code>.</div>
+
+            <div style="background:rgba(248,113,113,0.06);border:1px solid rgba(248,113,113,0.2);border-radius:8px;padding:12px 14px;margin-bottom:10px;font-size:11px;color:var(--text2);line-height:1.7">
+              <b style="color:#f87171">What this does:</b> If your software has an anti-cheat scanner built in (process detection, window detection, etc.) and it finds something, call this endpoint to report it. The admin panel logs it, your Discord gets a webhook alert, and if you set status to <code style="font-family:'JetBrains Mono',monospace;color:#f87171">BSOD_TRIGGERED</code> the key is automatically banned server-side.<br/><br/>
+              <b style="color:#f87171">This is optional</b> — only implement it if your software actually scans for cheats/debuggers. If you don't have a scanner, skip this endpoint entirely.<br/><br/>
+              <b style="color:#f87171">The 3 status values explained:</b><br/>
+              • <code style="font-family:'JetBrains Mono',monospace;color:#f87171">BSOD_TRIGGERED</code> — you already BSODed or crashed the cheater's machine and want to also ban their key so they can't come back<br/>
+              • <code style="font-family:'JetBrains Mono',monospace;color:#f87171">WARNED</code> — you showed the user a warning popup (key not banned yet, just logged)<br/>
+              • <code style="font-family:'JetBrains Mono',monospace;color:#f87171">CLOSED_BY_USER</code> — user closed the detected tool themselves, threat cleared<br/><br/>
+              <b style="color:#f87171">processes array:</b> Pass the full list of suspicious processes your scanner found. This shows up in your admin detection logs so you can see exactly what they were running.
+            </div>
+
             <div class="code" id="ag-det-code" style="font-size:11px"><span style="color:var(--text3)">// ── REQUEST ───────────────────────────────────────────────────────</span>
 POST <span id="ag-url-det" style="color:#34d399">https://yourapp.railway.app</span>/api/detection
 Content-Type: application/json
@@ -2309,7 +2344,7 @@ GET <span id="ag-url-health" style="color:#34d399">https://yourapp.railway.app</
       <!-- HWID generation guide -->
       <div class="card" style="margin-bottom:12px;border-color:rgba(52,211,153,0.25)">
         <div class="card-title" style="margin-bottom:12px;color:#34d399">🖥️ How to Generate a Valid HWID</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:12px">The HWID must be unique per machine, at least 8 characters, and pass entropy checks. Suspicious patterns (all zeros, "fake", "null", debugger names) are rejected. Below are proven methods for each language.</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.7">The HWID (Hardware ID) is a unique fingerprint of the user's machine — it's what locks a license key to one PC so it can't be shared. The server generates it by combining hardware identifiers (CPU serial, motherboard serial) and hashing them so the raw hardware info is never sent over the network. <b style="color:var(--text)">Rules:</b> must be at least 8 characters, must be unique per machine, must not contain suspicious patterns (all zeros, "fake", "null", "test", debugger names) — the server actively checks for these and rejects them. Use the code below exactly as written; don't try to make up your own HWID format.</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
           <button class="btn btn-ghost btn-sm ag-hwid-tab active" onclick="agHwidTab(this,'hwid-cpp')">⚙️ C++</button>
           <button class="btn btn-ghost btn-sm ag-hwid-tab" onclick="agHwidTab(this,'hwid-python')">🐍 Python</button>
@@ -2399,29 +2434,29 @@ function getHWID() {
       <div class="card" style="margin-bottom:4px;background:rgba(52,211,153,0.04);border-color:rgba(52,211,153,0.3)">
         <div class="card-title" style="margin-bottom:12px;color:#34d399">✅ Integration Checklist</div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px">
-          <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:10px">
-            <div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:6px">Step 1 — Get your keys</div>
-            <div style="font-size:11px;color:var(--text3)">In the admin panel: Apps → select your app → copy Public Key. Set it as a constant in your loader code.</div>
+          <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:12px">
+            <div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:6px">Step 1 — Get your Public Key</div>
+            <div style="font-size:11px;color:var(--text3);line-height:1.6">Go to the admin panel → Apps → click your app → copy the <b style="color:var(--text)">Public Key</b>. This is NOT your admin password — it's a safe identifier that goes inside your loader code. Paste it as a constant at the top of your code (e.g. <code style="font-family:'JetBrains Mono',monospace">const std::string PUBLIC_KEY = "pk_..."</code>). Also copy your server URL from Railway.</div>
           </div>
-          <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:10px">
-            <div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:6px">Step 2 — Generate a HWID</div>
-            <div style="font-size:11px;color:var(--text3)">Use the HWID code above. It must be unique per machine. Never hardcode a test HWID in production.</div>
+          <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:12px">
+            <div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:6px">Step 2 — Generate the HWID</div>
+            <div style="font-size:11px;color:var(--text3);line-height:1.6">The HWID is a unique fingerprint of the user's machine. It's what locks a key to one PC. Use the code from the "How to Generate a Valid HWID" section above — call it once at startup before the auth request. Never hardcode a fake HWID or reuse the same string for all users, the server will detect it and reject it.</div>
           </div>
-          <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:10px">
+          <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:12px">
             <div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:6px">Step 3 — Call /api/auth</div>
-            <div style="font-size:11px;color:var(--text3)">POST with your public key header, license key, and HWID. Save the <code style="font-family:'JetBrains Mono',monospace">session_token</code>.</div>
+            <div style="font-size:11px;color:var(--text3);line-height:1.6">This is the login check. Send the user's license key + the HWID you generated in Step 2. The server verifies everything and returns a <code style="font-family:'JetBrains Mono',monospace">session_token</code>. <b style="color:var(--text)">Save this token</b> — you need it for heartbeat and DLL download. If auth fails, read the <code style="font-family:'JetBrains Mono',monospace">code</code> field to show the right error message, then exit.</div>
           </div>
-          <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:10px">
-            <div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:6px">Step 4 — Start heartbeat loop</div>
-            <div style="font-size:11px;color:var(--text3)">Spin up a background thread that calls <code style="font-family:'JetBrains Mono',monospace">/api/heartbeat</code> every 60s. Exit on <code style="font-family:'JetBrains Mono',monospace">valid: false</code>.</div>
+          <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:12px">
+            <div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:6px">Step 4 — Start the heartbeat loop</div>
+            <div style="font-size:11px;color:var(--text3);line-height:1.6">Right after a successful auth, spin up a <b style="color:var(--text)">background thread</b> that calls <code style="font-family:'JetBrains Mono',monospace">/api/heartbeat</code> every 60 seconds. This is what makes real-time banning work — if you ban someone in the admin panel while they're running, their next heartbeat returns <code style="font-family:'JetBrains Mono',monospace">valid: false</code> and their software exits. Without this, bans only take effect on next launch.</div>
           </div>
-          <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:10px">
-            <div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:6px">Step 5 — (Optional) Download DLL</div>
-            <div style="font-size:11px;color:var(--text3)">GET <code style="font-family:'JetBrains Mono',monospace">/api/dll/:publicKey?key=…&amp;session_token=…</code> to download your payload securely.</div>
+          <div style="background:#000;border:1px solid rgba(139,92,246,0.3);border-radius:8px;padding:12px">
+            <div style="font-size:10px;font-weight:700;color:var(--p3);margin-bottom:6px">Step 5 — (Optional) Download your DLL</div>
+            <div style="font-size:11px;color:var(--text3);line-height:1.6">Only needed if you uploaded a DLL to your app in the admin panel. Instead of hosting the DLL on a raw CDN link (which can be leaked and shared), your loader downloads it through the server after a valid auth. The server checks the session is alive before serving the file, so leaked links are useless. Skip this step if you bundle the DLL inside your loader EXE already.</div>
           </div>
-          <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:10px">
-            <div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:6px">Step 6 — (Optional) Anti-cheat</div>
-            <div style="font-size:11px;color:var(--text3)">POST to <code style="font-family:'JetBrains Mono',monospace">/api/detection</code> when your scanner triggers. Use <code style="font-family:'JetBrains Mono',monospace">BSOD_TRIGGERED</code> to auto-ban.</div>
+          <div style="background:#000;border:1px solid rgba(248,113,113,0.3);border-radius:8px;padding:12px">
+            <div style="font-size:10px;font-weight:700;color:#f87171;margin-bottom:6px">Step 6 — (Optional) Anti-cheat reporting</div>
+            <div style="font-size:11px;color:var(--text3);line-height:1.6">If your software includes a process scanner or cheat detector, call <code style="font-family:'JetBrains Mono',monospace">/api/detection</code> when something is found. This logs the detection in your admin panel, fires a Discord alert, and can auto-ban the key. Only implement this if you actually have detection logic in your code — it's not required for basic key auth to work.</div>
           </div>
         </div>
       </div>
