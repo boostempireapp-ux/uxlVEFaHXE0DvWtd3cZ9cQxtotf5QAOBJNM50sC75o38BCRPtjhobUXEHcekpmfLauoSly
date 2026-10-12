@@ -878,6 +878,8 @@ const ALLOWED_DLL_HOSTS = [
   'drive.google.com',
   'dropbox.com',
   'dl.dropboxusercontent.com',
+  'filegarden.com',
+  'cdn.filegarden.com',
 ];
 
 function isAllowedDllHost(urlStr) {
@@ -891,7 +893,7 @@ function isAllowedDllHost(urlStr) {
 app.post('/api/admin/apps/:id/set-dll', requireAdmin, async (req, res) => {
   const { dllUrl } = req.body;
   if (dllUrl && !isAllowedDllHost(dllUrl))
-    return res.json({ success: false, message: 'DLL host not in allowlist. Supported: Catbox, Discord CDN, GitHub, jsDelivr, Google Drive, Dropbox.' });
+    return res.json({ success: false, message: 'DLL host not in allowlist. Supported: Catbox, File Garden, Discord CDN, GitHub, jsDelivr, Google Drive, Dropbox.' });
   const val = dllUrl && String(dllUrl).trim() ? String(dllUrl).trim() : null;
   const appDoc = await appsCol.findOne({ _id: new ObjectId(req.params.id) }, { projection: { name: 1 } });
   await appsCol.updateOne({ _id: new ObjectId(req.params.id) }, { $set: { dllUrl: val } });
@@ -1531,7 +1533,7 @@ app.post('/api/reseller/apps/:id/set-dll', requireReseller, async (req, res) => 
   }
 
   if (!isAllowedDllHost(val))
-    return res.json({ success: false, message: 'Only Catbox, Discord CDN, GitHub, jsDelivr, Google Drive, and Dropbox URLs are allowed.' });
+    return res.json({ success: false, message: 'Only Catbox, File Garden, Discord CDN, GitHub, jsDelivr, Google Drive, and Dropbox URLs are allowed.' });
 
   const appDoc = await appsCol.findOne({ _id: new ObjectId(req.params.id) }, { projection: { name: 1 } });
   if (!appDoc) return res.json({ success: false, message: 'App not found.' });
