@@ -1,7 +1,7 @@
 const express      = require('express');
 const compression  = require('compression');
 const { MongoClient, ObjectId } = require('mongodb');
-const { randomUUID, createHash, createHmac, timingSafeEqual } = require('crypto');
+const { randomUUID, randomBytes, createHash, createHmac, timingSafeEqual } = require('crypto');
 const path     = require('path');
 const https    = require('https');
 const http     = require('http');
@@ -147,9 +147,7 @@ function b32Encode(buf) {
 }
 
 function totpGenSecret() {
-  const bytes = [];
-  for (let i = 0; i < 20; i++) bytes.push(Math.floor(Math.random() * 256));
-  return b32Encode(Buffer.from(bytes));
+  return b32Encode(randomBytes(20));
 }
 
 function totpCode(secret, windowOffset = 0) {
@@ -178,14 +176,21 @@ function totpUri(secret, label = 'BoostEmpire Admin') {
 let db;
 let keysCol, logsCol, adminCol, appsCol, blocksCol, resellersCol, detectionsCol, adminAuditCol, dllLogsCol;
 
+let mongoClient; // keep reference for reconnect health checks
+
 async function connectDB() {
   const client = new MongoClient(MONGO_URI, {
     maxPoolSize: 10,
     minPoolSize: 2,
-    serverSelectionTimeoutMS: 5000,
+    serverSelectionTimeoutMS: 10000,
     socketTimeoutMS: 45000,
+    connectTimeoutMS: 10000,
+    heartbeatFrequencyMS: 10000,
+    retryWrites: true,
+    retryReads: true,
     compressors: ['zlib'],
   });
+  mongoClient = client;
   await client.connect();
   db             = client.db(DB_NAME);
   keysCol        = db.collection('keys');
@@ -201,35 +206,38 @@ async function connectDB() {
   await keysCol.createIndex({ key: 1 }, { unique: true });
   await keysCol.createIndex({ appId: 1, status: 1 });
   await keysCol.createIndex({ appId: 1, key: 1 });
+  await keysCol.createIndex({ createdBy: 1 });
   await logsCol.createIndex({ timestamp: -1 });
   await logsCol.createIndex({ appId: 1, timestamp: -1 });
   await logsCol.createIndex({ result: 1, timestamp: -1 });
+  await logsCol.createIndex({ key: 1, timestamp: -1 });  // speeds up HWID mismatch enrichment
   await appsCol.createIndex({ publicKey: 1 }, { unique: true });
   await blocksCol.createIndex({ ip: 1 }, { unique: true });
   await resellersCol.createIndex({ username: 1 }, { unique: true });
+  await resellersCol.createIndex({ sessionToken: 1 }, { sparse: true });
   await detectionsCol.createIndex({ timestamp: -1 });
+  await detectionsCol.createIndex({ appId: 1, timestamp: -1 });
   await adminAuditCol.createIndex({ timestamp: -1 });
   await dllLogsCol.createIndex({ timestamp: -1 });
   await dllLogsCol.createIndex({ appId: 1, timestamp: -1 });
 
   const adminDoc  = await adminCol.findOne({ _id: 'admin' });
-  const ADMIN_HASH = '730aa79139462fd34d63c453a7d8b76da661b1800c6b716ebedd9428f0ce0d7b';
+  const DEFAULT_ADMIN_HASH = '730aa79139462fd34d63c453a7d8b76da661b1800c6b716ebedd9428f0ce0d7b';
   if (!adminDoc) {
+    // First-time setup: create admin with default password
     await adminCol.insertOne({
-      _id: 'admin', password: ADMIN_HASH, adminToken: null,
+      _id: 'admin', password: DEFAULT_ADMIN_HASH, adminToken: null,
       twoFAEnabled: false, twoFASecret: null, twoFAPending: null,
       allowedCountries: []
     });
+    console.log('[auth] Admin account created with default password');
   } else {
+    // Only backfill missing fields — never overwrite user-changed password
     const update = {};
-    if (adminDoc.password !== ADMIN_HASH) {
-      update.password = ADMIN_HASH; update.adminToken = null;
-      console.log('[auth] Admin password updated on restart');
-    }
-    if (!('adminToken'      in adminDoc)) update.adminToken      = null;
-    if (!('twoFAEnabled'    in adminDoc)) update.twoFAEnabled    = false;
-    if (!('twoFASecret'     in adminDoc)) update.twoFASecret     = null;
-    if (!('twoFAPending'    in adminDoc)) update.twoFAPending    = null;
+    if (!('adminToken'       in adminDoc)) update.adminToken      = null;
+    if (!('twoFAEnabled'     in adminDoc)) update.twoFAEnabled    = false;
+    if (!('twoFASecret'      in adminDoc)) update.twoFASecret     = null;
+    if (!('twoFAPending'     in adminDoc)) update.twoFAPending    = null;
     if (!('allowedCountries' in adminDoc)) update.allowedCountries = [];
     if (Object.keys(update).length) await adminCol.updateOne({ _id: 'admin' }, { $set: update });
   }
@@ -350,7 +358,10 @@ function fetchPublicIP() {
 }
 async function resolveRealIP(req) {
   const ip = getIP(req);
+  // Only call external API if truly localhost and body has no hint — avoid latency on non-local requests
   if (ip !== '127.0.0.1' && ip !== '::1') return ip;
+  const clientReported = (req.body && req.body.real_ip) || '';
+  if (clientReported && clientReported !== '127.0.0.1' && clientReported !== '::1') return clientReported.trim();
   return (await fetchPublicIP().catch(()=>null)) || ip;
 }
 
@@ -514,13 +525,49 @@ async function trackFail(ip) {
   }
 }
 
+// ── ADMIN TOKEN CACHE (avoid DB hit on every admin request) ──────────────────
+let _cachedAdminToken = null;
+let _cachedAdminTokenAt = 0;
+const ADMIN_TOKEN_CACHE_MS = 30 * 1000; // re-validate from DB every 30s
+
+async function getAdminToken(forceRefresh = false) {
+  const now = Date.now();
+  if (!forceRefresh && _cachedAdminToken && (now - _cachedAdminTokenAt) < ADMIN_TOKEN_CACHE_MS)
+    return _cachedAdminToken;
+  const doc = await adminCol.findOne({ _id: 'admin' }, { projection: { adminToken: 1 } });
+  _cachedAdminToken = doc?.adminToken || null;
+  _cachedAdminTokenAt = now;
+  return _cachedAdminToken;
+}
+
+function invalidateAdminTokenCache() { _cachedAdminToken = null; _cachedAdminTokenAt = 0; }
+
+// ── COUNTRY ALLOWLIST CACHE ───────────────────────────────────────────────────
+let _cachedCountries = null;
+let _cachedCountriesAt = 0;
+const COUNTRIES_CACHE_MS = 60 * 1000; // refresh every 60s
+
+async function getCachedAllowedCountries() {
+  const now = Date.now();
+  if (_cachedCountries && (now - _cachedCountriesAt) < COUNTRIES_CACHE_MS) return _cachedCountries;
+  const doc = await adminCol.findOne({ _id: 'admin' }, { projection: { allowedCountries: 1 } });
+  _cachedCountries = doc?.allowedCountries || [];
+  _cachedCountriesAt = now;
+  return _cachedCountries;
+}
+function invalidateCountriesCache() { _cachedCountries = null; _cachedCountriesAt = 0; }
+
 // ── AUTH MIDDLEWARE ───────────────────────────────────────────────────────────
 async function requireAdmin(req, res, next) {
   const token = req.headers['x-admin-token'] || req.query.token;
   if (!token) return res.status(401).json({ success:false, message:'Unauthorized' });
-  const doc = await adminCol.findOne({ _id: 'admin' });
-  if (!doc || !doc.adminToken || !safeCompare(token, doc.adminToken))
-    return res.status(401).json({ success:false, message:'Unauthorized' });
+  let cached = await getAdminToken();
+  if (!cached || !safeCompare(token, cached)) {
+    // Cache may be stale — force refresh once
+    cached = await getAdminToken(true);
+    if (!cached || !safeCompare(token, cached))
+      return res.status(401).json({ success:false, message:'Unauthorized' });
+  }
   req.adminIP = getIP(req);
   next();
 }
@@ -590,7 +637,15 @@ for (const hPath of HONEYPOT_PATHS) {
 
 // ── PUBLIC ────────────────────────────────────────────────────────────────────
 app.get('/api/myip', (req, res) => res.json({ ip: getIP(req) }));
-app.get('/health',   (req, res) => res.json({ status:'ok', storage:'mongodb' }));
+app.get('/health', async (req, res) => {
+  try {
+    // Lightweight ping to verify DB is still connected
+    await db.command({ ping: 1 });
+    res.json({ status:'ok', storage:'mongodb', uptime: Math.floor(process.uptime()) });
+  } catch(e) {
+    res.status(503).json({ status:'degraded', storage:'mongodb', error: e.message });
+  }
+});
 app.get('/',         (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
@@ -660,9 +715,8 @@ app.post('/api/auth', rateLimit, async (req, res) => {
     return res.json({ success:false, code:'INVALID_SIGNATURE', message:'Request signature invalid' });
   }
 
-  // ── Country allowlist ─────────────────────────────────────────────────────
-  const adminCfg        = await adminCol.findOne({ _id: 'admin' }, { projection: { allowedCountries: 1 } });
-  const allowedCountries = adminCfg?.allowedCountries || [];
+  // ── Country allowlist (cached to avoid per-auth DB hit) ──────────────────
+  const allowedCountries = await getCachedAllowedCountries();
   if (allowedCountries.length > 0) {
     const country = await getIPCountry(ip);
     if (country && !allowedCountries.includes(country)) {
@@ -823,8 +877,10 @@ app.get('/api/admin/2fa/status', requireAdmin, async (req, res) => {
 
 // ── ADMIN: APPS ───────────────────────────────────────────────────────────────
 app.get('/api/admin/apps', requireAdmin, async (req, res) => {
-  const apps = await appsCol.find({}).sort({ createdAt:-1 }).toArray();
-  res.json({ success:true, apps });
+  try {
+    const apps = await appsCol.find({}).sort({ createdAt:-1 }).toArray();
+    res.json({ success:true, apps });
+  } catch(e) { res.status(500).json({ success:false, message: e.message }); }
 });
 app.post('/api/admin/apps', requireAdmin, async (req, res) => {
   const { name, description } = req.body;
@@ -980,26 +1036,44 @@ app.get('/api/dll/:publicKey', rateLimit, async (req, res) => {
 
   // Proxy the file so the raw 3rd-party URL is never exposed to the client
   const mod = appDoc.dllUrl.startsWith('https') ? https : http;
-  mod.get(appDoc.dllUrl, { timeout: 15000 }, (upstream) => {
+  const proxyReq = mod.get(appDoc.dllUrl, { timeout: 20000 }, (upstream) => {
     if (upstream.statusCode !== 200) {
       upstream.resume();
-      return res.status(502).json({ success: false, code: 'UPSTREAM_ERROR', message: `Upstream returned ${upstream.statusCode}` });
+      if (!res.headersSent) res.status(502).json({ success: false, code: 'UPSTREAM_ERROR', message: `Upstream returned ${upstream.statusCode}` });
+      return;
     }
-    const filename = appDoc.dllUrl.split('/').pop().split('?')[0] || 'payload.dll';
+    const rawName = appDoc.dllUrl.split('/').pop().split('?')[0] || 'payload.dll';
+    // Sanitize filename to prevent header injection
+    const filename = rawName.replace(/[^\w.\-]/g, '_');
     res.setHeader('Content-Type', upstream.headers['content-type'] || 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     if (upstream.headers['content-length'])
       res.setHeader('Content-Length', upstream.headers['content-length']);
+    upstream.on('error', () => { if (!res.headersSent) res.status(502).json({ success: false, code: 'UPSTREAM_ERROR', message: 'Stream error during DLL delivery' }); });
     upstream.pipe(res);
-  }).on('error', () => res.status(502).json({ success: false, code: 'UPSTREAM_ERROR', message: 'Failed to fetch DLL from upstream' }))
-    .on('timeout', function() { this.destroy(); res.status(504).json({ success: false, code: 'UPSTREAM_TIMEOUT' }); });
+  });
+  proxyReq.on('error', (e) => {
+    if (!res.headersSent) res.status(502).json({ success: false, code: 'UPSTREAM_ERROR', message: 'Failed to fetch DLL from upstream' });
+  });
+  proxyReq.on('timeout', () => {
+    proxyReq.destroy();
+    if (!res.headersSent) res.status(504).json({ success: false, code: 'UPSTREAM_TIMEOUT' });
+  });
 });
 
 // ── ADMIN: KEYS ───────────────────────────────────────────────────────────────
 app.get('/api/admin/keys', requireAdmin, async (req, res) => {
-  const filter = req.query.appId ? { appId:req.query.appId } : {};
-  const keys   = await keysCol.find(filter).sort({ createdAt:-1 }).toArray();
-  res.json({ success:true, keys });
+  const filter = req.query.appId ? { appId: req.query.appId } : {};
+  if (req.query.status)  filter.status  = req.query.status;
+  if (req.query.search)  filter.key     = { $regex: req.query.search, $options: 'i' };
+  const limit  = Math.min(parseInt(req.query.limit) || 500, 2000);
+  const skip   = parseInt(req.query.skip) || 0;
+  const [keys, total] = await Promise.all([
+    keysCol.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray(),
+    keysCol.countDocuments(filter),
+  ]);
+  res.json({ success: true, keys, total });
 });
 app.post('/api/admin/generate', requireAdmin, async (req, res) => {
   let { count=1, label='', product='Default', max_uses=1, expires_days=null, appId } = req.body;
@@ -1079,11 +1153,17 @@ app.post('/api/admin/keys/:key/set-expiry', requireAdmin, async (req, res) => {
 
 // ── ADMIN: LOGS / BLOCKS / STATS ──────────────────────────────────────────────
 app.get('/api/admin/logs', requireAdmin, async (req, res) => {
-  const filter={};
-  if (req.query.result) filter.result=req.query.result;
-  if (req.query.appId)  filter.appId=req.query.appId;
-  const logs = await logsCol.find(filter).sort({ timestamp:-1 }).limit(500).toArray();
-  res.json({ success:true, logs });
+  const filter = {};
+  if (req.query.result) filter.result = req.query.result;
+  if (req.query.appId)  filter.appId  = req.query.appId;
+  if (req.query.key)    filter.key    = req.query.key;
+  const limit = Math.min(parseInt(req.query.limit) || 200, 1000);
+  const skip  = parseInt(req.query.skip) || 0;
+  const [logs, total] = await Promise.all([
+    logsCol.find(filter).sort({ timestamp: -1 }).skip(skip).limit(limit).toArray(),
+    logsCol.countDocuments(filter),
+  ]);
+  res.json({ success: true, logs, total });
 });
 app.delete('/api/admin/logs', requireAdmin, async (req, res) => {
   await logsCol.deleteMany({});
@@ -1103,10 +1183,11 @@ app.delete('/api/admin/blocks/:ip', requireAdmin, async (req, res) => {
 });
 app.get('/api/admin/stats', requireAdmin, async (req, res) => {
   const hr = new Date(Date.now()-3600000).toISOString();
-  const [total, active, banned, used, recentAuths, hwidBlocks, totalApps, blockedIPs, totalResellers] = await Promise.all([
+  const [total, active, banned, frozen, used, recentAuths, hwidBlocks, totalApps, blockedIPs, totalResellers] = await Promise.all([
     keysCol.countDocuments({}),
     keysCol.countDocuments({ status:'active' }),
     keysCol.countDocuments({ status:'banned' }),
+    keysCol.countDocuments({ status:'frozen' }),
     keysCol.countDocuments({ uses:{ $gt:0 } }),
     logsCol.countDocuments({ timestamp:{ $gt:hr } }),
     logsCol.countDocuments({ result:'HWID_MISMATCH' }),
@@ -1114,7 +1195,7 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
     blocksCol.countDocuments({}),
     resellersCol.countDocuments({}),
   ]);
-  res.json({ success:true, stats:{ total,active,banned,used,recentAuths,hwidBlocks,totalApps,blockedIPs,totalResellers } });
+  res.json({ success:true, stats:{ total,active,banned,frozen,used,recentAuths,hwidBlocks,totalApps,blockedIPs,totalResellers } });
 });
 
 // Admin login brute-force tracking
@@ -1125,8 +1206,12 @@ const ADMIN_LOCKOUT_MS    = 15 * 60 * 1000;
 // ── ADMIN: HWID MISMATCHES ────────────────────────────────────────────────────
 app.get('/api/admin/hwid-mismatches', requireAdmin, async (req, res) => {
   const mismatches = await logsCol.find({ result:'HWID_MISMATCH' }).sort({ timestamp:-1 }).limit(400).toArray();
-  const enriched = await Promise.all(mismatches.map(async l => {
-    const keyDoc = await keysCol.findOne({ key: l.key });
+  // Batch key lookup — one query instead of N
+  const keyValues = [...new Set(mismatches.map(l => l.key).filter(Boolean))];
+  const keyDocs   = await keysCol.find({ key: { $in: keyValues } }, { projection: { key:1, status:1, label:1, hwidRaw:1 } }).toArray();
+  const keyMap    = Object.fromEntries(keyDocs.map(k => [k.key, k]));
+  const enriched  = mismatches.map(l => {
+    const keyDoc = keyMap[l.key];
     return {
       ...l,
       keyStatus : keyDoc ? keyDoc.status    : 'deleted',
@@ -1134,7 +1219,7 @@ app.get('/api/admin/hwid-mismatches', requireAdmin, async (req, res) => {
       hwidBound : keyDoc ? (keyDoc.hwidRaw || '') : '',
       appName   : l.app_name || 'Unknown',
     };
-  }));
+  });
   res.json({ success:true, mismatches:enriched });
 });
 
@@ -1174,6 +1259,7 @@ app.post('/api/admin/login', async (req, res) => {
   adminLoginFails.delete(ip);
   const token = genSessionToken();
   await adminCol.updateOne({ _id: 'admin' }, { $set: { adminToken: token } });
+  invalidateAdminTokenCache();
   auditLog(ip, 'ADMIN_LOGIN_SUCCESS', {});
   res.json({ success: true, token });
 });
@@ -1185,6 +1271,7 @@ app.post('/api/admin/change-password', requireAdmin, async (req, res) => {
   await adminCol.updateOne({ _id:'admin' }, {
     $set: { password: hashString(newPassword), adminToken: newToken }
   });
+  invalidateAdminTokenCache();
   auditLog(req.adminIP, 'CHANGE_PASSWORD', {});
   res.json({ success:true, token: newToken });
 });
@@ -1221,6 +1308,7 @@ app.post('/api/admin/config', requireAdmin, async (req, res) => {
     return res.json({ success: false, message: 'allowedCountries must be an array of ISO-2 country codes' });
   const clean = allowedCountries.map(c => String(c).toUpperCase().trim()).filter(c => /^[A-Z]{2}$/.test(c));
   await adminCol.updateOne({ _id: 'admin' }, { $set: { allowedCountries: clean } });
+  invalidateCountriesCache();
   auditLog(req.adminIP, 'UPDATE_COUNTRY_ALLOWLIST', { allowedCountries: clean });
   res.json({ success: true, allowedCountries: clean,
     message: clean.length ? `Auth restricted to: ${clean.join(', ')}` : 'Country allowlist disabled (all regions allowed)' });
@@ -1412,19 +1500,25 @@ app.delete('/api/reseller/keys/:key', requireReseller, async (req, res) => {
 // ── RESELLER: LOGS / BLOCKS / APPS ───────────────────────────────────────────
 app.get('/api/reseller/logs', requireReseller, async (req, res) => {
   if (!req.reseller.permissions.viewLogs) return res.status(403).json({ success:false, message:'Access denied' });
-  const myKeys   = await keysCol.find({ createdBy:req.reseller.username }, { projection:{ key:1 } }).toArray();
-  const myKeySet = new Set(myKeys.map(k=>k.key));
-  const filter   = {};
+  // Build filter using $in to avoid loading all keys into memory
+  const myKeys   = await keysCol.find({ createdBy:req.reseller.username }, { projection:{ key:1 } }).limit(2000).toArray();
+  const myKeyList = myKeys.map(k=>k.key);
+  const filter   = { key: { $in: myKeyList } };
   if (req.query.result) filter.result = req.query.result;
-  const docs   = await logsCol.find(filter).sort({ timestamp:-1 }).limit(300).toArray();
+  const limit  = Math.min(parseInt(req.query.limit) || 300, 1000);
+  const skip   = parseInt(req.query.skip) || 0;
   const perm   = req.reseller.permissions;
-  const masked = docs.filter(l=>myKeySet.has(l.key)).map(l => {
+  const [docs, total] = await Promise.all([
+    logsCol.find(filter).sort({ timestamp:-1 }).skip(skip).limit(limit).toArray(),
+    logsCol.countDocuments(filter),
+  ]);
+  const masked = docs.map(l => {
     const out={...l};
     if (!perm.viewIP)   out.ip='—';
     if (!perm.viewHWID) out.hwid='—';
     return out;
   });
-  res.json({ success:true, logs:masked });
+  res.json({ success:true, logs:masked, total });
 });
 app.get('/api/reseller/blocks', requireReseller, async (req, res) => {
   if (!req.reseller.permissions.viewBlocks) return res.status(403).json({ success:false, message:'Access denied' });
@@ -2007,10 +2101,9 @@ app.post('/dashboard/api/login', async (req, res) => {
     const { password } = req.body || {};
     if (!password) return res.status(400).json({ success: false, message: 'Password required' });
     const adminDoc = await adminCol.findOne({ _id: 'admin' });
-    const ADMIN_HASH = '730aa79139462fd34d63c453a7d8b76da661b1800c6b716ebedd9428f0ce0d7b';
     const hash = createHash('sha256').update(String(password)).digest('hex');
-    const expected = (adminDoc && adminDoc.password) ? adminDoc.password : ADMIN_HASH;
-    if (!timingSafeEqual(Buffer.from(hash), Buffer.from(expected)))
+    const expected = adminDoc?.password || '';
+    if (!expected || !timingSafeEqual(Buffer.from(hash), Buffer.from(expected)))
       return res.status(401).json({ success: false, message: 'Invalid password' });
     const token = randomUUID();
     dashSessions.set(token, { createdAt: Date.now() });
@@ -2065,6 +2158,16 @@ app.get('/dashboard/api/logs', requireDash, async (req, res) => {
     }));
     res.json({ success: true, logs });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// ── PROCESS-LEVEL ERROR GUARDS ────────────────────────────────────────────────
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught exception:', err);
+  // Give in-flight requests 2s to drain before exiting (process manager will restart)
+  setTimeout(() => process.exit(1), 2000);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[ERROR] Unhandled promise rejection:', reason);
 });
 
 // ── START ─────────────────────────────────────────────────────────────────────
