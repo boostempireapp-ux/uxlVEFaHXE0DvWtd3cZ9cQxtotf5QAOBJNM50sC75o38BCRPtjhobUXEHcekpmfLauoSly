@@ -1227,7 +1227,7 @@ app.post('/api/admin/config', requireAdmin, async (req, res) => {
 });
 
 // ── ADMIN: RESELLERS ──────────────────────────────────────────────────────────
-const DEFAULT_PERMISSIONS = { viewKeys:false, viewHWID:false, viewIP:false, viewLogs:false, viewBlocks:false, generateKeys:false, banKeys:false, freezeKeys:false, resetHWID:false, deleteKeys:false, viewStats:false, canUseCatboxHosting:false };
+const DEFAULT_PERMISSIONS = { viewKeys:false, viewHWID:false, viewIP:false, viewLogs:false, viewBlocks:false, generateKeys:false, banKeys:false, freezeKeys:false, resetHWID:false, deleteKeys:false, viewStats:false, canUseCatboxHosting:false, canUseFileGardenHosting:false };
 
 app.get('/api/admin/resellers', requireAdmin, async (req, res) => {
   const docs = await resellersCol.find({}).sort({ createdAt:-1 }).toArray();
@@ -1509,13 +1509,35 @@ app.get('/api/reseller/my-apps', requireReseller, async (req, res) => {
 });
 
 // POST /api/reseller/apps/:id/set-dll  { dllUrl: "https://files.catbox.moe/..." }
-// Reseller can only set DLL on apps they are assigned to AND if canUseCatboxHosting is granted
+// Reseller can only set DLL on apps they are assigned to AND if canUseCatboxHosting OR canUseFileGardenHosting is granted
 app.post('/api/reseller/apps/:id/set-dll', requireReseller, async (req, res) => {
   const { dllUrl } = req.body;
 
-  // Check Catbox hosting permission
-  if (!req.reseller.permissions?.canUseCatboxHosting)
-    return res.status(403).json({ success: false, message: 'Your account does not have Catbox DLL hosting permission. Contact your admin.' });
+  // Check hosting permission — must have at least one DLL hosting permission
+  const hasCatbox     = !!req.reseller.permissions?.canUseCatboxHosting;
+  const hasFileGarden = !!req.reseller.permissions?.canUseFileGardenHosting;
+  if (!hasCatbox && !hasFileGarden)
+    return res.status(403).json({ success: false, message: 'Your account does not have DLL hosting permission. Contact your admin.' });
+
+  // If they only have one permission, validate the URL matches that host
+  if (dllUrl && hasCatbox && !hasFileGarden) {
+    try {
+      const h = new URL(dllUrl).hostname;
+      const catboxHosts = ["files.catbox.moe","catbox.moe","litterbox.catbox.moe"];
+      const isCatbox = catboxHosts.some(ch => h === ch || h.endsWith("."+ch));
+      if (!isCatbox)
+        return res.status(403).json({ success: false, message: "Your account only has Catbox hosting permission. Use a catbox.moe link." });
+    } catch(e) { /* invalid URL — let isAllowedDllHost handle it below */ }
+  }
+  if (dllUrl && hasFileGarden && !hasCatbox) {
+    try {
+      const h = new URL(dllUrl).hostname;
+      const fgHosts = ["filegarden.com","cdn.filegarden.com"];
+      const isFG = fgHosts.some(fh => h === fh || h.endsWith("."+fh));
+      if (!isFG)
+        return res.status(403).json({ success: false, message: "Your account only has File Garden hosting permission. Use a filegarden.com link." });
+    } catch(e) { /* invalid URL — let isAllowedDllHost handle it below */ }
+  }
 
   // Verify the reseller is allowed to manage this app
   const allowed = (req.reseller.allowedApps || []).map(String);
