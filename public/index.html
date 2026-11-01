@@ -3370,6 +3370,19 @@ function getHWID() {
 <div id="toast"></div>
 
 <script>
+  // Security: escape all user-supplied strings before inserting into innerHTML.
+  // Without this, a stored value like <script>alert(1)</script> in an app name
+  // or IP field becomes live code in the admin panel — exactly what happened.
+  function escapeHTML(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
 // ── VERIFY BOT CONFIG ─────────────────────────────────────────────────────────
 // Set this to your WispByte verify bot URL (no trailing slash) to hardcode it.
 // Example: window.VERIFY_BOT_URL = 'https://your-verify-bot.wispbyte.com';
@@ -3702,7 +3715,7 @@ async function loadDashboard(){
     const t=fmtTimeShort(l.timestamp);
     return `<div class="act-row">
       <span class="act-time">${t}</span>
-      <span class="act-app">${l.app_name||'—'}</span>
+      <span class="act-app">${escapeHTML(l.app_name||'—')}</span>
       ${badge}
     </div>`;
   }).join('');
@@ -3740,7 +3753,7 @@ async function loadApps(){
   // Populate generate app dropdown
   const menu=document.getElementById('cs-app-menu');
   menu.innerHTML=allApps.map(a=>`
-    <div class="cs-opt" data-val="${a._id}" onclick="selectCSApp('${a._id}','${a.name}')">
+    <div class="cs-opt" data-val="${a._id}" onclick="selectCSApp('${escapeHTML(a._id)}','${escapeHTML(a.name)}')">
       <span class="cs-opt-icon">📱</span>
       <div class="cs-opt-main">
         <span class="cs-opt-label">${a.name}</span>
@@ -3749,7 +3762,7 @@ async function loadApps(){
     </div>`).join('');
   // Populate key filter
   const kf=document.getElementById('key-app-filter');
-  kf.innerHTML='<option value="">All Apps</option>'+allApps.map(a=>`<option value="${a._id}">${a.name}</option>`).join('');
+  kf.innerHTML='<option value="">All Apps</option>'+allApps.map(a=>`<option value="${escapeHTML(a._id)}">${escapeHTML(a.name)}</option>`).join('');
 
   const el=document.getElementById('apps-list');
   if(!r.apps.length){
@@ -3759,25 +3772,25 @@ async function loadApps(){
     <div class="app-card">
       <div class="app-card-hdr">
         <div>
-          <div class="app-name">${a.name} <span class="badge ${a.active?'b-active':'b-expired'}" style="vertical-align:middle">${a.active?'Active':'Disabled'}</span></div>
-          <div class="app-desc">${a.description||'No description'} &nbsp;·&nbsp; ${a.createdAt?a.createdAt.substring(0,10):'—'}</div>
+          <div class="app-name">${escapeHTML(a.name)} <span class="badge ${a.active?'b-active':'b-expired'}" style="vertical-align:middle">${a.active?'Active':'Disabled'}</span></div>
+          <div class="app-desc">${escapeHTML(a.description||'No description')} &nbsp;·&nbsp; ${a.createdAt?a.createdAt.substring(0,10):'—'}</div>
         </div>
         <div style="display:flex;gap:7px;flex-wrap:wrap">
           <button class="btn btn-ghost btn-sm" onclick="toggleApp('${a._id}',${a.active})">${a.active?'Disable':'Enable'}</button>
           <button class="btn btn-ghost btn-sm" onclick="rotateKeys('${a._id}')">↺ Rotate Keys</button>
-          <button class="btn btn-ghost btn-sm" style="color:#c084fc;border-color:#7c3aed55" onclick="openDllModal('${a._id}','${a.name}','${(a.dllUrl||'').replace(/'/g,'')}','${a.publicKey}')">🟣 DLL</button>
+          <button class="btn btn-ghost btn-sm" style="color:#c084fc;border-color:#7c3aed55" onclick="openDllModal('${escapeHTML(a._id)}','${escapeHTML(a.name)}','${escapeHTML((a.dllUrl||''))}','${a.publicKey}')">🟣 DLL</button>
           <button class="btn btn-danger btn-sm" onclick="deleteApp('${a._id}')">🗑</button>
         </div>
       </div>
       <div class="apikey-box">
         <span class="apikey-label">Public Key</span>
-        <span class="apikey-val" id="pk-${a._id}">${a.publicKey}</span>
-        <button class="apikey-copy" data-copy="${a.publicKey}" onclick="copyFromAttr(this)">Copy</button>
+        <span class="apikey-val" id="pk-${a._id}">${escapeHTML(a.publicKey)}</span>
+        <button class="apikey-copy" data-copy="${escapeHTML(a.publicKey)}" onclick="copyFromAttr(this)">Copy</button>
       </div>
       <div class="apikey-box">
         <span class="apikey-label">Secret Key</span>
-        <span class="apikey-val secret-mask" id="sk-${a._id}" title="Hover to reveal">${a.secretKey}</span>
-        <button class="apikey-copy" data-copy="${a.secretKey}" onclick="copyFromAttr(this)">Copy</button>
+        <span class="apikey-val secret-mask" id="sk-${a._id}" title="Hover to reveal">${escapeHTML(a.secretKey)}</span>
+        <button class="apikey-copy" data-copy="${escapeHTML(a.secretKey)}" onclick="copyFromAttr(this)">Copy</button>
       </div>
       <div style="margin-top:10px;padding:8px 13px;background:#000;border-radius:var(--r);font-size:11px;color:var(--text3)">
         In your code: &nbsp;<span style="color:var(--p3);font-family:'JetBrains Mono',monospace;font-size:11px">x-public-key: ${a.publicKey}</span>
@@ -3785,7 +3798,7 @@ async function loadApps(){
       <div style="margin-top:8px;padding:8px 13px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);font-size:11px;display:flex;align-items:center;gap:8px">
         <span style="color:#c084fc;flex-shrink:0">🟣 DLL:</span>
         ${a.dllUrl
-          ? `<span style="color:#a855f7;font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.dllUrl}">${a.dllUrl}</span><span style="color:#4ade80;flex-shrink:0">✅ Set</span>`
+          ? `<span style="color:#a855f7;font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHTML(a.dllUrl)}">${escapeHTML(a.dllUrl)}</span><span style="color:#4ade80;flex-shrink:0">✅ Set</span>`
           : `<span style="color:var(--text3);font-size:11px">Not configured — click 🟣 DLL to add a Catbox or File Garden link</span>`}
       </div>
       <div style="margin-top:8px;padding:8px 13px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);font-size:11px;display:flex;align-items:center;gap:8px">
@@ -3793,7 +3806,7 @@ async function loadApps(){
         <span style="flex:1;color:${a.keyExpiresAt?(new Date(a.keyExpiresAt)<new Date()?'#f87171':'var(--text2)'):'var(--text3)'}" id="app-expiry-${a._id}">
           ${a.keyExpiresAt?(new Date(a.keyExpiresAt)<new Date()?'⚠️ Expired — '+a.keyExpiresAt.substring(0,10):a.keyExpiresAt.substring(0,10)):'Never'}
         </span>
-        <button class="btn btn-ghost btn-xs" onclick="openExpiryModal('${a._id}','${a.name}','${a.keyExpiresAt||''}')">Edit</button>
+        <button class="btn btn-ghost btn-xs" onclick="openExpiryModal('${escapeHTML(a._id)}','${escapeHTML(a.name)}','${escapeHTML(a.keyExpiresAt||'')}')">Edit</button>
       </div>
     </div>
   `).join('');
@@ -4067,12 +4080,12 @@ function renderLogs(logs){
   if(!logs.length){tb.innerHTML='<tr><td colspan="7"><div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No logs match</div></div></td></tr>';return;}
   tb.innerHTML=logs.map(l=>`<tr>
     <td class="mono" style="font-size:10px;white-space:nowrap">${fmtTime(l.timestamp)}</td>
-    <td style="color:var(--text2);font-size:11px">${l.app_name||'—'}</td>
-    <td><span class="kc" style="font-size:10px">${(l.key||'—').substring(0,18)}…</span></td>
-    <td class="mono" style="font-size:10px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${l.hwid||''}">${l.hwid||'<span style="color:var(--text3)">—</span>'}</td>
-    <td class="mono" style="font-size:10px">${l.ip||'—'}</td>
+    <td style="color:var(--text2);font-size:11px">${escapeHTML(l.app_name||'—')}</td>
+    <td><span class="kc" style="font-size:10px">${escapeHTML((l.key||'—').substring(0,18))}…</span></td>
+    <td class="mono" style="font-size:10px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHTML(l.hwid||'')}">${ escapeHTML(l.hwid)||'<span style="color:var(--text3)">—</span>'}</td>
+    <td class="mono" style="font-size:10px">${escapeHTML(l.ip||'—')}</td>
     <td>${rb(l.result)}</td>
-    <td style="color:var(--text3);font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${l.details||''}">${l.details||'—'}</td>
+    <td style="color:var(--text3);font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHTML(l.details||'')}">${ escapeHTML(l.details)||'—'}</td>
   </tr>`).join('');
 }
 // ── 2FA ───────────────────────────────────────────────────────────────────────
@@ -4180,7 +4193,7 @@ async function bcLoadGuilds() {
     const r = await api('/api/admin/discord/guilds');
     if (!r.success) { sel.innerHTML = '<option value="">'+( r.message||'No token saved')+' </option>'; showToast(r.message||'Save a bot token first', 'error'); return; }
     sel.innerHTML = '<option value="">— select a guild —</option>' +
-      r.guilds.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+      r.guilds.map(g => `<option value="${escapeHTML(g.id)}">${escapeHTML(g.name)}</option>`).join('');
     showToast(`Loaded ${r.guilds.length} guild(s) ✅`, 'success');
     // Load channels for first guild if only one
     if (r.guilds.length === 1) { sel.value = r.guilds[0].id; bcGuildChanged(); }
@@ -4202,7 +4215,7 @@ async function bcGuildChanged() {
       api('/api/admin/discord/guilds/'+guildId+'/webhooks'),
     ]);
     const chOpts = cr.success
-      ? '<option value="">— pick a channel —</option>' + cr.channels.map(c=>`<option value="${c.name}" data-id="${c.id}">#${c.name}</option>`).join('')
+      ? '<option value="">— pick a channel —</option>' + cr.channels.map(c=>`<option value="${escapeHTML(c.name)}" data-id="${escapeHTML(c.id)}">#${escapeHTML(c.name)}</option>`).join('')
       : '<option value="">'+( cr.message||'Error')+' </option>';
     logSel.innerHTML = chOpts;
     verifySel.innerHTML = chOpts;
@@ -4211,7 +4224,7 @@ async function bcGuildChanged() {
     if (saved.logChannelName)    { [...logSel.options].forEach(o=>{ if(o.value===saved.logChannelName) logSel.value=o.value; }); }
     if (saved.verifyChannelName) { [...verifySel.options].forEach(o=>{ if(o.value===saved.verifyChannelName) verifySel.value=o.value; }); }
     hookSel.innerHTML = hr.success
-      ? '<option value="">— none (use channel) —</option>' + hr.webhooks.map(h=>`<option value="${h.url}">${h.name} (#${hr.webhooks.find?h.channelId:h.channelId})</option>`).join('')
+      ? '<option value="">— none (use channel) —</option>' + hr.webhooks.map(h=>`<option value="${escapeHTML(h.url)}">${escapeHTML(h.name)} (#${hr.webhooks.find?h.channelId:h.channelId})</option>`).join('')
       : '<option value="">'+( hr.message||'Error')+' </option>';
     if (hr.success && saved.webhookUrl) {
       [...hookSel.options].forEach(o=>{ if(o.value===saved.webhookUrl) hookSel.value=o.value; });
@@ -4298,7 +4311,7 @@ async function loadAudit(){
   };
   el.innerHTML=r.audit.map(e=>{
     const c=ACTION_COLOR[e.action]||'#a1a1aa';
-    const extras=Object.entries(e).filter(([k])=>!['_id','action','ip','timestamp'].includes(k)).map(([k,v])=>`<span style="color:var(--text3)">${k}:</span> <span style="color:var(--text2)">${typeof v==='object'?JSON.stringify(v):v}</span>`).join('  ');
+    const extras=Object.entries(e).filter(([k])=>!['_id','action','ip','timestamp'].includes(k)).map(([k,v])=>`<span style="color:var(--text3)">${k}:</span> <span style="color:var(--text2)">${escapeHTML(typeof v==='object'?JSON.stringify(v):String(v))}</span>`).join('  ');
     return `<div style="display:flex;align-items:baseline;gap:12px;padding:8px 16px;border-bottom:1px solid var(--border2);font-size:11px;font-family:'JetBrains Mono',monospace">
       <span style="color:var(--text3);white-space:nowrap;flex-shrink:0">${new Date(e.timestamp).toLocaleString()}</span>
       <span style="color:#60a5fa;white-space:nowrap;flex-shrink:0">${e.ip||'—'}</span>
@@ -4332,10 +4345,10 @@ async function loadBlocks(){
   }
   badge.textContent=r.blocks.length;badge.style.display='inline';
   tb.innerHTML=r.blocks.map(b=>`<tr>
-    <td><span class="kc">${b.ip}</span></td>
-    <td style="color:var(--text2);font-size:11px">${b.reason||'—'}</td>
+    <td><span class="kc">${escapeHTML(b.ip)}</span></td>
+    <td style="color:var(--text2);font-size:11px">${escapeHTML(b.reason||'—')}</td>
     <td class="mono" style="font-size:10px">${b.blockedAt?b.blockedAt.substring(0,19).replace('T',' '):'—'}</td>
-    <td><button class="btn btn-ghost btn-xs" onclick="unblockIP('${b.ip}')">Unblock</button></td>
+    <td><button class="btn btn-ghost btn-xs" onclick="unblockIP('${escapeHTML(b.ip)}')">Unblock</button></td>
   </tr>`).join('');
 }
 async function unblockAllIPs(){
@@ -4401,7 +4414,7 @@ function renderHwidMismatches(list) {
       ? '<span class="mono" style="font-size:10px;color:#f87171;max-width:130px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + m.hwid + '">' + m.hwid.substring(0,20) + (m.hwid.length>20?'...':'') + '</span>'
       : '<span style="color:var(--text3)">&mdash;</span>';
     const boundHwid = m.hwidBound
-      ? '<span class="mono" style="font-size:10px;color:var(--p3);max-width:120px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + m.hwidBound + '">' + m.hwidBound.substring(0,20) + '...</span>'
+      ? '<span class="mono" style="font-size:10px;color:var(--p3);max-width:120px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeHTML(m.hwidBound) + '">' + escapeHTML(m.hwidBound.substring(0,20)) + '...</span>'
       : '<span style="color:var(--text3);font-size:11px">Unbound</span>';
     const resetBtn = (ks !== 'deleted' && ks !== 'banned')
       ? '<button class="btn btn-ghost btn-xs" style="color:#93c5fd;border-color:rgba(59,130,246,0.25)" data-k="' + safeKey + '" onclick="resetHWIDFromMismatch(decodeURIComponent(this.dataset.k))">&#8635; Reset</button>'
@@ -4415,7 +4428,7 @@ function renderHwidMismatches(list) {
       + '<td>' + attemptedHwid + '</td>'
       + '<td>' + boundHwid + '</td>'
       + '<td class="mono" style="font-size:10px">' + (m.ip||'&mdash;') + '</td>'
-      + '<td style="color:var(--text3);font-size:11px">' + (m.keyLabel||'&mdash;') + '</td>'
+      + '<td style="color:var(--text3);font-size:11px">' + escapeHTML(m.keyLabel||'') + '</td>'
       + '<td style="display:flex;gap:5px;align-items:center">' + resetBtn + copyBtn + '</td>'
       + '</tr>';
   }).join('');
@@ -4968,12 +4981,12 @@ async function loadResellers(){
           <div style="width:40px;height:40px;background:var(--golddim);border:1px solid rgba(245,158,11,0.25);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px">🔑</div>
           <div>
             <div style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:${rs.active?'var(--gold)':'var(--text3)'}">
-              ${rs.displayName} <span style="font-size:11px;color:var(--text3);font-family:'Inter',sans-serif">@${rs.username}</span>
+              ${escapeHTML(rs.displayName)} <span style="font-size:11px;color:var(--text3);font-family:'Inter',sans-serif">@${escapeHTML(rs.username)}</span>
             </div>
             <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
               <span class="badge ${rs.active?'b-gold':'b-suspended'}">${rs.active?'Active':'Suspended'}</span>
               <span style="font-size:10px;color:var(--text3)">Keys: ${q}</span>
-              ${rs.notes?`<span style="font-size:10px;color:var(--text3)">· ${rs.notes}</span>`:''}
+              ${rs.notes?`<span style="font-size:10px;color:var(--text3)">· ${escapeHTML(rs.notes)}</span>`:''}
             </div>
           </div>
         </div>
@@ -5209,7 +5222,7 @@ async function rDelKey(key){if(!confirm('Delete key?'))return;await rdel('/api/r
 // ═══════════════ RESELLER GENERATE ═══════════════
 async function loadResellerGeneratePage(){
   const ar=await rget('/api/reseller/apps');
-  if(ar.success){const m=document.getElementById('rcs-app-menu');m.innerHTML=ar.apps.map(a=>`<div class="cs-opt" data-val="${a._id}" onclick="selRCSApp('${a._id}','${a.name}')"><span class="cs-opt-icon">📱</span><div class="cs-opt-main"><span class="cs-opt-label">${a.name}</span></div></div>`).join('');}
+  if(ar.success){const m=document.getElementById('rcs-app-menu');m.innerHTML=ar.apps.map(a=>`<div class="cs-opt" data-val="${a._id}" onclick="selRCSApp('${escapeHTML(a._id)}','${escapeHTML(a.name)}')"><span class="cs-opt-icon">📱</span><div class="cs-opt-main"><span class="cs-opt-label">${a.name}</span></div></div>`).join('');}
   const sr=await rget('/api/reseller/stats');
   const qn=document.getElementById('r-quota-notice');
   const sg=document.getElementById('r-sidebar-generated');
@@ -5314,10 +5327,10 @@ async function loadResellerLogs(){
   if(!RDATA.permissions.viewLogs){document.getElementById('r-logs-body').innerHTML='<tr><td colspan="6"><div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">Log access not enabled</div></div></td></tr>';return;}
   const r=await rget('/api/reseller/logs'); if(r.success){rAllLogs=r.logs;document.getElementById('rl-count').textContent=r.logs.length+' entries';filterResellerLogs();}
 }
-function filterResellerLogs(){const q=document.getElementById('rl-search').value.toLowerCase();const rf=document.getElementById('rl-filter').value;let logs=rAllLogs;if(rf)logs=logs.filter(l=>l.result===rf);if(q)logs=logs.filter(l=>(l.key||'').toLowerCase().includes(q));const tb=document.getElementById('r-logs-body');const sh=RDATA.permissions.viewHWID;const si=RDATA.permissions.viewIP;if(!logs.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No logs</div></div></td></tr>';return;}tb.innerHTML=logs.map(l=>`<tr><td style="font-family:'JetBrains Mono',monospace;font-size:10px;white-space:nowrap">${fmtTime(l.timestamp)}</td><td><span class="kc" style="font-size:10px">${(l.key||'—').substring(0,18)}…</span></td>${sh?`<td style="font-family:'JetBrains Mono',monospace;font-size:10px">${l.hwid||'—'}</td>`:'<td style="color:var(--text3)">—</td>'}${si?`<td style="font-family:'JetBrains Mono',monospace;font-size:10px">${l.ip||'—'}</td>`:'<td style="color:var(--text3)">—</td>'}<td>${rb(l.result)}</td><td style="color:var(--text3);font-size:11px">${l.details||'—'}</td></tr>`).join('');}
+function filterResellerLogs(){const q=document.getElementById('rl-search').value.toLowerCase();const rf=document.getElementById('rl-filter').value;let logs=rAllLogs;if(rf)logs=logs.filter(l=>l.result===rf);if(q)logs=logs.filter(l=>(l.key||'').toLowerCase().includes(q));const tb=document.getElementById('r-logs-body');const sh=RDATA.permissions.viewHWID;const si=RDATA.permissions.viewIP;if(!logs.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No logs</div></div></td></tr>';return;}tb.innerHTML=logs.map(l=>`<tr><td style="font-family:'JetBrains Mono',monospace;font-size:10px;white-space:nowrap">${fmtTime(l.timestamp)}</td><td><span class="kc" style="font-size:10px">${escapeHTML((l.key||'—').substring(0,18))}…</span></td>${sh?`<td style="font-family:'JetBrains Mono',monospace;font-size:10px">${l.hwid||'—'}</td>`:'<td style="color:var(--text3)">—</td>'}${si?`<td style="font-family:'JetBrains Mono',monospace;font-size:10px">${escapeHTML(l.ip||'—')}</td>`:'<td style="color:var(--text3)">—</td>'}<td>${rb(l.result)}</td><td style="color:var(--text3);font-size:11px">${l.details||'—'}</td></tr>`).join('');}
 
 // ═══════════════ RESELLER BLOCKS ═══════════════
-async function loadResellerBlocks(){if(!RDATA.permissions.viewBlocks){document.getElementById('r-blocks-body').innerHTML='<tr><td colspan="3"><div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">Block access not enabled</div></div></td></tr>';return;}const r=await rget('/api/reseller/blocks');if(!r.success)return;const tb=document.getElementById('r-blocks-body');if(!r.blocks.length){tb.innerHTML='<tr><td colspan="3"><div class="empty"><div class="empty-icon">✅</div><div class="empty-text">No blocked IPs</div></div></td></tr>';return;}tb.innerHTML=r.blocks.map(b=>`<tr><td><span class="kc">${b.ip}</span></td><td style="color:var(--text2);font-size:11px">${b.reason||'—'}</td><td style="font-family:'JetBrains Mono',monospace;font-size:10px">${b.blockedAt?b.blockedAt.substring(0,19).replace('T',' '):'—'}</td></tr>`).join('');}
+async function loadResellerBlocks(){if(!RDATA.permissions.viewBlocks){document.getElementById('r-blocks-body').innerHTML='<tr><td colspan="3"><div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">Block access not enabled</div></div></td></tr>';return;}const r=await rget('/api/reseller/blocks');if(!r.success)return;const tb=document.getElementById('r-blocks-body');if(!r.blocks.length){tb.innerHTML='<tr><td colspan="3"><div class="empty"><div class="empty-icon">✅</div><div class="empty-text">No blocked IPs</div></div></td></tr>';return;}tb.innerHTML=r.blocks.map(b=>`<tr><td><span class="kc">${escapeHTML(b.ip)}</span></td><td style="color:var(--text2);font-size:11px">${escapeHTML(b.reason||'—')}</td><td style="font-family:'JetBrains Mono',monospace;font-size:10px">${b.blockedAt?b.blockedAt.substring(0,19).replace('T',' '):'—'}</td></tr>`).join('');}
 
 // ═══════════════ RESELLER HTTP HELPERS ═══════════════
 async function rget(url){const r=await fetch(url,{headers:{'x-reseller-token':RTOKEN}});return r.json();}
@@ -5406,13 +5419,13 @@ async function fetchDetections() {
   tb.innerHTML = r.detections.map(d => {
     const ts = d.timestamp ? d.timestamp.substring(0,19).replace('T',' ') : '—';
     const procs = Array.isArray(d.processes) && d.processes.length
-      ? d.processes.map(p => `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(248,113,113,0.1);color:#f87171;padding:1px 5px;border-radius:4px;margin:1px;display:inline-block">${p.name||'?'} <span style="color:var(--text3)">PID:${p.pid||'?'}</span></span>`).join(' ')
+      ? d.processes.map(p => `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;background:rgba(248,113,113,0.1);color:#f87171;padding:1px 5px;border-radius:4px;margin:1px;display:inline-block">${escapeHTML(p.name||'?')} <span style="color:var(--text3)">PID:${escapeHTML(String(p.pid||'?'))}</span></span>`).join(' ')
       : '<span style="color:var(--text3);font-size:11px">—</span>';
     const keyStr = d.key && d.key !== '—'
-      ? `<span class="kc" style="font-size:10px;cursor:pointer" title="${d.key}">${d.key.substring(0,12)}…</span>`
+      ? `<span class="kc" style="font-size:10px;cursor:pointer" title="${escapeHTML(d.key)}">${escapeHTML(d.key.substring(0,12))}…</span>`
       : '<span style="color:var(--text3)">—</span>';
     const ipStr = d.ip
-      ? `<span class="kc" style="font-size:10px">${d.ip}</span>`
+      ? `<span class="kc" style="font-size:10px">${escapeHTML(d.ip)}</span>`
       : '<span style="color:var(--text3)">—</span>';
     return `<tr>
       <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text2)">${ts}</td>
