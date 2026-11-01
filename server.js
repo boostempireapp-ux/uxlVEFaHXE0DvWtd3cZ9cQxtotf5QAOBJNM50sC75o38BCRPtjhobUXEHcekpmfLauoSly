@@ -8,14 +8,18 @@ const http     = require('http');
 
 const app  = express();
 const PORT = process.env.PORT || 8080;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://boostempireapp_db_user:iLtBIzCxsdt8A7Wu@cluster0.3dj2qi7.mongodb.net/?appName=Cluster0';
+const MONGO_URI = process.env.MONGO_URI;
+if (!MONGO_URI) {
+  console.error('[FATAL] MONGO_URI environment variable is not set. Set it in Render → Environment.');
+  process.exit(1);
+}
 const DB_NAME   = 'boostempire';
 
-const BOT_SECRET = process.env.BOT_SECRET || 'changeme-set-BOT_SECRET-env-var';
+const BOT_SECRET = process.env.BOT_SECRET; // Set BOT_SECRET in Render → Environment
 
 // ── DISCORD WEBHOOK ───────────────────────────────────────────────────────────
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK
-  || 'https://canary.discord.com/api/webhooks/1551110595401613343/13goaUq_9wCAnKdtmiHLsaoK8Vy_ZNtkDgcZtdkzesrbtVhipyXvR4X3qPE0vjxAbGEx';
+  || null; // Set DISCORD_WEBHOOK in Render → Environment
 
 function sendDiscordAlert(embed) {
   if (!DISCORD_WEBHOOK) return;
@@ -885,7 +889,10 @@ app.get('/api/admin/apps', requireAdmin, async (req, res) => {
 app.post('/api/admin/apps', requireAdmin, async (req, res) => {
   const { name, description } = req.body;
   if (!name) return res.json({ success:false, message:'App name required' });
-  const doc = { name, description:description||'', publicKey:genPubKey(), secretKey:genSecKey(), active:true, createdAt:new Date().toISOString() };
+  // Strip HTML tags server-side — belt-and-suspenders alongside client escaping
+  const safeName = String(name).replace(/<[^>]*>/g, '').trim().substring(0, 200);
+  const safeDesc = String(description||'').replace(/<[^>]*>/g, '').trim().substring(0, 1000);
+  const doc = { name: safeName, description: safeDesc, publicKey:genPubKey(), secretKey:genSecKey(), active:true, createdAt:new Date().toISOString() };
   const result = await appsCol.insertOne(doc);
   auditLog(req.adminIP, 'CREATE_APP', { appName: name });
   res.json({ success:true, app:{ ...doc, _id:result.insertedId } });
